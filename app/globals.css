@@ -1,0 +1,242 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import './styles/fonts.css';
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Smoke animation styles */
+.landing-page {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background:
+    linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 40%),
+    url('/img/bgimg.png') no-repeat bottom center/cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  transition: opacity 1.5s ease;
+  overflow: hidden;
+}
+
+.landing-page.fadeout {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.smoke-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.rising-smoke,
+.drifting-smoke {
+  position: absolute;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0;
+  animation-timing-function: ease-out;
+}
+
+.rising-smoke {
+  bottom: -50px;
+  width: 200px;
+  height: 150px;
+  border-radius: 50% 50% 0 0;
+  animation: riseAndDrift 18s infinite;
+}
+
+.drifting-smoke {
+  animation: 
+    float 25s infinite,
+    horizontalDrift 30s infinite,
+    smokeFade 40s infinite;
+}
+
+/* Smoke elements positioning */
+.rising-smoke:nth-child(1) { left: 15%; width: 180px; height: 120px; animation-delay: 0s; }
+.rising-smoke:nth-child(2) { left: 35%; width: 220px; height: 160px; animation-delay: 2s; }
+.rising-smoke:nth-child(3) { left: 55%; width: 200px; height: 140px; animation-delay: 4s; }
+.rising-smoke:nth-child(4) { left: 25%; width: 160px; height: 100px; animation-delay: 1s; }
+.rising-smoke:nth-child(5) { left: 70%; width: 240px; height: 180px; animation-delay: 3s; }
+.drifting-smoke:nth-child(6) { left: 10%; top: 20%; width: 250px; height: 120px; animation-delay: 0s; }
+.drifting-smoke:nth-child(7) { left: 60%; top: 40%; width: 350px; height: 180px; animation-delay: 5s; }
+.drifting-smoke:nth-child(8) { left: 30%; top: 15%; width: 200px; height: 100px; animation-delay: 8s; }
+.drifting-smoke:nth-child(9) { left: 75%; top: 30%; width: 300px; height: 150px; animation-delay: 12s; }
+.drifting-smoke:nth-child(10) { left: 20%; top: 50%; width: 280px; height: 140px; animation-delay: 15s; }
+
+/* Keyframes */
+@keyframes riseAndDrift {
+  0% { transform: translate(0, 0) scale(0.8); opacity: 0; }
+  15% { opacity: 0.6; }
+  50% { transform: translate(40px, -50vh) scale(1.2); opacity: 0.4; }
+  100% { transform: translate(80px, -100vh) scale(1.5); opacity: 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(-15px); }
+  50% { transform: translateY(15px); }
+}
+
+@keyframes horizontalDrift {
+  0%, 100% { transform: translateX(-50px); }
+  50% { transform: translateX(50px); }
+}
+
+@keyframes smokeFade {
+  0% { opacity: 0; }
+  20% { opacity: 0.5; }
+  80% { opacity: 0.3; }
+  100% { opacity: 0; }
+}
+
+/* Main content */
+.main-page-content {
+  min-height: 100vh;
+  padding-top: 5rem;
+  background: #000000;
+}
+@keyframes flameFlicker {
+  0%   { text-shadow: 0 0 4px #ff9a00, 0 0 10px #ff7300; }
+  25%  { text-shadow: 0 0 6px #ffae42, 0 0 12px #ff6600; }
+  50%  { text-shadow: 0 0 8px #ffcc33, 0 0 14px #ff3300; }
+  75%  { text-shadow: 0 0 6px #ffae42, 0 0 12px #ff6600; }
+  100% { text-shadow: 0 0 4px #ff9a00, 0 0 10px #ff7300; }
+}
+
+.flame-text {
+  animation: flameFlicker 1.5s infinite ease-in-out;
+  color: #fff1dc;
+}
+.unifrakturmaguntia-regular {
+  font-family: "UnifrakturMaguntia", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.fire-sparkles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.sparkle {
+  position: absolute;
+  background: radial-gradient(circle, #ff7700 0%, rgba(255, 255, 255, 0.3) 60%, transparent 100%);
+  border-radius: 50%;
+  opacity: 0;
+  animation: flyUp var(--duration, 4s) ease-out var(--delay, 0s) forwards;
+  filter: blur(1px);
+}
+
+@keyframes flyUp {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.2;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--x), calc(var(--y) * -1)) scale(0.5);
+    opacity: 0;
+  }
+}

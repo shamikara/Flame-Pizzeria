@@ -1,0 +1,72 @@
+{
+    "overview": {
+      "completedOrders": 234,
+      "pendingOrders": 32,
+      "popularFood": "Chicken Kottu",
+      "dailySales": 74250.00,
+      "activeStaff": 6
+    },
+    "sales": [
+      { "id": 1, "item": "Veggie Pizza", "qty": 12, "total": 4200 },
+      { "id": 2, "item": "Jam Bun", "qty": 20, "total": 2000 }
+    ],
+    "lowStock": [
+      { "id": 1, "name": "Flour", "quantityKg": 2.1, "unit": "KG" },
+      { "id": 2, "name": "Yeast", "quantityKg": 0.4, "unit": "KG" }
+    ],
+    "foodSold": {
+      "Veggie Pizza": 120,
+      "Jam Bun": 85,
+      "Sausage Roll": 60
+    },
+    "weeklyRevenue": [
+      { "day": "Mon", "lastWeek": 10500, "thisWeek": 11400 },
+      { "day": "Tue", "lastWeek": 9800, "thisWeek": 9900 }
+    ],
+    "users": {
+        "users": [
+          { "id": 1, "name": "Nimali Perera", "email": "nimali@example.com", "role": "Customer", "joined": "2024-11-22" },
+          { "id": 2, "name": "Sameera Fernando", "email": "sameera@example.com", "role": "Customer", "joined": "2025-01-15" }
+        ],
+        "recipeRequests": [
+          { "id": 1, "title": "Kottu Roti", "author": "Nimali Perera", "status": "Pending", "submitted": "2025-05-20" },
+          { "id": 2, "title": "Fish Patties", "author": "Sameera Fernando", "status": "Pending", "submitted": "2025-05-21" }
+        ]
+    },
+    
+    "employees": [
+      {
+        "id": 1,
+        "name": "Kavinda De Silva",
+        "role": "CHEF",
+        "status": "ON_SHIFT",
+        "salary": "Rs. 20000"
+      }
+    ],
+    "orders": [
+      {
+        "id": 1,
+        "user": "Nimal Perera",
+        "items": 3,
+        "status": "DELIVERED",
+        "total": 2300
+      }
+    ],
+    "foods": [
+      {
+        "id": 1,
+        "name": "Egg Roll",
+        "price": 350,
+        "stock": "In Stock"
+      }
+    ],
+    "reports": [
+      {
+        "id": 1,
+        "title": "April Sales Report",
+        "date": "2025-05-01",
+        "file": "/downloads/april-sales.pdf"
+      }
+    ]
+  }
+  

@@ -1,0 +1,16 @@
+.dashboard-layout {
+  background-color: white;
+  padding: 0;
+  margin: 0;
+}
+
+.dashboard-layout main {
+  background-color: white;
+  padding: 2rem;
+}
+
+.dashboard-layout .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}

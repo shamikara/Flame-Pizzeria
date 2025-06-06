@@ -1,0 +1,330 @@
+// prisma/schema.prisma
+// FINAL VERSION WITH EXPLICIT TABLE MAPPING
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+enum Role {
+  ADMIN
+  MANAGER
+  STORE_KEEP
+  CHEF
+  WAITER
+  DELIVERY_PERSON
+  KITCHEN_HELPER
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum OrderType {
+  DINE_IN
+  DELIVERY
+  TAKEAWAY
+}
+
+enum LeaveStatus {
+  ACTIVE
+  ON_LEAVE
+}
+
+enum MeasurementUnit {
+  KG
+  G
+  L
+  ML
+  PIECE
+}
+
+enum AlertSeverity {
+  LOW
+  EXPIRING
+  OUT
+  CRITICAL
+}
+
+// --- MODELS ---
+
+model User {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  password  String
+  address   String?
+  contact   String?
+  role      Role     @default(CUSTOMER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee       Employee?
+  orders         Order[]
+  ratings        Rating[]
+  recipes        Recipe[]
+  recipeComments RecipeComment[]
+
+  @@map("users") // Explicit table name
+}
+
+model Employee {
+  id          String      @id @default(cuid())
+  userId      String      @unique
+  salary      Float
+  leaveStatus LeaveStatus @default(ACTIVE)
+  joinedAt    DateTime    @default(now())
+  isActive    Boolean     @default(true)
+  
+  user            User        @relation(fields: [userId], references: [id])
+  shifts          Shift[]
+  preparedOrders  Order[]     @relation("OrderPreparedBy")
+  deliveredOrders Order[]     @relation("OrderDeliveredBy")
+  deliveries      Delivery[]
+
+  @@map("employees")
+}
+
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  foodItems FoodItem[]
+
+  @@map("categories")
+}
+
+model FoodItem {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id])
+  recipe      Recipe?
+  orderItems  OrderItem[]
+  ratings     Rating[]
+
+  @@map("food_items")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  total           Float
+  status          OrderStatus @default(PENDING)
+  type            OrderType
+  tableNumber     String?
+  deliveryAddress String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  preparedById    String?
+  preparedBy      Employee?   @relation(name: "OrderPreparedBy", fields: [preparedById], references: [id])
+  deliveredById   String?
+  deliveredBy     Employee?   @relation(name: "OrderDeliveredBy", fields: [deliveredById], references: [id])
+  
+  items           OrderItem[]
+  payments        Payment[]
+  delivery        Delivery?
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String   @id @default(cuid())
+  quantity     Int
+  price        Float
+  specialNotes String?
+
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id])
+  foodItemId   String
+  foodItem     FoodItem @relation(fields: [foodItemId], references: [id])
+
+  @@map("order_items")
+}
+
+model RawMaterial {
+  id               String       @id @default(cuid())
+  name             String       @unique
+  quantity         Float        @default(0)
+  unit             MeasurementUnit
+  expiryDate       DateTime?
+  restockThreshold Float        @default(5)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  supplierId        String?
+  supplier          Supplier?          @relation(fields: [supplierId], references: [id])
+  inventoryAlerts   InventoryAlert[]
+  recipeIngredients RecipeIngredient[]
+
+  @@map("raw_materials")
+}
+
+model Recipe {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  steps       String   @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  foodItemId  String   @unique
+  foodItem    FoodItem @relation(fields: [foodItemId], references: [id])
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  ingredients RecipeIngredient[]
+  comments    RecipeComment[]
+
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id            String          @id @default(cuid())
+  quantity      Float
+  unit          MeasurementUnit
+  
+  recipeId      String
+  recipe        Recipe          @relation(fields: [recipeId], references: [id])
+  rawMaterialId String
+  rawMaterial   RawMaterial     @relation(fields: [rawMaterialId], references: [id])
+
+  @@map("recipe_ingredients")
+}
+
+model InventoryAlert {
+  id            String        @id @default(cuid())
+  message       String
+  severity      AlertSeverity
+  resolved      Boolean       @default(false)
+  resolvedAt    DateTime?
+  createdAt     DateTime      @default(now())
+
+  rawMaterialId String
+  rawMaterial   RawMaterial   @relation(fields: [rawMaterialId], references: [id])
+
+  @@map("inventory_alerts")
+}
+
+model RecipeComment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  recipeId  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+
+  @@map("recipe_comments")
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  stars     Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  foodItemId String
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+
+  @@map("ratings")
+}
+
+model Delivery {
+  id         String    @id @default(cuid())
+  startTime  DateTime
+  endTime    DateTime?
+  status     String    @default("pending")
+
+  orderId    String    @unique
+  order      Order     @relation(fields: [orderId], references: [id])
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+
+  @@map("deliveries")
+}
+
+model Shift {
+  id           String   @id @default(cuid())
+  start        DateTime
+  end          DateTime
+  breakMinutes Int      @default(30)
+  task         String?  // Optional: e.g., "Cashier", "Kitchen Prep", "Delivery"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt  
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id])
+
+  @@map("shifts")
+}
+
+model Supplier {
+  id           String   @id @default(cuid())
+  name         String
+  contact      String
+  email        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  rawMaterials RawMaterial[]
+
+  @@map("suppliers")
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  amount        Float
+  method        String
+  status        String
+  transactionId String?
+  createdAt     DateTime @default(now())
+  
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String
+  userId     String?
+  oldData    Json?
+  newData    Json?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
