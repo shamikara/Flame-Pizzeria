@@ -2,12 +2,12 @@ import { LoginForm } from "@/components/login-form"
 import { RegisterForm } from "@/components/register-form"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
   searchParams: { email?: string }
 }) {
-  const email = searchParams.email || ""
+  const email = await searchParams.email || ""
 
   return (
     <div className="container mx-auto px-4 py-16 flex justify-center">

@@ -1,132 +1,134 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { User, Trash2, Edit2, Search } from 'lucide-react'
+import { useState, useEffect, useTransition } from 'react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { approveRecipe, rejectRecipe } from '@/app/actions/recipes';
+import { Check, X } from 'lucide-react';
 
-type UserType = {
-  id: number
-  name: string
-  email: string
-  role: 'Customer' | 'Employee' | 'Admin'
-  status: 'Active' | 'Inactive'
+// Define the shape of our data
+type RecipeData = {
+  id: string;
+  name: string;
+  status: string;
+};
+type UserWithRecipes = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  recipes: RecipeData[];
+  _count: {
+    recipes: number;
+  };
+};
+
+// Data fetching function
+async function getCustomersWithRecipes(): Promise<UserWithRecipes[]> {
+  const res = await fetch('/api/users/with-recipes');
+  if (!res.ok) throw new Error("Failed to fetch data");
+  return res.json();
 }
 
-const initialUsers: UserType[] = [
-  { id: 1, name: 'Kamal Perera', email: 'kamal@example.com', role: 'Customer', status: 'Active' },
-  { id: 2, name: 'Nimal Silva', email: 'nimal@example.com', role: 'Employee', status: 'Active' },
-  { id: 3, name: 'Samanthi Jayawardena', email: 'samanthi@example.com', role: 'Customer', status: 'Inactive' },
-  { id: 4, name: 'Anura Fernando', email: 'anura@example.com', role: 'Admin', status: 'Active' },
-  { id: 5, name: 'Dilani Kumari', email: 'dilani@example.com', role: 'Customer', status: 'Active' },
-]
-
 export default function UsersPage() {
-  const [users, setUsers] = useState(initialUsers)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [customers, setCustomers] = useState<UserWithRecipes[]>([]);
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
 
-  // Filter users by search term (name or email)
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  // Dummy handlers
-  const handleEdit = (id: number) => alert(`Edit user with ID: ${id}`)
-  const handleDelete = (id: number) => {
-    if (confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter((user) => user.id !== id))
-    }
-  }
+  useEffect(() => {
+    getCustomersWithRecipes().then(setCustomers).catch(console.error);
+  }, []);
+  
+  const handleApprove = (recipeId: string) => {
+    startTransition(async () => {
+      const result = await approveRecipe(recipeId);
+      if (result.success) {
+        toast({ title: "Success", description: "Recipe approved and published." });
+      } else {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+      }
+    });
+  };
+  
+  const handleReject = (recipeId: string) => {
+    startTransition(async () => {
+      const result = await rejectRecipe(recipeId);
+       if (result.success) {
+        toast({ title: "Success", description: "Recipe has been rejected." });
+      } else {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+      }
+    });
+  };
 
   return (
-    <div className="p-6 text-white">
-      <h1 className="text-3xl font-bold mb-6">Users Management</h1>
-
-      <div className="flex mb-6 max-w-md">
-        <Input
-          placeholder="Search users by name or email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="bg-black border border-red-600 text-white placeholder-red-400"
-          type="search"
-          spellCheck={false}
-          autoComplete="off"
-        />
-        <Button
-          variant="outline"
-          className="ml-2 border-red-600 text-red-500 hover:bg-red-600 hover:text-white"
-          onClick={() => setSearchTerm('')}
-          aria-label="Clear search"
-        >
-          <Search className="w-5 h-5" />
-        </Button>
-      </div>
-
-      <Card className="bg-black border border-red-600 shadow-md">
-        <CardContent className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-red-700">
-                <th className="py-3 px-4 text-red-400">Name</th>
-                <th className="py-3 px-4 text-red-400">Email</th>
-                <th className="py-3 px-4 text-red-400">Role</th>
-                <th className="py-3 px-4 text-red-400">Status</th>
-                <th className="py-3 px-4 text-red-400 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-6 text-red-500 italic">
-                    No users found.
-                  </td>
-                </tr>
+    <div className="p-4 md:p-8">
+      <h2 className="text-3xl font-bold tracking-tight mb-4">Customer & Recipe Management</h2>
+      <Accordion type="single" collapsible className="w-full">
+        {customers.map((customer) => (
+          <AccordionItem value={customer.id} key={customer.id}>
+            <AccordionTrigger className="hover:no-underline">
+              <div className="flex items-center gap-4">
+                <Avatar>
+                  <AvatarImage src={`https://api.dicebear.com/8.x/lorelei/svg?seed=${customer.email}`} />
+                  <AvatarFallback>{customer.firstName?.[0]}{customer.lastName?.[0]}</AvatarFallback>
+                </Avatar>
+                <div className="text-left">
+                  <div className="font-semibold">{customer.firstName} {customer.lastName}</div>
+                  <div className="text-sm text-muted-foreground">{customer.email}</div>
+                </div>
+              </div>
+              <div className="ml-auto pr-4">
+                <Badge variant={customer._count.recipes > 0 ? "default" : "secondary"}>
+                  {customer._count.recipes} Recipes
+                </Badge>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              {customer.recipes.length > 0 ? (
+                <div className="space-y-4 p-4 bg-muted/50 rounded-md">
+                  {customer.recipes.map((recipe) => (
+                    <div key={recipe.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-background">
+                      <div>
+                        <p className="font-medium">{recipe.name}</p>
+                        <Badge 
+                           variant={
+                            recipe.status === 'APPROVED' ? 'default' :
+                            recipe.status === 'REJECTED' ? 'destructive' : 'secondary'
+                          }
+                        >
+                          {recipe.status}
+                        </Badge>
+                      </div>
+                      {recipe.status === 'PENDING' && (
+                        <div className="flex gap-2">
+                           <Button size="icon" variant="outline" onClick={() => handleApprove(recipe.id)} disabled={isPending}>
+                            <Check className="h-4 w-4 text-green-500" />
+                           </Button>
+                           <Button size="icon" variant="outline" onClick={() => handleReject(recipe.id)} disabled={isPending}>
+                             <X className="h-4 w-4 text-red-500" />
+                           </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               ) : (
-                filteredUsers.map(({ id, name, email, role, status }) => (
-                  <tr key={id} className="border-b border-red-800 hover:bg-red-900/20">
-                    <td className="py-3 px-4 flex items-center space-x-2">
-                      <User className="w-5 h-5 text-red-500" />
-                      <span>{name}</span>
-                    </td>
-                    <td className="py-3 px-4">{email}</td>
-                    <td className="py-3 px-4">{role}</td>
-                    <td
-                      className={`py-3 px-4 font-semibold ${
-                        status === 'Active' ? 'text-green-400' : 'text-red-500'
-                      }`}
-                    >
-                      {status}
-                    </td>
-                    <td className="py-3 px-4 text-center space-x-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-600 text-red-500 hover:bg-red-600 hover:text-white"
-                        onClick={() => handleEdit(id)}
-                        aria-label={`Edit ${name}`}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-600 text-red-500 hover:bg-red-600 hover:text-white"
-                        onClick={() => handleDelete(id)}
-                        aria-label={`Delete ${name}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                <p className="text-center text-muted-foreground p-4">This user has not submitted any recipes.</p>
               )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </div>
-  )
+  );
 }

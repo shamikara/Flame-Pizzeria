@@ -23,6 +23,6 @@
       }
     ],
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "lib/data/projects-data.js", "lib/data/projects-table-data.js", "lib/data/statistics-cards-data.js", "lib/data/statistics-charts-data.js", "lib/data/conversations-data.js", "lib/data/index.js", "lib/data/orders-overview-data.js", "lib/data/platform-settings-data.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "lib/data/projects-data.js", "lib/data/projects-table-data.js", "lib/data/statistics-cards-data.js", "lib/data/statistics-charts-data.js", "lib/data/index.js", "lib/data/orders-overview-data.js", "lib/data/platform-settings-data.js"],
   "exclude": ["node_modules"]
 }

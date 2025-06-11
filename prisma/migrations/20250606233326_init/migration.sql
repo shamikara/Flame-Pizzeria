@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE `users` (
+CREATE TABLE `User` (
     `id` VARCHAR(191) NOT NULL,
     `firstName` VARCHAR(191) NOT NULL,
     `lastName` VARCHAR(191) NOT NULL,
@@ -12,12 +12,12 @@ CREATE TABLE `users` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `users_email_key`(`email`),
+    UNIQUE INDEX `User_email_key`(`email`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `employees` (
+CREATE TABLE `Employee` (
     `id` VARCHAR(191) NOT NULL,
     `userId` VARCHAR(191) NOT NULL,
     `salary` DOUBLE NOT NULL,
@@ -25,23 +25,23 @@ CREATE TABLE `employees` (
     `joinedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `isActive` BOOLEAN NOT NULL DEFAULT true,
 
-    UNIQUE INDEX `employees_userId_key`(`userId`),
+    UNIQUE INDEX `Employee_userId_key`(`userId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `categories` (
+CREATE TABLE `Category` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `categories_name_key`(`name`),
+    UNIQUE INDEX `Category_name_key`(`name`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `food_items` (
+CREATE TABLE `FoodItem` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `description` VARCHAR(191) NULL,
@@ -56,7 +56,7 @@ CREATE TABLE `food_items` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `orders` (
+CREATE TABLE `Order` (
     `id` VARCHAR(191) NOT NULL,
     `total` DOUBLE NOT NULL,
     `status` ENUM('PENDING', 'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED', 'REFUNDED') NOT NULL DEFAULT 'PENDING',
@@ -73,7 +73,7 @@ CREATE TABLE `orders` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `order_items` (
+CREATE TABLE `OrderItem` (
     `id` VARCHAR(191) NOT NULL,
     `quantity` INTEGER NOT NULL,
     `price` DOUBLE NOT NULL,
@@ -85,7 +85,7 @@ CREATE TABLE `order_items` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `raw_materials` (
+CREATE TABLE `RawMaterial` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `quantity` DOUBLE NOT NULL DEFAULT 0,
@@ -96,12 +96,12 @@ CREATE TABLE `raw_materials` (
     `updatedAt` DATETIME(3) NOT NULL,
     `supplierId` VARCHAR(191) NULL,
 
-    UNIQUE INDEX `raw_materials_name_key`(`name`),
+    UNIQUE INDEX `RawMaterial_name_key`(`name`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `recipes` (
+CREATE TABLE `Recipe` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `description` VARCHAR(191) NOT NULL,
@@ -112,12 +112,12 @@ CREATE TABLE `recipes` (
     `foodItemId` VARCHAR(191) NOT NULL,
     `authorId` VARCHAR(191) NOT NULL,
 
-    UNIQUE INDEX `recipes_foodItemId_key`(`foodItemId`),
+    UNIQUE INDEX `Recipe_foodItemId_key`(`foodItemId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `recipe_ingredients` (
+CREATE TABLE `RecipeIngredient` (
     `id` VARCHAR(191) NOT NULL,
     `quantity` DOUBLE NOT NULL,
     `unit` ENUM('KG', 'G', 'L', 'ML', 'PIECE') NOT NULL,
@@ -128,7 +128,7 @@ CREATE TABLE `recipe_ingredients` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `inventory_alerts` (
+CREATE TABLE `InventoryAlert` (
     `id` VARCHAR(191) NOT NULL,
     `message` VARCHAR(191) NOT NULL,
     `severity` ENUM('LOW', 'EXPIRING', 'OUT', 'CRITICAL') NOT NULL,
@@ -141,7 +141,7 @@ CREATE TABLE `inventory_alerts` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `recipe_comments` (
+CREATE TABLE `RecipeComment` (
     `id` VARCHAR(191) NOT NULL,
     `content` TEXT NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -152,7 +152,7 @@ CREATE TABLE `recipe_comments` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `ratings` (
+CREATE TABLE `Rating` (
     `id` VARCHAR(191) NOT NULL,
     `stars` INTEGER NOT NULL,
     `comment` TEXT NULL,
@@ -164,7 +164,7 @@ CREATE TABLE `ratings` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `deliveries` (
+CREATE TABLE `Delivery` (
     `id` VARCHAR(191) NOT NULL,
     `startTime` DATETIME(3) NOT NULL,
     `endTime` DATETIME(3) NULL,
@@ -172,12 +172,12 @@ CREATE TABLE `deliveries` (
     `orderId` VARCHAR(191) NOT NULL,
     `employeeId` VARCHAR(191) NOT NULL,
 
-    UNIQUE INDEX `deliveries_orderId_key`(`orderId`),
+    UNIQUE INDEX `Delivery_orderId_key`(`orderId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `shifts` (
+CREATE TABLE `Shift` (
     `id` VARCHAR(191) NOT NULL,
     `start` DATETIME(3) NOT NULL,
     `end` DATETIME(3) NOT NULL,
@@ -188,7 +188,7 @@ CREATE TABLE `shifts` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `suppliers` (
+CREATE TABLE `Supplier` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `contact` VARCHAR(191) NOT NULL,
@@ -201,7 +201,7 @@ CREATE TABLE `suppliers` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `payments` (
+CREATE TABLE `Payment` (
     `id` VARCHAR(191) NOT NULL,
     `amount` DOUBLE NOT NULL,
     `method` VARCHAR(191) NOT NULL,
@@ -214,7 +214,7 @@ CREATE TABLE `payments` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `audit_logs` (
+CREATE TABLE `AuditLog` (
     `id` VARCHAR(191) NOT NULL,
     `action` VARCHAR(191) NOT NULL,
     `entityType` VARCHAR(191) NOT NULL,
@@ -228,64 +228,64 @@ CREATE TABLE `audit_logs` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `employees` ADD CONSTRAINT `employees_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Employee` ADD CONSTRAINT `Employee_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `food_items` ADD CONSTRAINT `food_items_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `categories`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `FoodItem` ADD CONSTRAINT `FoodItem_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `Category`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `orders` ADD CONSTRAINT `orders_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Order` ADD CONSTRAINT `Order_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `orders` ADD CONSTRAINT `orders_preparedById_fkey` FOREIGN KEY (`preparedById`) REFERENCES `employees`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Order` ADD CONSTRAINT `Order_preparedById_fkey` FOREIGN KEY (`preparedById`) REFERENCES `Employee`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `orders` ADD CONSTRAINT `orders_deliveredById_fkey` FOREIGN KEY (`deliveredById`) REFERENCES `employees`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Order` ADD CONSTRAINT `Order_deliveredById_fkey` FOREIGN KEY (`deliveredById`) REFERENCES `Employee`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `order_items` ADD CONSTRAINT `order_items_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `OrderItem` ADD CONSTRAINT `OrderItem_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `Order`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `order_items` ADD CONSTRAINT `order_items_foodItemId_fkey` FOREIGN KEY (`foodItemId`) REFERENCES `food_items`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `OrderItem` ADD CONSTRAINT `OrderItem_foodItemId_fkey` FOREIGN KEY (`foodItemId`) REFERENCES `FoodItem`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `raw_materials` ADD CONSTRAINT `raw_materials_supplierId_fkey` FOREIGN KEY (`supplierId`) REFERENCES `suppliers`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `RawMaterial` ADD CONSTRAINT `RawMaterial_supplierId_fkey` FOREIGN KEY (`supplierId`) REFERENCES `Supplier`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `recipes` ADD CONSTRAINT `recipes_foodItemId_fkey` FOREIGN KEY (`foodItemId`) REFERENCES `food_items`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Recipe` ADD CONSTRAINT `Recipe_foodItemId_fkey` FOREIGN KEY (`foodItemId`) REFERENCES `FoodItem`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `recipes` ADD CONSTRAINT `recipes_authorId_fkey` FOREIGN KEY (`authorId`) REFERENCES `users`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Recipe` ADD CONSTRAINT `Recipe_authorId_fkey` FOREIGN KEY (`authorId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `recipe_ingredients` ADD CONSTRAINT `recipe_ingredients_recipeId_fkey` FOREIGN KEY (`recipeId`) REFERENCES `recipes`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `RecipeIngredient` ADD CONSTRAINT `RecipeIngredient_recipeId_fkey` FOREIGN KEY (`recipeId`) REFERENCES `Recipe`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `recipe_ingredients` ADD CONSTRAINT `recipe_ingredients_rawMaterialId_fkey` FOREIGN KEY (`rawMaterialId`) REFERENCES `raw_materials`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `RecipeIngredient` ADD CONSTRAINT `RecipeIngredient_rawMaterialId_fkey` FOREIGN KEY (`rawMaterialId`) REFERENCES `RawMaterial`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `inventory_alerts` ADD CONSTRAINT `inventory_alerts_rawMaterialId_fkey` FOREIGN KEY (`rawMaterialId`) REFERENCES `raw_materials`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `InventoryAlert` ADD CONSTRAINT `InventoryAlert_rawMaterialId_fkey` FOREIGN KEY (`rawMaterialId`) REFERENCES `RawMaterial`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `recipe_comments` ADD CONSTRAINT `recipe_comments_authorId_fkey` FOREIGN KEY (`authorId`) REFERENCES `users`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `RecipeComment` ADD CONSTRAINT `RecipeComment_authorId_fkey` FOREIGN KEY (`authorId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `recipe_comments` ADD CONSTRAINT `recipe_comments_recipeId_fkey` FOREIGN KEY (`recipeId`) REFERENCES `recipes`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `RecipeComment` ADD CONSTRAINT `RecipeComment_recipeId_fkey` FOREIGN KEY (`recipeId`) REFERENCES `Recipe`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `ratings` ADD CONSTRAINT `ratings_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Rating` ADD CONSTRAINT `Rating_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `ratings` ADD CONSTRAINT `ratings_foodItemId_fkey` FOREIGN KEY (`foodItemId`) REFERENCES `food_items`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Rating` ADD CONSTRAINT `Rating_foodItemId_fkey` FOREIGN KEY (`foodItemId`) REFERENCES `FoodItem`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `deliveries` ADD CONSTRAINT `deliveries_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Delivery` ADD CONSTRAINT `Delivery_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `Order`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `deliveries` ADD CONSTRAINT `deliveries_employeeId_fkey` FOREIGN KEY (`employeeId`) REFERENCES `employees`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Delivery` ADD CONSTRAINT `Delivery_employeeId_fkey` FOREIGN KEY (`employeeId`) REFERENCES `Employee`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `shifts` ADD CONSTRAINT `shifts_employeeId_fkey` FOREIGN KEY (`employeeId`) REFERENCES `employees`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Shift` ADD CONSTRAINT `Shift_employeeId_fkey` FOREIGN KEY (`employeeId`) REFERENCES `Employee`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `payments` ADD CONSTRAINT `payments_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `orders`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Payment` ADD CONSTRAINT `Payment_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `Order`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
