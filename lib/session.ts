@@ -45,8 +45,8 @@ export interface UserPayload extends JwtPayload {
   email: string;
 }
 
-export function getSession(): UserPayload | null {
-  const token = cookies().get('token')?.value;
+export async function getSession(): Promise<UserPayload | null> {
+  const token = (await cookies()).get('token')?.value;
 
   if (!token || !JWT_SECRET) {
     return null;

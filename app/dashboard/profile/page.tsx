@@ -1,10 +1,11 @@
-import { getServerSession } from "@/lib/session";
+
 import { redirect } from "next/navigation";
 import db from "@/lib/db";
 import { ProfileForm } from "@/components/profile-form";
+import { getSession } from "@/lib/session";
 
 export default async function ProfilePage() {
-  const session = await getServerSession();
+  const session = await getSession();
   
   if (!session) {
     redirect('/login'); 

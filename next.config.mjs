@@ -1,3 +1,5 @@
+// next.config.mjs
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -9,7 +11,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  matcher: ['/admin/:path*'],
+  // The 'matcher' key has been completely removed from this file.
 }
 
 export default nextConfig

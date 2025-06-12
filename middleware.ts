@@ -26,74 +26,72 @@
 // export const config = {
 //   matcher: ['/dashboard/:path*', '/login'],
 // };
-//-------------------------------
-// middleware.ts -new add
-
-// middleware.ts
+//-------------------------------// middleware.ts// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verify } from 'jsonwebtoken';
-import { type UserPayload } from '@/lib/session'; // Import our new type
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-// Define allowed paths for each role
-const rolePermissions: Record<UserPayload['role'], string[]> = {
-  ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/employees', '/dashboard/users', '/dashboard/raw-materials', '/dashboard/reports', '/dashboard/profile'],
-  CHEF: ['/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
-  WAITER: ['/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
-  STORE_KEEPER: ['/dashboard/raw-materials', '/dashboard/profile'],
-  CUSTOMER: [], // Customers have no access to any dashboard pages
-};
+// --- STEP 1: Import from 'jose' instead of 'jsonwebtoken' ---
+import { jwtVerify } from 'jose';
+import { type UserPayload } from '@/lib/session';
 
 export async function middleware(request: NextRequest) {
+  const JWT_SECRET = process.env.JWT_SECRET;
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('token')?.value;
 
-  // --- Check for token and JWT_SECRET ---
-  if (!token || !JWT_SECRET) {
+  console.log(`--- MIDDLEWARE TRIGGERED FOR: ${pathname} ---`);
+  
+  if (!JWT_SECRET) {
+    console.error('CRITICAL: JWT_SECRET is not available in the middleware.');
+    return NextResponse.redirect(new URL('/login?error=server_config', request.url));
+  }
+  if (!token) {
+    console.log('Middleware: No token found. Redirecting to login.');
     return NextResponse.redirect(new URL('/login', request.url));
   }
+  console.log('Middleware: Token found.');
 
   try {
-    // --- Verify the token ---
-    const user = verify(token, JWT_SECRET) as UserPayload;
+    // --- STEP 2: Use `jwtVerify` which is Edge-compatible ---
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret) as { payload: UserPayload };
+    
+    console.log(`Middleware: Token verified successfully for role: ${payload.role}`);
 
-    // --- Role-based access control ---
-    const userRole = user.role;
-
-    // 1. Kick out customers immediately
+    const userRole = payload.role;
     if (userRole === 'CUSTOMER') {
-        // You might want to log them out or just redirect them to the homepage/shop
-        return NextResponse.redirect(new URL('/shop', request.url));
+      return NextResponse.redirect(new URL('/shop', request.url));
     }
     
-    // 2. Check if the user's role allows access to the requested path
-    // We check if the pathname starts with any of the allowed paths for that role.
+    const rolePermissions: Record<UserPayload['role'], string[]> = {
+        ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/employees', '/dashboard/users', '/dashboard/raw-materials', '/dashboard/reports', '/dashboard/profile'],
+        CHEF: ['/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
+        WAITER: ['/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
+        STORE_KEEPER: ['/dashboard/raw-materials', '/dashboard/profile'],
+        CUSTOMER: [],
+    };
+
     const allowedPaths = rolePermissions[userRole] || [];
     const hasAccess = allowedPaths.some(path => pathname.startsWith(path));
 
     if (!hasAccess) {
-        // If they don't have access, redirect them to a default page for their role
-        let defaultUrl = '/login'; // Fallback
-        if (userRole === 'ADMIN') defaultUrl = '/dashboard/overview';
-        if (userRole === 'CHEF' || userRole === 'WAITER') defaultUrl = '/dashboard/orders';
-        if (userRole === 'STORE_KEEPER') defaultUrl = '/dashboard/raw-materials';
-        
-        return NextResponse.redirect(new URL(defaultUrl, request.url));
+      console.log(`Middleware: Access DENIED for role ${userRole} to path ${pathname}.`);
+      let defaultUrl = '/dashboard/overview';
+      if (userRole === 'CHEF' || userRole === 'WAITER') defaultUrl = '/dashboard/orders';
+      if (userRole === 'STORE_KEEPER') defaultUrl = '/dashboard/raw-materials';
+      return NextResponse.redirect(new URL(defaultUrl, request.url));
     }
 
-    // --- If all checks pass, allow the request to continue ---
+    console.log(`Middleware: Access GRANTED for role ${userRole} to path ${pathname}.`);
     return NextResponse.next();
 
   } catch (error) {
-    // --- Handle invalid/expired token ---
-    console.log('Token verification failed, redirecting to login.');
+    // This will catch invalid tokens (e.g., expired, malformed)
+    console.error('Middleware: JWT verification failed!', error);
     return NextResponse.redirect(new URL('/login', request.url));
   }
 }
 
-// --- Configure the middleware to run only on dashboard routes ---
+// Your matcher config remains the same and is correct.
 export const config = {
-  matcher: '/dashboard/:path*',
+  matcher: ['/dashboard/:path*'],
 };

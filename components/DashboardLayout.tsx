@@ -230,12 +230,15 @@
 //   );
 // }
 // components/DashboardLayout.tsx
+// components/DashboardLayout.tsx
 "use client";
 
 import Link from "next/link";
 // ... other imports
 import { DashboardNav } from "./sidebar/components/Links";
 import { UserPayload } from "@/lib/session"; // Import the type
+import { Sheet, SheetContent } from "./ui/sheet";
+
 
 // ... Logo component stays the same
 
