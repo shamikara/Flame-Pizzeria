@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         total: calculateTotal(items),
         type: "DELIVERY", // Assuming this is a delivery order
         deliveryAddress: `${address}, ${city}, ${state} ${zipCode}`,
-        notes,
+       // notes,
         items: {
           create: items.map((item: any) => ({
             foodItemId: item.id, 

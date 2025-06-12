@@ -18,14 +18,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { CartSheet } from "./cart-sheet"
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { items } = useCart()
+  const { itemCount } = useCart();
   const { user } = useSession()
   const router = useRouter();
-
-  const totalItems = items.reduce((total, item) => total + item.quantity, 0)
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -69,16 +68,7 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link href="/checkout">
-            <Button variant="outline" size="icon" className="relative">
-              <ShoppingCart className="h-5 w-5" />
-              {totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {totalItems}
-                </span>
-              )}
-            </Button>
-          </Link>
+        <CartSheet />
 
           {user ? (
             <DropdownMenu>
