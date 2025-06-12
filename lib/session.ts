@@ -1,32 +1,36 @@
 // lib/session.ts
+'use server'; // Marking this file as server-only is good practice
 
 import { cookies } from 'next/headers';
-import { verify } from 'jsonwebtoken';
+import { jwtVerify } from 'jose'; // Use the Edge-compatible library
 import { type JwtPayload } from 'jsonwebtoken';
 
-// 1. This is the single source of truth for your user session's shape.
+// The UserPayload type remains the same
 export interface UserPayload extends JwtPayload {
   userId: string;
   role: 'ADMIN' | 'CHEF' | 'WAITER' | 'STORE_KEEP' | 'CUSTOMER';
   email: string;
-  firstName?: string; // Make sure this is included
+  firstName?: string;
 }
 
-// 2. This is the function for SERVER-SIDE use (Server Actions, API Routes, Server Components)
-export async function getServerSession(): Promise<UserPayload | null> { 
-  const token = (await cookies()).get('token')?.value;
+// THIS IS THE CORRECTED SERVER-SIDE SESSION FUNCTION
+export async function getServerSession(): Promise<UserPayload | null> {
+  const token = cookies().get('token')?.value;
 
   if (!token || !process.env.JWT_SECRET) {
     return null;
   }
 
   try {
-    // The 'verify' function will throw an error if the token is invalid or expired
-    const decoded = verify(token, process.env.JWT_SECRET) as UserPayload;
-    return decoded;
+    // We use `jwtVerify` from 'jose', which is fully async and Edge-safe
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    
+    // The decoded payload from jose is the user object we need
+    return payload as UserPayload;
   } catch (error) {
-    // This will handle cases of invalid or expired tokens gracefully
-    console.error('Invalid token in getServerSession:', error);
+    // This will catch invalid/expired tokens
+    console.error('Failed to verify session token:', error);
     return null;
   }
 }

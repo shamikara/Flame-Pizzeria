@@ -29,7 +29,7 @@ export default function Header() {
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.refresh();
-    router.push('/login');
+   // router.push('/login');
   };
   
   // --- CHANGE 1: Create a safe display name variable ---
@@ -51,9 +51,18 @@ export default function Header() {
             <Link href="/shop?category=pizza" className="text-sm font-medium transition-colors hover:text-primary">
               Pizza
             </Link>
-            <Link href="/recipes-board" className="text-sm font-medium transition-colors hover:text-primary">
-              Recipes 
-            </Link>
+            <Link href="/shop?category=burgers-and-submarines" className="text-sm font-medium transition-colors hover:text-primary">
+            Burgers & Submarines
+          </Link>
+          <Link href="/shop?category=short-eats" className="text-sm font-medium transition-colors hover:text-primary">
+            Short Eats
+          </Link>
+          <Link href="/shop?category=drinks-and-deserts" className="text-sm font-medium transition-colors hover:text-primary">
+            Drinks & Deserts
+          </Link>
+          <Link href="/recipes-board" className="text-sm font-medium transition-colors hover:text-primary">
+            Receipes 
+          </Link>
           </nav>
         </div>
 
@@ -84,7 +93,7 @@ export default function Header() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 
-                {user.role !== 'CUSTOMER' && (
+                {user?.role === 'CUSTOMER' && (
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/overview" className="cursor-pointer">
                       <LayoutDashboard className="mr-2 h-4 w-4" />
@@ -124,7 +133,27 @@ export default function Header() {
 
       <div className={cn("fixed inset-0 top-16 z-50 bg-background md:hidden", isMenuOpen ? "block" : "hidden")}>
         <nav className="container grid gap-6 p-6">
-          {/* ... mobile links ... */}
+          <Link href="/" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
+            Home
+          </Link>
+          <Link href="/shop" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
+            Menu
+          </Link>
+          <Link href="/shop?category=pizza" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
+            Pizza
+          </Link>
+          <Link href="/shop?category=burgers-and-submarines" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
+            Burgers & Submarines
+          </Link>
+          <Link href="/shop?category=short-eats" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
+            Short Eats
+          </Link>
+          <Link href="/shop?category=drinks-and-deserts" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
+            Drinks & Deserts
+          </Link>
+          <Link href="/login" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
+            Login
+          </Link>
           {user ? (
              <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="text-left text-lg font-medium text-red-500">
                 Logout
