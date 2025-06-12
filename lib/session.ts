@@ -15,7 +15,7 @@ export interface UserPayload extends JwtPayload {
 
 // THIS IS THE CORRECTED SERVER-SIDE SESSION FUNCTION
 export async function getServerSession(): Promise<UserPayload | null> {
-  const token = cookies().get('token')?.value;
+  const token = (await cookies()).get('token')?.value;
 
   if (!token || !process.env.JWT_SECRET) {
     return null;

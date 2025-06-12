@@ -93,7 +93,7 @@ export default function Header() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 
-                {user?.role === 'CUSTOMER' && (
+                {user.role !== 'CUSTOMER' && (
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/overview" className="cursor-pointer">
                       <LayoutDashboard className="mr-2 h-4 w-4" />
