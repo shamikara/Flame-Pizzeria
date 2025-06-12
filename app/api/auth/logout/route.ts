@@ -3,12 +3,14 @@ import { serialize } from 'cookie';
 
 const COOKIE_NAME = 'token'; 
 
-export async function GET() {
+// Change GET to POST to match the request from your header
+export async function POST() {
+  // The logic to clear the cookie is to set its value to empty and its maxAge to -1
   const serializedCookie = serialize(COOKIE_NAME, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: -1,
+    maxAge: -1, // This tells the browser to expire the cookie immediately
     path: '/',
   });
 
@@ -17,7 +19,7 @@ export async function GET() {
     message: 'Logged out successfully',
   });
 
-  // Attach the "expired" cookie header to the response
+  // Attach the "expired" cookie header to the response to clear it from the browser
   response.headers.set('Set-Cookie', serializedCookie);
 
   return response;

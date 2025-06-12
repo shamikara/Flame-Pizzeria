@@ -66,7 +66,7 @@ export async function middleware(request: NextRequest) {
         ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/employees', '/dashboard/users', '/dashboard/raw-materials', '/dashboard/reports', '/dashboard/profile'],
         CHEF: ['/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
         WAITER: ['/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
-        STORE_KEEPER: ['/dashboard/raw-materials', '/dashboard/profile'],
+        STORE_KEEP: ['/dashboard/raw-materials', '/dashboard/profile'],
         CUSTOMER: [],
     };
 
@@ -77,7 +77,7 @@ export async function middleware(request: NextRequest) {
       console.log(`Middleware: Access DENIED for role ${userRole} to path ${pathname}.`);
       let defaultUrl = '/dashboard/overview';
       if (userRole === 'CHEF' || userRole === 'WAITER') defaultUrl = '/dashboard/orders';
-      if (userRole === 'STORE_KEEPER') defaultUrl = '/dashboard/raw-materials';
+      if (userRole === 'STORE_KEEP') defaultUrl = '/dashboard/raw-materials';
       return NextResponse.redirect(new URL(defaultUrl, request.url));
     }
 
@@ -93,5 +93,21 @@ export async function middleware(request: NextRequest) {
 
 // Your matcher config remains the same and is correct.
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  /*
+   * Match all request paths under /dashboard, EXCEPT for the ones that are:
+   * - for API routes
+   * - for Next.js static files (_next/static)
+   * - for Next.js image optimization files (_next/image)
+   * - for the favicon
+   * - or any other files inside /public that have an extension (e.g., .png, .jpg, .svg)
+   */
+  matcher: [
+    '/dashboard/:path*',
+  ],
+  // This is an experimental flag to ensure middleware runs only on pages
+  // and not on asset requests, which is exactly what we want.
+  unstable_allowDynamic: [
+    '/node_modules/function-bind/**', // Recommended for some dependencies
+    '/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js', // Recommended
+  ],
 };

@@ -45,7 +45,7 @@ interface LoginPageProps {
 // The page just passes the searchParams object down
 export default function LoginPage({ searchParams }: LoginPageProps) {
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
+    <div className="w-full ">
       <div className="flex items-center justify-center py-12">
         <div className="mx-auto grid w-[350px] gap-6">
           <div className="grid gap-2 text-center">
@@ -63,16 +63,6 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
             </Link>
           </div>
         </div>
-      </div>
-      <div className="hidden bg-muted lg:block">
-        <Image
-          src="/img/auth/auth.png"
-          alt="Authentication illustration"
-          width={1920}
-          height={1080}
-          priority
-          className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-        />
       </div>
     </div>
   );

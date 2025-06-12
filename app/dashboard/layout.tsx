@@ -11,17 +11,17 @@
 // This is now a Server Component by default
 
 import DashboardLayoutComponent from '@/components/DashboardLayout';
-import { getSession, UserPayload } from '@/lib/session';
+import { getServerSession, UserPayload } from '@/lib/session';
 import { redirect } from 'next/navigation';
 
 export default async function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   // Fetch the session data on the server
-  const user = await getSession();
+  const user = await getServerSession();
 
   // If there's no user session, the middleware should have already redirected.
   // This is an extra layer of protection.
   if (!user) {
-    redirect('/login');
+    redirect('/');
   }
 
   // Pass the user data to the client component that renders the layout

@@ -169,7 +169,7 @@ export function LoginForm({ searchParams }: LoginFormProps) {
       const userRole = result.user.role;
       if (userRole === 'ADMIN') router.push('/dashboard/overview');
       else if (userRole === 'CHEF' || userRole === 'WAITER') router.push('/dashboard/orders');
-      else if (userRole === 'STORE_KEEPER') router.push('/dashboard/raw-materials');
+      else if (userRole === 'STORE_KEEP') router.push('/dashboard/raw-materials');
       else router.push('/shop');
     } catch (error) {
       console.error('An unexpected error occurred:', error);

@@ -69,7 +69,7 @@ const allDashboardLinks = [
   { href: "/dashboard/foods", label: "Foods", icon: Package, roles: ['ADMIN', 'CHEF', 'WAITER'] },
   { href: "/dashboard/employees", label: "Employees", icon: Users2, roles: ['ADMIN'] },
   { href: "/dashboard/users", label: "Customers", icon: User, roles: ['ADMIN'] },
-  { href: "/dashboard/raw-materials", label: "Inventory", icon: Factory, roles: ['ADMIN', 'STORE_KEEPER'] },
+  { href: "/dashboard/raw-materials", label: "Inventory", icon: Factory, roles: ['ADMIN', 'STORE_KEEP'] },
   { href: "/dashboard/reports", label: "Reports", icon: LineChart, roles: ['ADMIN'] },
 ];
 

@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { getServerSession } from "@/lib/session";
+import db from "@/lib/db";
+import { getServerSession } from "@/lib/session"; // Your server-side session function
 import { comparePassword, hashPassword } from "@/lib/auth";
 
 const profileSchema = z.object({
@@ -17,13 +17,15 @@ const passwordSchema = z.object({
   newPassword: z.string().min(6),
 });
 
+// CHANGE 1: Add 'async' to the function signature
 export async function updateProfile(data: z.infer<typeof profileSchema>) {
-  const session = getServerSession();
+  // CHANGE 2: Add 'await' to get the result of the Promise
+  const session = await getServerSession();
   if (!session) return { error: "Not authenticated" };
 
   try {
     await db.user.update({
-      where: { id: session.userId },
+      where: { id: session.userId }, // This will now work correctly
       data: {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -37,12 +39,14 @@ export async function updateProfile(data: z.infer<typeof profileSchema>) {
   }
 }
 
+// CHANGE 3: Add 'async' to the function signature
 export async function changePassword(data: z.infer<typeof passwordSchema>) {
-  const session = getServerSession();
+  // CHANGE 4: Add 'await' to get the result of the Promise
+  const session = await getServerSession();
   if (!session) return { error: "Not authenticated" };
 
   try {
-    const user = await db.user.findUnique({ where: { id: session.userId } });
+    const user = await db.user.findUnique({ where: { id: session.userId } }); // This will now work
     if (!user) return { error: "User not found." };
 
     const isPasswordCorrect = await comparePassword(data.currentPassword, user.password);

@@ -2,10 +2,10 @@
 import { redirect } from "next/navigation";
 import db from "@/lib/db";
 import { ProfileForm } from "@/components/profile-form";
-import { getSession } from "@/lib/session";
+import { getServerSession } from "@/lib/session";
 
 export default async function ProfilePage() {
-  const session = await getSession();
+  const session = await getServerSession();
   
   if (!session) {
     redirect('/login'); 
