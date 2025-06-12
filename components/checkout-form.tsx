@@ -155,7 +155,7 @@ export function CheckoutForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isAuthenticated ? `Welcome back,  ${userDetails.firstName || ''}!` : 'Delivery Information'}</CardTitle>
+        <CardTitle>{isAuthenticated ? `Welcome back   ${user?.firstName || ''}!` : 'Delivery Information'}</CardTitle>
         <CardDescription>{isAuthenticated ? 'Please confirm your delivery details below.' : 'Enter your details. An account will be created for you.'}</CardDescription>
       </CardHeader>
       <CardContent>
