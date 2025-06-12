@@ -135,6 +135,7 @@ model Order {
   total           Float
   status          OrderStatus @default(PENDING)
   type            OrderType // More structured than a string
+  notes           String?
   tableNumber     String? // For DINE_IN
   deliveryAddress String? // For DELIVERY
   createdAt       DateTime    @default(now())

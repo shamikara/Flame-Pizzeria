@@ -4,6 +4,7 @@ import './globals.css';
 import LayoutWrapper from '@/components/layout-wrapper';
 import { SessionProvider } from '@/components/session-provider'; // <-- 1. Import the SessionProvider
 import { Toaster } from '@/components/ui/toaster';           // <-- 2. Import the Toaster
+import TypebotChat from '@/components/TypebotChat';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,7 +24,10 @@ export default function RootLayout({
       <body className={inter.className}>
       
         <SessionProvider>
-          <LayoutWrapper>{children}</LayoutWrapper>
+          <LayoutWrapper>
+            {children}
+            <TypebotChat />
+          </LayoutWrapper>
         </SessionProvider>
         <Toaster />
       </body>

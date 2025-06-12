@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { useSession } from "@/components/session-provider"
 import { useRouter } from "next/navigation";
+import { ProfileModal } from "@/components/profile-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +30,8 @@ export default function Header() {
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.refresh();
-   // router.push('/login');
+    router.push('/login');
+    window.location.reload();
   };
   
   // --- CHANGE 1: Create a safe display name variable ---
@@ -102,12 +104,7 @@ export default function Header() {
                   </DropdownMenuItem>
                 )}
                 
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard/profile" className="cursor-pointer">
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    <span>My Profile</span>
-                  </Link>
-                </DropdownMenuItem>
+                <ProfileModal />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-50">
                   <LogOut className="mr-2 h-4 w-4" />

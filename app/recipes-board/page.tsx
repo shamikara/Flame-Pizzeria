@@ -3,6 +3,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
+import { X } from "lucide-react"
 
 const sampleRecipes = [
   {
@@ -113,10 +114,10 @@ export default function RecipesBoardPage() {
           <div className="bg-[url('/img/noticeboard/board.png')] bg-cover bg-no-repeat bg-center">
           <div className="bg-white/40 backdrop-blur-md rounded-lg shadow-xl max-w-4xl max-h-[80vh] h-full w-full p-4 relative">
             <button
-              className="absolute top-2 right-3 text-gray-500 hover:text-red-500 text-xl font-bold"
+              className="absolute top-2 right-2 border border-white hover:text-red-500 text-xl font-bold rounded-sm opacity-50 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
               onClick={() => setSelected(null)}
             >
-              ❌
+             <X className="h-6 w-6" />
             </button>
             <Image
               src={sampleRecipes[selected - 1].image}
