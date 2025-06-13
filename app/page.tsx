@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState ,FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import "./globals.css"; // ensure styles load correctly if you’re not using layout.tsx
 import { HeroCarousel } from "@/components/hero-carousel";
@@ -9,11 +9,15 @@ import { CategoryShowcase } from "@/components/category-showcase";
 import { Testimonials } from "@/components/testimonials";
 import { CTASection } from "@/components/cta-section";
 import Image from "next/image";
+import { useToast } from "@/hooks/use-toast";
 
 export default function HomePage() {
   const [fadeOut, setFadeOut] = useState(false);
   const [showMain, setShowMain] = useState(false);
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const { toast } = useToast();
 
   const handleEnter = () => {
     setFadeOut(true);
@@ -21,6 +25,41 @@ export default function HomePage() {
       setShowMain(true);
     }, 1500); // should match CSS animation time
   };
+
+  const handleSubscribe = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); // Prevent the default form submission
+    setIsSubscribing(true);
+
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || "Subscription failed.");
+      }
+
+      toast({
+        title: "Success!",
+        description: result.message,
+      });
+      setEmail(""); // Clear the input field on success
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
 
   if (!showMain) {
     return (
@@ -60,23 +99,27 @@ export default function HomePage() {
           </button>
           <div className="mt-20 flex justify-center">
   <div className="border border-white/5 p-8 w-full rounded-lg">
-    <h3 className="text-2xl font-semibold mb-4 text-gray-300 text-center">Subscribe to Our Newsletter</h3>
+    <h3 className="text-2xl font-semibold mb-4 text-gray-300 text-center">Sapp\page.tsx</h3>
     <p className="text-gray-400 mb-6 text-center">Get fresh bakery updates, offers & recipes straight to your inbox</p>
     
-    <form className="flex flex-col sm:flex-row items-center justify-center gap-3">
-      <input
-        type="email"
-        placeholder="Enter your email"
-        className="px-5 py-3 w-full sm:w-auto rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 transition bg-white/30 text-white placeholder-white/70"
-        required
-      />
-      <button
-        type="submit"
-        className="bg-orange-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-orange-800 transition"
-      >
-        Subscribe
-      </button>
-    </form>
+    <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    className="px-5 py-3 w-full sm:w-auto rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 transition bg-white/30 text-white placeholder-white/70"
+                    required
+                    value={email} // Controlled input
+                    onChange={(e) => setEmail(e.target.value)} // Update state on change
+                    disabled={isSubscribing} // Disable while submitting
+                  />
+                  <button
+                    type="submit"
+                    className="bg-orange-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-orange-800 transition disabled:bg-orange-900 disabled:cursor-not-allowed"
+                    disabled={isSubscribing} // Disable while submitting
+                  >
+                    {isSubscribing ? "Subscribing..." : "Subscribe"}
+                  </button>
+                </form>
   </div>
 </div>
 </div>

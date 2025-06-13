@@ -34,54 +34,61 @@ export function FoodItemGrid({ items }: { items: FoodItem[] }) {
 }
 
 function FoodItemCard({ item }: { item: FoodItem }) {
-  const { addItem } = useCart()
-  const [isCustomizing, setIsCustomizing] = useState(false)
-  const [selectedCustomizations, setSelectedCustomizations] = useState<Record<number, boolean>>({})
-  const [showModal, setShowModal] = useState(false)
-  const router = useRouter()
-  const hasCustomizations = (item.customizations && item.customizations.length > 0)
+  // --- 1. THE FIX: Get `addToCart` from the hook instead of `addItem` ---
+  const { addToCart } = useCart();
+
+  const [isCustomizing, setIsCustomizing] = useState(false);
+  const [selectedCustomizations, setSelectedCustomizations] = useState<Record<number, boolean>>({});
+  const [showModal, setShowModal] = useState(false);
+  const router = useRouter();
+  const hasCustomizations = (item.customizations && item.customizations.length > 0);
 
   const handleCustomize = () => {
-    if (!hasCustomizations) return
-    setIsCustomizing(true)
-    setSelectedCustomizations({})
-  }
+    if (!hasCustomizations) return;
+    setIsCustomizing(true);
+    setSelectedCustomizations({});
+  };
 
   const handleCustomizationToggle = (id: number) => {
     setSelectedCustomizations(prev => ({
       ...prev,
       [id]: !prev[id]
-    }))
-  }
+    }));
+  };
 
-  const handleAddToCart = () => {
-    const selectedIds = Object.entries(selectedCustomizations)
-      .filter(([_, isSelected]) => isSelected)
-      .map(([id]) => parseInt(id))
+  // This is the main function that needs updating
+  const handleAddToCart = (isCustomized: boolean = false) => {
+    // Determine which customizations were selected, if any
+    const finalCustomizations = (isCustomized && hasCustomizations)
+      ? item.customizations?.filter(c => selectedCustomizations[c.id]) || []
+      : [];
 
-    const customizations = item.customizations?.filter(c => selectedIds.includes(c.id)) || []
-    const totalPrice = item.price + customizations.reduce((sum, c) => sum + c.price, 0)
-
-    addItem({
-      id: item.id,
+    // --- 2. THE FIX: Prepare the data in the new format for `addToCart` ---
+    // The new `addToCart` function takes the base product info and the quantity.
+    const newItemData = {
+      productId: item.id,
       name: item.name,
-      price: totalPrice,
+      price: item.price, // We pass the BASE price. The provider calculates the total.
       image: item.image,
-      quantity: 1,
-      customizations: customizations,
-    })
-    setIsCustomizing(false)
-    setShowModal(true)
-  }
+      customizations: finalCustomizations,
+    };
+
+    // --- 3. THE FIX: Call the correct function `addToCart` ---
+    addToCart(newItemData, 1); // We are adding a quantity of 1
+
+    // Close the customization modal and show the confirmation modal
+    setIsCustomizing(false);
+    setShowModal(true);
+  };
 
   const handleContinueShopping = () => {
-    setShowModal(false)
-  }
+    setShowModal(false);
+  };
 
   const handleGoToCart = () => {
-    setShowModal(false)
-    router.push('/checkout')
-  }
+    setShowModal(false);
+    router.push('/checkout');
+  };
 
   return (
     <>
@@ -104,15 +111,12 @@ function FoodItemCard({ item }: { item: FoodItem }) {
           <p className="font-bold">Rs. {item.price.toFixed(2)}</p>
         </CardContent>
         <CardFooter className="p-4 pt-0 flex gap-2">
-          <Button
+        <Button
             variant="default"
             className="w-full"
-            onClick={handleAddToCart}
+            onClick={hasCustomizations ? handleCustomize : () => handleAddToCart(false)}
           >
-            Add to Cart
-          </Button>
-          <Button variant="outline" onClick={handleCustomize} className={`${hasCustomizations ? "border border-white/80 h-11" : "hidden"}`}>
-            Customize
+            {hasCustomizations ? "Customize" : "Add to Cart"}
           </Button>
         </CardFooter>
 
@@ -152,10 +156,10 @@ function FoodItemCard({ item }: { item: FoodItem }) {
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-2">
-                <Button variant="outline" className="border border-white/80" onClick={() => setIsCustomizing(false)}>
+              <Button variant="outline" className="border border-white/80" onClick={() => setIsCustomizing(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddToCart}>
+                <Button onClick={() => handleAddToCart(true)}>
                   Add to Cart
                 </Button>
               </div>
