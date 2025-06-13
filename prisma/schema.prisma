@@ -141,6 +141,8 @@ model Order {
   status          OrderStatus @default(PENDING)
   type            OrderType // More structured than a string
   notes           String?
+  address         String
+  phone           String
   tableNumber     String? // For DINE_IN
   deliveryAddress String? // For DELIVERY
   createdAt       DateTime    @default(now())
@@ -166,6 +168,7 @@ model OrderItem {
   quantity     Int
   price        Float // Price at the time of order
   specialNotes String?
+  customizations Json?
 
   // Relationships
   order      Order    @relation(fields: [orderId], references: [id])

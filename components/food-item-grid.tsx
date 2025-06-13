@@ -63,8 +63,6 @@ function FoodItemCard({ item }: { item: FoodItem }) {
       ? item.customizations?.filter(c => selectedCustomizations[c.id]) || []
       : [];
 
-    // --- 2. THE FIX: Prepare the data in the new format for `addToCart` ---
-    // The new `addToCart` function takes the base product info and the quantity.
     const newItemData = {
       productId: item.id,
       name: item.name,
@@ -73,10 +71,8 @@ function FoodItemCard({ item }: { item: FoodItem }) {
       customizations: finalCustomizations,
     };
 
-    // --- 3. THE FIX: Call the correct function `addToCart` ---
     addToCart(newItemData, 1); // We are adding a quantity of 1
 
-    // Close the customization modal and show the confirmation modal
     setIsCustomizing(false);
     setShowModal(true);
   };

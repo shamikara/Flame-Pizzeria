@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 // Note the new `cartItemId` and using `productId` for clarity
 export interface CartItem {
   cartItemId: string; // A unique ID for this specific line item in the cart
-  productId: number;
+  productId: string;
   name: string;
   price: number;
   image: string;
