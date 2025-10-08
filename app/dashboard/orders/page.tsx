@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User } from '@prisma/client';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -9,72 +8,79 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
-import { OrderForm } from '@/components/order-form';
+import { OrderForm } from "@/components/order-form";
 import { PopularItemsPieChart } from "@/components/charts/popular-items-pie-chart";
-// --- TYPE DEFINITIONS ---
+
 type OrderWithDetails = {
   id: string;
   total: number;
   status: string;
-  createdAt: Date;
+  createdAt: string;
   address: string;
   phone: string;
-  user: {
-    firstName: string;
-    lastName: string;
-  };
+  user: { firstName: string; lastName: string };
 };
 
-type PopularItemData = {
-  name: string;
-  count: number;
-};
+type MinimalUser = { id: string; firstName: string; lastName: string };
+type PopularItemData = { name: string; count: number };
 
-// --- COMPONENT LOGIC ---
-const statusVariantMap: { [key: string]: "secondary" | "outline" | "default" | "destructive" } = {
-    PENDING: "secondary", PROCESSING: "outline", COMPLETED: "default", CANCELLED: "destructive",
+const statusVariantMap: Record<string, "secondary" | "outline" | "default" | "destructive"> = {
+  PENDING: "secondary",
+  CONFIRMED: "outline",
+  PREPARING: "outline",
+  READY_FOR_PICKUP: "outline",
+  OUT_FOR_DELIVERY: "outline",
+  DELIVERED: "default",
+  CANCELLED: "destructive",
+  REFUNDED: "destructive",
 };
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
-  const [users, setUsers] = useState<Pick<User, 'id' | 'firstName' | 'lastName'>[]>([]);
+  const [users, setUsers] = useState<MinimalUser[]>([]);
   const [popularItems, setPopularItems] = useState<PopularItemData[]>([]);
   const [isAddOrderDialogOpen, setIsAddOrderDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
 
   const fetchAllData = async () => {
-    // Fetch all data in parallel for better performance
-    const [ordersRes, usersRes, popularItemsRes] = await Promise.all([
-      fetch('/api/orders/list'),
-      fetch('/api/users/list'),
-      fetch('/api/orders/today-popular')
-    ]);
-    
-    const ordersData = await ordersRes.json();
-    const usersData = await usersRes.json();
-    const popularItemsData = await popularItemsRes.json();
-
-    setOrders(ordersData);
-    setUsers(usersData);
-    setPopularItems(popularItemsData);
+    try {
+      const [ordersRes, usersRes, popularItemsRes] = await Promise.all([
+        fetch("/api/orders/list"),
+        fetch("/api/users/list"),
+        fetch("/api/orders/today-popular"),
+      ]);
+      setOrders(await ordersRes.json());
+      setUsers(await usersRes.json());
+      setPopularItems(await popularItemsRes.json());
+    } catch (err) {
+      console.error("Failed to fetch dashboard data", err);
+    }
   };
 
+  const updateStatus = async (orderId: string, status: string) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      fetchAllData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
+  useEffect(() => { fetchAllData(); }, []);
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      {/* Section 1: Data Visualization */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <div className="lg:col-span-3">
           <PopularItemsPieChart data={popularItems} />
         </div>
-        {/* You can add more chart cards here in the future */}
       </div>
 
-      {/* Section 2: Order Management Table */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-3xl font-bold tracking-tight">Manage Orders</h2>
@@ -86,10 +92,7 @@ export default function OrdersPage() {
               <DialogHeader>
                 <DialogTitle>Create New Order</DialogTitle>
               </DialogHeader>
-              <OrderForm users={users} onFormSubmit={() => {
-                  setIsAddOrderDialogOpen(false);
-                  fetchAllData(); // Refresh all data on new order
-              }} />
+              <OrderForm users={users} onFormSubmit={() => { setIsAddOrderDialogOpen(false); fetchAllData(); }} />
             </DialogContent>
           </Dialog>
         </div>
@@ -107,22 +110,25 @@ export default function OrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => (
+              {orders.map(order => (
                 <TableRow key={order.id}>
                   <TableCell className="font-mono text-xs">{order.id}</TableCell>
-                  <TableCell className="font-medium">{`${order.user.firstName} ${order.user.lastName}`}</TableCell>
-                  <TableCell><Badge variant={statusVariantMap[order.status] || 'secondary'}>{order.status}</Badge></TableCell>
+                  <TableCell>{`${order.user.firstName} ${order.user.lastName}`}</TableCell>
+                  <TableCell><Badge variant={statusVariantMap[order.status] || "secondary"}>{order.status}</Badge></TableCell>
                   <TableCell>{new Date(order.createdAt).toLocaleString()}</TableCell>
                   <TableCell className="text-right">Rs. {order.total.toFixed(2)}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => setSelectedOrder(order)}>View Details</DropdownMenuItem>
-                        {/* More actions can be added here */}
+                        <DropdownMenuLabel>Update Status</DropdownMenuLabel>
+                        {["CONFIRMED","PREPARING","READY_FOR_PICKUP","OUT_FOR_DELIVERY","DELIVERED","CANCELLED"].map(s => (
+                          <DropdownMenuItem key={s} onClick={() => updateStatus(order.id, s)}>Mark as {s.replaceAll("_"," ")}</DropdownMenuItem>
+                        ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -133,7 +139,6 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Dialog for Viewing Order Details */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
         <DialogContent>
           <DialogHeader>

@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { OrderStatus, OrderType, User, FoodItem } from "@prisma/client";
+import { OrderStatus, OrderType } from "@prisma/client";
 
 // --- Form Schema for Validation ---
 const formSchema = z.object({
@@ -41,23 +41,23 @@ type FormValues = z.infer<typeof formSchema>;
 // --- Server Action to Create the Order ---
 async function createOrder(data: FormValues) {
   // This function would be in a separate actions file in a real app
-  const response = await fetch('/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+  const response = await fetch("/api/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
 
   if (!response.ok) {
-      const errorResult = await response.json();
-      throw new Error(errorResult.error || 'Failed to create order');
+    const errorResult = await response.json();
+    throw new Error(errorResult.error || "Failed to create order");
   }
   return response.json();
 }
 
-
 // --- The Form Component ---
+type MinimalUser = { id: string; firstName: string; lastName: string };
 interface OrderFormProps {
-  users: Pick<User, 'id' | 'firstName' | 'lastName'>[];
+  users: MinimalUser[];
   onFormSubmit: () => void;
 }
 
@@ -119,7 +119,7 @@ export function OrderForm({ users, onFormSubmit }: OrderFormProps) {
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="total"
@@ -135,46 +135,70 @@ export function OrderForm({ users, onFormSubmit }: OrderFormProps) {
         />
 
         <div className="grid grid-cols-2 gap-4">
-            <FormField
+          <FormField
             control={form.control}
             name="status"
             render={({ field }) => (
-                <FormItem>
+              <FormItem>
                 <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                        {Object.values(OrderStatus).map(status => (
-                            <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                    </SelectContent>
+                <Select
+                  onValueChange={(v) => field.onChange(v as OrderStatus)}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {(Object.values(OrderStatus) as OrderStatus[]).map(
+                      (status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
                 </Select>
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <FormField
+          />
+          <FormField
             control={form.control}
             name="type"
             render={({ field }) => (
-                <FormItem>
+              <FormItem>
                 <FormLabel>Order Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                        {Object.values(OrderType).map(type => (
-                            <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                    </SelectContent>
+                <Select
+                  onValueChange={(v) => field.onChange(v as OrderType)}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {(Object.values(OrderType) as OrderType[]).map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
+          />
         </div>
 
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Creating..." : "Create Order"}
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={form.formState.isSubmitting}
+        >
+          {form.formState.isSubmitting ? "Creating..." : "Create Order"}
         </Button>
       </form>
     </Form>

@@ -63,10 +63,10 @@ export async function middleware(request: NextRequest) {
     }
     
     const rolePermissions: Record<UserPayload['role'], string[]> = {
-        ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/employees', '/dashboard/users', '/dashboard/raw-materials', '/dashboard/reports', '/dashboard/profile'],
+        ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
         CHEF: ['/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
         WAITER: ['/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
-        STORE_KEEP: ['/dashboard/raw-materials', '/dashboard/profile'],
+        STORE_KEEP: ['/dashboard/ingredients', '/dashboard/profile'],
         CUSTOMER: [],
     };
 
@@ -77,7 +77,7 @@ export async function middleware(request: NextRequest) {
       console.log(`Middleware: Access DENIED for role ${userRole} to path ${pathname}.`);
       let defaultUrl = '/dashboard/overview';
       if (userRole === 'CHEF' || userRole === 'WAITER') defaultUrl = '/dashboard/orders';
-      if (userRole === 'STORE_KEEP') defaultUrl = '/dashboard/raw-materials';
+      if (userRole === 'STORE_KEEP') defaultUrl = '/dashboard/ingredients';
       return NextResponse.redirect(new URL(defaultUrl, request.url));
     }
 

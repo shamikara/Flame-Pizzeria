@@ -14,7 +14,7 @@ type Customization = {
   price: number
 }
 
-type FoodItem = {
+export type FoodItem = {
   id: number
   name: string
   description: string
@@ -28,23 +28,18 @@ type FoodItem = {
 export function FoodItemDetail({ item }: { item: FoodItem }) {
   const [quantity, setQuantity] = useState(1)
   const [selectedCustomizations, setSelectedCustomizations] = useState<Customization[]>([])
-  const { addItem } = useCart()
+  const { addToCart } = useCart()
 
   const handleQuantityChange = (change: number) => {
     const newQuantity = quantity + change
-    if (newQuantity >= 1) {
-      setQuantity(newQuantity)
-    }
+    if (newQuantity >= 1) setQuantity(newQuantity)
   }
 
   const toggleCustomization = (customization: Customization) => {
     setSelectedCustomizations((prev) => {
       const exists = prev.find((c) => c.id === customization.id)
-      if (exists) {
-        return prev.filter((c) => c.id !== customization.id)
-      } else {
-        return [...prev, customization]
-      }
+      if (exists) return prev.filter((c) => c.id !== customization.id)
+      return [...prev, customization]
     })
   }
 
@@ -55,14 +50,16 @@ export function FoodItemDetail({ item }: { item: FoodItem }) {
   }
 
   const handleAddToCart = () => {
-    addItem({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      image: item.image,
-      quantity,
-      customizations: selectedCustomizations,
-    })
+    addToCart(
+      {
+        productId: item.id.toString(), // <-- cast to string
+        name: item.name,
+        price: item.price,
+        image: item.image,
+        customizations: selectedCustomizations.map(c => ({ ...c, id: Number(c.id) })),
+      },
+      quantity
+    )
   }
 
   return (
@@ -74,7 +71,6 @@ export function FoodItemDetail({ item }: { item: FoodItem }) {
       <div>
         <h1 className="text-3xl font-bold mb-2">{item.name}</h1>
         <p className="text-2xl font-bold mb-4">Rs. {item.price.toFixed(2)}</p>
-
         <p className="text-muted-foreground mb-6">{item.longDescription || item.description}</p>
 
         <div className="mb-6">
@@ -82,14 +78,10 @@ export function FoodItemDetail({ item }: { item: FoodItem }) {
           <div className="flex items-center gap-4">
             <Button variant="outline" size="icon" onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1}>
               <MinusCircle className="h-4 w-4" />
-              <span className="sr-only">Decrease quantity</span>
             </Button>
-
             <span className="text-xl font-medium w-8 text-center">{quantity}</span>
-
             <Button variant="outline" size="icon" onClick={() => handleQuantityChange(1)}>
               <PlusCircle className="h-4 w-4" />
-              <span className="sr-only">Increase quantity</span>
             </Button>
           </div>
         </div>
@@ -106,10 +98,7 @@ export function FoodItemDetail({ item }: { item: FoodItem }) {
                     onCheckedChange={() => toggleCustomization(customization)}
                   />
                   <div className="grid gap-1.5 leading-none">
-                    <Label
-                      htmlFor={`customization-${customization.id}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
+                    <Label htmlFor={`customization-${customization.id}`} className="text-sm font-medium">
                       {customization.name}
                     </Label>
                     <p className="text-sm text-muted-foreground">+ Rs. {customization.price.toFixed(2)}</p>

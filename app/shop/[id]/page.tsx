@@ -1,12 +1,11 @@
-import { FoodItemDetail } from "@/components/food-item-detail"
 import { notFound } from "next/navigation"
+import { FoodItemDetail, type FoodItem } from "@/components/food-item-detail"
+import { prisma } from "@/lib/db"
 
 export default async function FoodItemPage({ params }: { params: { id: string } }) {
-  const item = await getFoodItemById(Number.parseInt(params.id))
+  const item = await getFoodItemById(params.id)
 
-  if (!item) {
-    notFound()
-  }
+  if (!item) notFound()
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -15,29 +14,26 @@ export default async function FoodItemPage({ params }: { params: { id: string } 
   )
 }
 
-async function getFoodItemById(id: number) {
-  // In a real app, this would fetch from your database
-  const allItems = [
-    // Pizzas
-    {
-      id: 1,
-      name: "Margherita Pizza",
-      description: "Classic tomato sauce, fresh mozzarella, basil",
-      longDescription:
-        "Our Margherita Pizza is made with San Marzano tomato sauce, fresh mozzarella cheese, fresh basil, salt, and extra-virgin olive oil. Baked to perfection in our brick oven for that authentic Italian taste.",
-      price: 13.99,
-      image: "/placeholder.svg?height=600&width=600",
-      category: "pizza",
-      customizations: [
-        { id: 1, name: "Extra Cheese", price: 1.5 },
-        { id: 2, name: "Extra Mushrooms", price: 1.0 },
-        { id: 3, name: "Extra Pepperoni", price: 1.5 },
-        { id: 4, name: "Extra Onions", price: 0.75 },
-        { id: 5, name: "Extra Bell Peppers", price: 0.75 },
-      ],
-    },
-    // More items would be here...
-  ]
+async function getFoodItemById(id: string): Promise<FoodItem | null> {
+  const dbItem = await prisma.foodItem.findUnique({
+    where: { id },
+    include: { customizations: true, category: true },
+  })
 
-  return allItems.find((item) => item.id === id)
+  if (!dbItem) return null
+
+  return {
+    id: Number(dbItem.id),
+    name: dbItem.name,
+    description: dbItem.description || "",
+    longDescription: dbItem.description || "",
+    price: dbItem.price,
+    image: dbItem.imageUrl || "/placeholder.svg",
+    category: dbItem.category?.name || "unknown",
+    customizations: dbItem.customizations?.map(c => ({
+      id: Number(c.id),
+      name: c.name,
+      price: c.price,
+    })) || [], // always array
+  }
 }

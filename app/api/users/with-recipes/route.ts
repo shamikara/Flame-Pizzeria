@@ -14,11 +14,12 @@ export async function GET() {
         lastName: true,
         email: true,
         // Select all recipes for the user
+       
         recipes: {
           select: {
             id: true,
             name: true,
-            status: true,
+            createdAt: true,
           },
           orderBy: {
             createdAt: 'desc',

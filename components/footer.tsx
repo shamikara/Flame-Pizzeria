@@ -36,15 +36,21 @@ export default function Footer() {
                   Pizza
                 </Link>
               </li>
-              <Link href="/shop?category=burgers-and-submarines" className="text-sm font-medium transition-colors hover:text-primary">
+              <li>
+              <Link href="/shop?category=burgers-and-submarines" className="text-muted-foreground hover:text-primary">
             Burgers & Submarines
           </Link>
-          <Link href="/shop?category=short-eats" className="text-sm font-medium transition-colors hover:text-primary">
+          </li>
+          <li>
+          <Link href="/shop?category=short-eats" className="text-muted-foreground hover:text-primary">
             Short Eats
           </Link>
-          <Link href="/shop?category=drinks-and-deserts" className="text-sm font-medium transition-colors hover:text-primary">
+          </li>
+          <li>
+          <Link href="/shop?category=drinks-and-deserts" className="text-muted-foreground hover:text-primary">
             Drinks & Deserts
           </Link>
+          </li>
               <li>
                 <Link href="/shop" className="text-muted-foreground hover:text-primary">
                   View All

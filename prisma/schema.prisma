@@ -1,19 +1,15 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
- // previewFeatures = ["createManyAndReturn"]
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "mysql" // or postgresql
   url      = env("DATABASE_URL")
 }
 
-// --- ENUMS ---
-// (No changes needed here, they are well-defined)
-
+//
+// ENUMS
+//
 enum Role {
   ADMIN
   MANAGER
@@ -62,10 +58,24 @@ enum AlertSeverity {
   CRITICAL
 }
 
-// --- MODELS ---
+enum PaymentMethod {
+  CASH
+  CARD
+  ONLINE
+}
 
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+//
+// MODELS
+//
 model User {
-  id        String   @id @default(cuid()) // Changed to CUID
+  id        String   @id @default(cuid())
   firstName String
   lastName  String
   email     String   @unique
@@ -77,8 +87,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relationships
-  employee       Employee? // A user can be an employee (1-to-1)
+  employee       Employee? // 1-to-1 if user is employee
   orders         Order[]
   ratings        Rating[]
   recipes        Recipe[]
@@ -88,7 +97,7 @@ model User {
 model Employee {
   id          String      @id @default(cuid())
   user        User        @relation(fields: [userId], references: [id])
-  userId      String      @unique // Now a mandatory 1-to-1 link to a User
+  userId      String      @unique
   salary      Float
   leaveStatus LeaveStatus @default(ACTIVE)
   joinedAt    DateTime    @default(now())
@@ -101,19 +110,27 @@ model Employee {
   deliveries      Delivery[]
 }
 
-// NEW: A dedicated model for categories for consistency.
+model Shift {
+  id           String   @id @default(cuid())
+  start        DateTime
+  end          DateTime
+  breakMinutes Int      @default(30)
+
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+}
+
 model Category {
   id        String   @id @default(cuid())
   name      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relationships
   foodItems FoodItem[]
 }
 
 model FoodItem {
-  id          String   @id @default(cuid()) // Renamed from Product
+  id          String   @id @default(cuid())
   name        String
   description String?
   price       Float
@@ -122,33 +139,35 @@ model FoodItem {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relationships
   category   Category    @relation(fields: [categoryId], references: [id])
-  categoryId String // Link to the new Category model
-  recipe     Recipe? // A food item might be based on one recipe
+  categoryId String
+  recipe     Recipe?     // optional recipe
   orderItems OrderItem[]
   ratings    Rating[]
+  customizations Customization[]
 }
-model NewsletterSubscription {
-  id        String   @id @default(cuid())
-  email     String   @unique // The email of the subscriber
-  createdAt DateTime @default(now())
+
+model Customization {
+  id         String    @id @default(cuid())
+  name       String
+  price      Float
+  foodItem   FoodItem  @relation(fields: [foodItemId], references: [id])
+  foodItemId String
 }
 
 model Order {
   id              String      @id @default(cuid())
   total           Float
   status          OrderStatus @default(PENDING)
-  type            OrderType // More structured than a string
+  type            OrderType
   notes           String?
   address         String
   phone           String
-  tableNumber     String? // For DINE_IN
-  deliveryAddress String? // For DELIVERY
+  tableNumber     String?
+  deliveryAddress String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  // Relationships
   user          User      @relation(fields: [userId], references: [id])
   userId        String
   preparedBy    Employee? @relation(name: "OrderPreparedBy", fields: [preparedById], references: [id])
@@ -159,133 +178,59 @@ model Order {
   items    OrderItem[]
   payments Payment[]
   delivery Delivery?
-
-  // REMOVED: OrderRawMaterial relation. Inventory should be handled by application logic.
 }
 
 model OrderItem {
   id           String  @id @default(cuid())
   quantity     Int
-  price        Float // Price at the time of order
+  price        Float
   specialNotes String?
   customizations Json?
 
-  // Relationships
   order      Order    @relation(fields: [orderId], references: [id])
   orderId    String
   foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
   foodItemId String
 }
 
-model RawMaterial {
-  id               String          @id @default(cuid())
-  name             String          @unique // Added unique constraint
-  quantity         Float           @default(0) // Renamed from quantityKg
-  unit             MeasurementUnit
-  expiryDate       DateTime?
-  restockThreshold Float           @default(5)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+model Payment {
+  id            String        @id @default(cuid())
+  amount        Float
+  method        PaymentMethod
+  status        String
+  transactionId String?
+  createdAt     DateTime @default(now())
 
-  // Relationships
-  supplier          Supplier?          @relation(fields: [supplierId], references: [id])
-  supplierId        String?
-  inventoryAlerts   InventoryAlert[]
-  recipeIngredients RecipeIngredient[]
-}
-
-model Recipe {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  steps       String   @db.Text // Use Text for potentially long strings
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relationships
-  foodItem    FoodItem           @relation(fields: [foodItemId], references: [id])
-  foodItemId  String             @unique // A recipe produces one specific food item
-  author      User               @relation(fields: [authorId], references: [id])
-  authorId    String
-  ingredients RecipeIngredient[]
-  comments    RecipeComment[]
-}
-
-model RecipeIngredient {
-  id       String          @id @default(cuid())
-  quantity Float
-  unit     MeasurementUnit
-
-  // Relationships
-  recipe        Recipe      @relation(fields: [recipeId], references: [id])
-  recipeId      String
-  rawMaterial   RawMaterial @relation(fields: [rawMaterialId], references: [id])
-  rawMaterialId String
-}
-
-// --- OTHER MODELS (Mainly ID and type changes) ---
-
-model InventoryAlert {
-  id         String        @id @default(cuid())
-  message    String
-  severity   AlertSeverity
-  resolved   Boolean       @default(false)
-  resolvedAt DateTime?
-  createdAt  DateTime      @default(now())
-
-  // Relationships
-  rawMaterial   RawMaterial @relation(fields: [rawMaterialId], references: [id])
-  rawMaterialId String
-}
-
-model RecipeComment {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-
-  // Relationships
-  author   User   @relation(fields: [authorId], references: [id])
-  authorId String
-  recipe   Recipe @relation(fields: [recipeId], references: [id])
-  recipeId String
-}
-
-model Rating {
-  id        String   @id @default(cuid())
-  stars     Int // Validate 1-5 in application code
-  comment   String?  @db.Text
-  createdAt DateTime @default(now())
-
-  // Relationships
-  user       User     @relation(fields: [userId], references: [id])
-  userId     String
-  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
-  foodItemId String
+  order   Order  @relation(fields: [orderId], references: [id])
+  orderId String
 }
 
 model Delivery {
   id        String    @id @default(cuid())
   startTime DateTime
   endTime   DateTime?
-  status    String    @default("pending") // Consider an enum here too
+  status    String    @default("pending")
 
-  // Relationships
   order      Order    @relation(fields: [orderId], references: [id])
   orderId    String   @unique
   employee   Employee @relation(fields: [employeeId], references: [id])
   employeeId String
 }
 
-model Shift {
-  id           String   @id @default(cuid())
-  start        DateTime
-  end          DateTime
-  breakMinutes Int      @default(30)
+model Ingredient {
+  id               String          @id @default(cuid())
+  name             String          @unique
+  stock            Float           @default(0)
+  unit             MeasurementUnit
+  expiryDate       DateTime?
+  restockThreshold Float           @default(5)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  // Relationships
-  employee   Employee @relation(fields: [employeeId], references: [id])
-  employeeId String
+  supplier          Supplier?          @relation(fields: [supplierId], references: [id])
+  supplierId        String?
+  inventoryAlerts   InventoryAlert[]
+  recipeIngredients RecipeIngredient[]
 }
 
 model Supplier {
@@ -297,30 +242,87 @@ model Supplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relationships
-  rawMaterials RawMaterial[]
+  ingredients Ingredient[]
 }
 
-model Payment {
-  id            String   @id @default(cuid())
-  amount        Float
-  method        String // "CASH", "CARD", "ONLINE"
-  status        String // "PENDING", "COMPLETED", "REFUNDED"
-  transactionId String?
-  createdAt     DateTime @default(now())
+model Recipe {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  steps       String   @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Relationships
-  order   Order  @relation(fields: [orderId], references: [id])
-  orderId String
+  foodItem    FoodItem           @relation(fields: [foodItemId], references: [id])
+  foodItemId  String             @unique
+  author      User               @relation(fields: [authorId], references: [id])
+  authorId    String
+  ingredients RecipeIngredient[]
+  comments    RecipeComment[]
+}
+
+model RecipeIngredient {
+  id         String     @id @default(cuid())
+  quantity   Float
+  unit       MeasurementUnit
+
+  recipe        Recipe     @relation(fields: [recipeId], references: [id])
+  recipeId      String
+  ingredient    Ingredient @relation(fields: [ingredientId], references: [id])
+  ingredientId  String
+}
+
+model RecipeComment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+  recipe   Recipe @relation(fields: [recipeId], references: [id])
+  recipeId String
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  stars     Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+  foodItemId String
+}
+
+model InventoryAlert {
+  id         String        @id @default(cuid())
+  message    String
+  severity   AlertSeverity
+  resolved   Boolean       @default(false)
+  resolvedAt DateTime?
+  createdAt  DateTime      @default(now())
+
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  ingredientId String
+}
+
+model NewsletterSubscription {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
 }
 
 model AuditLog {
   id         String   @id @default(cuid())
-  action     String // "CREATE", "UPDATE", "DELETE"
-  entityType String // "FoodItem", "Order", etc.
+  action     String
+  entityType String
   entityId   String
   userId     String?
-  oldData    Json? // Use Json type for better handling
-  newData    Json? // Use Json type
+  oldData    Json?
+  newData    Json?
   createdAt  DateTime @default(now())
 }
+
+

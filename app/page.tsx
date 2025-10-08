@@ -99,7 +99,7 @@ export default function HomePage() {
           </button>
           <div className="mt-20 flex justify-center">
   <div className="border border-white/5 p-8 w-full rounded-lg">
-    <h3 className="text-2xl font-semibold mb-4 text-gray-300 text-center">Sapp\page.tsx</h3>
+    <h3 className="text-2xl font-semibold mb-4 text-gray-300 text-center">Subscribe to Our Newsletter</h3>
     <p className="text-gray-400 mb-6 text-center">Get fresh bakery updates, offers & recipes straight to your inbox</p>
     
     <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-center justify-center gap-3">

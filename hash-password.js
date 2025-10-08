@@ -2,7 +2,7 @@
 import bcrypt from 'bcryptjs';
 
 // --- 1. SET YOUR NEW PASSWORD HERE ---
-const passwordToHash = 'changeme123';
+const passwordToHash = 'password123';
 
 // --- 2. SET SALT ROUNDS (10 is standard) ---
 const saltRounds = 10;

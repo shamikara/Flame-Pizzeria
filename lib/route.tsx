@@ -41,7 +41,7 @@ import {
     {
       name: 'Stock',
       layout: '/dashboard',
-      path: 'raw-materials',
+      path: 'ingredients',
       icon: <MdRestaurantMenu className="h-5 w-5" />,
     },
     {

@@ -9,6 +9,12 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
 
+type Customization = {
+  id: number
+  name: string
+  price: number
+}
+
 type FoodItem = {
   id: number
   name: string
@@ -16,11 +22,7 @@ type FoodItem = {
   price: number
   image: string
   category: string
-  customizations?: Array<{
-    id: number
-    name: string
-    price: number
-  }>
+  customizations?: Customization[]
 }
 
 export function FoodItemGrid({ items }: { items: FoodItem[] }) {
@@ -34,57 +36,51 @@ export function FoodItemGrid({ items }: { items: FoodItem[] }) {
 }
 
 function FoodItemCard({ item }: { item: FoodItem }) {
-  // --- 1. THE FIX: Get `addToCart` from the hook instead of `addItem` ---
-  const { addToCart } = useCart();
-
-  const [isCustomizing, setIsCustomizing] = useState(false);
-  const [selectedCustomizations, setSelectedCustomizations] = useState<Record<number, boolean>>({});
-  const [showModal, setShowModal] = useState(false);
-  const router = useRouter();
-  const hasCustomizations = (item.customizations && item.customizations.length > 0);
+  const { addToCart } = useCart()
+  const [isCustomizing, setIsCustomizing] = useState(false)
+  const [selectedCustomizations, setSelectedCustomizations] = useState<Record<number, boolean>>({})
+  const [showModal, setShowModal] = useState(false)
+  const router = useRouter()
+  const hasCustomizations = (item.customizations && item.customizations.length > 0)
 
   const handleCustomize = () => {
-    if (!hasCustomizations) return;
-    setIsCustomizing(true);
-    setSelectedCustomizations({});
-  };
+    if (!hasCustomizations) return
+    setIsCustomizing(true)
+    setSelectedCustomizations({})
+  }
 
   const handleCustomizationToggle = (id: number) => {
     setSelectedCustomizations(prev => ({
       ...prev,
-      [id]: !prev[id]
-    }));
-  };
+      [id]: !prev[id],
+    }))
+  }
 
-  // This is the main function that needs updating
   const handleAddToCart = (isCustomized: boolean = false) => {
-    // Determine which customizations were selected, if any
-    const finalCustomizations = (isCustomized && hasCustomizations)
-      ? item.customizations?.filter(c => selectedCustomizations[c.id]) || []
-      : [];
+    const finalCustomizations =
+      isCustomized && hasCustomizations
+        ? item.customizations
+            ?.filter((c) => selectedCustomizations[c.id])
+            .map(c => ({ ...c, id: Number(c.id) })) || []
+        : []
 
-    const newItemData = {
-      productId: item.id,
-      name: item.name,
-      price: item.price, // We pass the BASE price. The provider calculates the total.
-      image: item.image,
-      customizations: finalCustomizations,
-    };
+    addToCart(
+      {
+        productId: item.id.toString(), // <-- cast to string
+        name: item.name,
+        price: item.price,
+        image: item.image,
+        customizations: finalCustomizations,
+      },
+      1
+    )
 
-    addToCart(newItemData, 1); // We are adding a quantity of 1
+    setIsCustomizing(false)
+    setShowModal(true)
+  }
 
-    setIsCustomizing(false);
-    setShowModal(true);
-  };
-
-  const handleContinueShopping = () => {
-    setShowModal(false);
-  };
-
-  const handleGoToCart = () => {
-    setShowModal(false);
-    router.push('/checkout');
-  };
+  const handleContinueShopping = () => setShowModal(false)
+  const handleGoToCart = () => { setShowModal(false); router.push('/checkout') }
 
   return (
     <>
@@ -107,7 +103,7 @@ function FoodItemCard({ item }: { item: FoodItem }) {
           <p className="font-bold">Rs. {item.price.toFixed(2)}</p>
         </CardContent>
         <CardFooter className="p-4 pt-0 flex gap-2">
-        <Button
+          <Button
             variant="default"
             className="w-full"
             onClick={hasCustomizations ? handleCustomize : () => handleAddToCart(false)}
@@ -119,8 +115,11 @@ function FoodItemCard({ item }: { item: FoodItem }) {
         {isCustomizing && item.customizations && (
           <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50">
             <div className="bg-white/20 backdrop-blur-sm rounded-lg p-6 max-w-md w-full border border-white/80">
-            <Image src={`/${item.image}`} className="mx-auto mb-6 rounded-md" alt={item.name} width={400} height={400} />
-              <h2 className="text-xl font-light text-center text-gray-300 mb-8">Make Your {item.name} <br /> <span className="font-unifrakturcook !text-red-800 flame-text">Extra </span> Special ?</h2>
+              <Image src={`/${item.image}`} className="mx-auto mb-6 rounded-md" alt={item.name} width={400} height={400} />
+              <h2 className="text-xl font-light text-center text-gray-300 mb-8">
+                Make Your {item.name} <br />
+                <span className="font-unifrakturcook !text-red-800 flame-text">Extra </span> Special?
+              </h2>
               <div className="mt-4 border-t pt-4"></div>
               <div className="space-y-4">
                 {item.customizations.map((customization) => (
@@ -152,7 +151,7 @@ function FoodItemCard({ item }: { item: FoodItem }) {
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline" className="border border-white/80" onClick={() => setIsCustomizing(false)}>
+                <Button variant="outline" className="border border-white/80" onClick={() => setIsCustomizing(false)}>
                   Cancel
                 </Button>
                 <Button onClick={() => handleAddToCart(true)}>
@@ -163,7 +162,7 @@ function FoodItemCard({ item }: { item: FoodItem }) {
           </div>
         )}
       </Card>
-      
+
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent>
           <DialogHeader>
