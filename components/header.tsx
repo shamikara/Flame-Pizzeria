@@ -2,13 +2,15 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
-import { ShoppingCart, Menu, X, LogOut, User as UserIcon, LayoutDashboard } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { ShoppingCart, Menu, X, LogOut, User as UserIcon, LayoutDashboard, Sun, Moon } from "lucide-react"
 import { useCart } from "@/components/cart-provider"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { useSession } from "@/components/session-provider"
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ProfileModal } from "@/components/profile-modal";
 import {
   DropdownMenu,
@@ -27,9 +29,13 @@ export default function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [themeMounted, setThemeMounted] = useState(false)
+  const { resolvedTheme, setTheme } = useTheme()
   const { itemCount } = useCart();
   const { user } = useSession()
   const router = useRouter();
+  const pathname = usePathname();
+  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/dashboard');
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -38,6 +44,41 @@ export default function Header() {
     window.location.reload();
   };
 
+  useEffect(() => {
+    setThemeMounted(true)
+  }, [])
+
+  const handleThemeToggle = (checked: boolean) => {
+    setTheme(checked ? 'dark' : 'light')
+  }
+
+  const renderThemeToggle = (variant: 'inline' | 'mobile') => {
+    if (!themeMounted || isAdminRoute) return null
+    const isDark = resolvedTheme === 'dark'
+
+    const switchControl = (
+      <div className="flex items-center gap-2">
+        <Sun className={cn('h-4 w-4 transition-colors', !isDark ? 'text-orange-700' : 'text-muted-foreground')} />
+        <Switch
+          checked={isDark}
+          onCheckedChange={handleThemeToggle}
+          aria-label="Toggle dark mode"
+        />
+        <Moon className={cn('h-4 w-4 transition-colors', isDark ? 'text-blue-400' : 'text-muted-foreground')} />
+      </div>
+    )
+
+    if (variant === 'mobile') {
+      return (
+        <div className="flex items-center justify-between">
+          <span className="text-lg font-medium">Dark mode</span>
+          {switchControl}
+        </div>
+      )
+    }
+
+    return switchControl
+  }
 
   const displayName = user?.firstName || user?.email?.split('@')[0] || 'Account';
 
@@ -141,6 +182,7 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-4">
+          {renderThemeToggle('inline')}
           <CartSheet />
 
           {/* Notifications - Only show for staff */}
@@ -273,6 +315,7 @@ export default function Header() {
           <Link href="/login" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
             Login
           </Link>
+          {renderThemeToggle('mobile')}
           {user ? (
             <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="text-left text-lg font-medium text-red-500">
               Logout

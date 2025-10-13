@@ -6,6 +6,7 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import { CartProvider } from '@/components/cart-provider'
 import FireSparkles from '@/components/ui/fireSparkles'
+import { AdminThemeGuard } from './admin-theme-guard'
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -17,11 +18,13 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <CartProvider>
         {isAdminRoute ? (
-          <div className="min-h-screen bg-black text-white">{children}</div>
+  <AdminThemeGuard>
+    <div className="min-h-screen bg-black text-white">{children}</div>
+  </AdminThemeGuard>
         ) : (
           <div className="flex min-h-screen flex-col">
             <Header />
-            <main className="flex-1 bg-[url('/img/bgimg.png')] bg-cover bg-no-repeat">
+            <main className="flex-1 bg-[url('/img/bgimg-lite.png')] bg-cover bg-no-repeat dark:bg-[url('/img/bgimg.png')]">
               <div className="smoke-container">
                 {[...Array(5)].map((_, i) => (
                   <div

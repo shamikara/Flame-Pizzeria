@@ -75,25 +75,28 @@ export function Testimonials() {
   const t = testimonials[index]
 
   return (
-    <section className="py-5 ">
-       <h2 className="text-3xl font-bold mb-8 text-center">What Our Customers Say</h2>
-        <div className="container mt-10 p-8 bg-black/50 my-8 backdrop-blur-md rounded-xl">
-       
-      <div className="max-w-xl mx-auto text-center px-4 transition-opacity duration-500">
-        <p className="text-lg font-medium italic">"{t.text}"</p>
-        <div className="my-4 flex justify-center">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Star
-              key={i}
-              className={`h-5 w-5 mx-0.5 ${
-                i < t.rating ? "fill-yellow-400 text-yellow-400" : "fill-gray-300 text-gray-300"
-              }`}
-            />
-          ))}
+    <section className="py-5">
+      <h2 className="text-3xl font-bold mb-8 text-center text-gray-900 dark:text-white">
+        What Our Customers Say
+      </h2>
+      <div className="container mt-10 p-8 my-8 rounded-xl backdrop-blur-md bg-white/70 dark:bg-black/50 shadow-sm dark:shadow-none">
+        <div className="max-w-xl mx-auto text-center px-4 transition-opacity duration-500">
+          <p className="text-lg font-medium italic text-gray-700 dark:text-gray-200">"{t.text}"</p>
+          <div className="my-4 flex justify-center">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star
+                key={i}
+                className={`h-5 w-5 mx-0.5 ${
+                  i < t.rating
+                    ? "fill-yellow-500 text-yellow-500"
+                    : "fill-gray-300 text-gray-300 dark:fill-gray-600 dark:text-gray-600"
+                }`}
+              />
+            ))}
+          </div>
+          <div className="mt-4 font-semibold text-lg text-gray-800 dark:text-gray-300">{t.name}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-500/80">{t.date}</div>
         </div>
-        <div className="mt-4 font-semibold text-lg text-gray-300">{t.name}</div>
-        <div className="text-sm text-gray-500">{t.date}</div>
-      </div>
       </div>
     </section>
   )
