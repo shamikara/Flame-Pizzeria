@@ -10,6 +10,7 @@ const foodItemSchema = z.object({
   categoryId: z.number(),
   isActive: z.boolean(),
   foodType: z.number().int().min(0).max(31), // allow multi-flag bitmask
+  nutrition: z.record(z.number()).nullable().optional(),
 })
 
 export async function GET() {
@@ -55,6 +56,7 @@ export async function GET() {
         image: item.imageUrl || '/placeholder.svg',
         category: item.category?.name || 'unknown',
         foodType: item.foodType ?? 0,
+        nutrition: item.nutrition ?? null,
       }))
 
     if (popularItems.length < 4) {
@@ -76,6 +78,7 @@ export async function GET() {
         image: item.imageUrl || '/placeholder.svg',
         category: item.category?.name || 'unknown',
         foodType: item.foodType ?? 0,
+        nutrition: item.nutrition ?? null,
       }))
 
       popularItems.push(...formattedAdditional)
@@ -101,6 +104,7 @@ export async function POST(request: Request) {
         categoryId: data.categoryId,
         isActive: data.isActive,
         foodType: data.foodType,
+        nutrition: data.nutrition ?? null,
       },
       include: { category: true },
     })
@@ -136,6 +140,7 @@ export async function PUT(request: Request) {
         categoryId: data.categoryId,
         isActive: data.isActive,
         foodType: data.foodType,
+        nutrition: data.nutrition ?? null,
       },
       include: { category: true },
     })

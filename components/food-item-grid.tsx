@@ -8,9 +8,10 @@ import { useCart } from "@/components/cart-provider"
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { Loader2, Utensils } from "lucide-react"
 import { getImagePath } from "@/lib/image-utils"
 import { FoodTypeBadge } from "@/components/food-type-badge"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type Customization = {
   id: number
@@ -27,6 +28,7 @@ type FoodItem = {
   category: string
   foodType: number
   customizations?: Customization[]
+  nutrition?: Record<string, number> | null
 }
 
 export function FoodItemGrid({ items }: { items: FoodItem[] }) {
@@ -97,14 +99,69 @@ function FoodItemCard({ item }: { item: FoodItem }) {
     <>
       <Card className="overflow-hidden">
         <Link href={`/shop/${item.id}`} className="block overflow-hidden">
-          <div className="aspect-square relative">
-            <Image
-              src={getImagePath(item.image) || "img/placeholder.jpg"}
-              alt={item.name}
-              fill
-              className="object-cover transition-transform hover:scale-105"
-            />
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="aspect-square relative group cursor-pointer">
+                  <Image
+                    src={getImagePath(item.image) || "img/placeholder.jpg"}
+                    alt={item.name}
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Utensils className="h-8 w-8 text-white" />
+                  </div>
+                </div>
+              </TooltipTrigger>
+              {item.nutrition && (
+               <TooltipContent
+  side="right"
+  align="center"
+  sideOffset={16}
+  className="pointer-events-none max-w-xs rounded-xl bg-black/70 text-white border border-white/20 backdrop-blur-md shadow-2xl"
+>
+  <div className="space-y-3">
+    <p className="text-sm font-semibold tracking-wide uppercase text-white/80">
+      Nutrition Facts
+    </p>
+    <div className="space-y-2 text-sm">
+      {Object.entries(item.nutrition).map(([key, value]) => {
+        // Map each nutrient to its unit
+        const units: Record<string, string> = {
+          fat: "g",
+          saturatedFat: "g",
+          carbs: "g",
+          fiber: "g",
+          sugar: "g",
+          sodium: "mg",
+          protein: "g",
+          calories: "kcal",
+        };
+
+        const unit = units[key] || ""; // fallback to empty if unknown
+        return (
+          <div
+            key={key}
+            className="flex justify-between gap-4 border-b border-white/10 pb-1 last:border-none last:pb-0"
+          >
+            <span className="capitalize text-white/70">{key}</span>
+            <span className="font-semibold text-white">
+              {value} {unit} {/* Show value with unit */}
+            </span>
           </div>
+        );
+      })}
+    </div>
+    <p className="text-xs text-white/50 mt-2">
+      *Values per serving
+    </p>
+  </div>
+</TooltipContent>
+
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </Link>
         <CardContent className="p-4 space-y-3">
           <Link href={`/shop/${item.id}`} className="block">

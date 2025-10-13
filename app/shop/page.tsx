@@ -9,11 +9,12 @@ import { FoodSortSelect, SortOption } from "@/components/food-sort-select"
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; sort?: SortOption }>
+  searchParams: Promise<{ category?: string; sort?: SortOption; q?: string }>
 }) {
   const params = await searchParams
   const category = params?.category || "all"
   const sort = params?.sort || "recommended"
+  const search = params?.q?.trim() ?? ""
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
@@ -25,14 +26,14 @@ export default async function ShopPage({
       <FoodCategoryTabs activeCategory={category} />
 
       <Suspense fallback={<LoadingSkeleton />}>
-        <FoodItems category={category} sort={sort} />
+        <FoodItems category={category} sort={sort} search={search} />
       </Suspense>
     </div>
   )
 }
 
-async function FoodItems({ category, sort }: { category: string; sort: SortOption }) {
-  const items = await getFoodItems(category, sort)
+async function FoodItems({ category, sort, search }: { category: string; sort: SortOption; search: string }) {
+  const items = await getFoodItems(category, sort, search)
   return <FoodItemGrid items={items} />
 }
 
@@ -45,7 +46,7 @@ function LoadingSkeleton() {
   )
 }
 
-async function getFoodItems(categorySlug: string, sort: SortOption): Promise<FoodItem[]> {
+async function getFoodItems(categorySlug: string, sort: SortOption, search: string): Promise<FoodItem[]> {
   const categoryName =
     categorySlug === "all"
       ? null
@@ -55,14 +56,23 @@ async function getFoodItems(categorySlug: string, sort: SortOption): Promise<Foo
           .join(" ")
           .replace(/And/g, "&")
 
+  const where: any = categoryName
+    ? {
+        category: {
+          name: categoryName,
+        },
+      }
+    : { isActive: true }
+
+  if (search && !categoryName) {
+    where.OR = [
+      { name: { contains: search } },
+      { description: { contains: search } },
+    ]
+  }
+
   const dbItems = await prisma.foodItem.findMany({
-    where: categoryName
-      ? {
-          category: {
-            name: categoryName,
-          },
-        }
-      : { isActive: true },
+    where,
     include: { customizations: true, category: true },
   })
 
@@ -75,6 +85,7 @@ async function getFoodItems(categorySlug: string, sort: SortOption): Promise<Foo
     image: item.imageUrl || "/placeholder.svg",
     category: item.category?.name || "unknown",
     foodType: item.foodType ?? 0,
+    nutrition: item.nutrition ?? null,
     customizations:
       item.customizations?.map((c) => ({
         id: Number(c.id),

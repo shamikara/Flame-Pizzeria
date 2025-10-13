@@ -136,7 +136,8 @@ model FoodItem {
   price       Float
   imageUrl    String?
   isActive    Boolean  @default(true)
-  foodType Int @default(0) @db.TinyInt
+  foodType    Int      @default(0) @db.TinyInt // bitmask: 1=Veg, 2=Egg, 4=Dairy, 8=Meat, 16=Seafood
+  nutrition   Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

@@ -34,6 +34,7 @@ type FoodFormProps = {
     categoryId: number;
     isActive: boolean;
     foodType: number;
+    nutrition?: Record<string, number> | null;
   };
   onFormSubmit: () => void;
 };
@@ -45,6 +46,13 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
   const [imageUrl, setImageUrl] = useState(foodItem?.imageUrl || "");
   const [categoryId, setCategoryId] = useState(foodItem?.categoryId?.toString() || "");
   const [foodType, setFoodType] = useState<number>(foodItem?.foodType ?? 0);
+  const [nutrition, setNutrition] = useState<string>(
+    JSON.stringify(
+      foodItem?.nutrition ?? { calories: 0, protein: 0, carbs: 0, fat: 0 },
+      null,
+      2
+    )
+  );
   const [isActive, setIsActive] = useState(foodItem?.isActive ?? true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,6 +89,13 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
     setIsSubmitting(true);
 
     try {
+      let parsedNutrition: Record<string, number> | null = null;
+      try {
+        parsedNutrition = nutrition.trim() ? JSON.parse(nutrition) : null;
+      } catch (error) {
+        throw new Error("Nutrition must be valid JSON");
+      }
+
       const payload = {
         name,
         description: description || null,
@@ -89,6 +104,7 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
         categoryId: parseInt(categoryId),
         isActive,
         foodType,
+        nutrition: parsedNutrition,
       };
 
       const url = foodItem ? `/api/fooditems?id=${foodItem.id}` : "/api/fooditems";
@@ -118,7 +134,7 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   };
 
@@ -168,6 +184,18 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
           placeholder="img/fooditems/pizza.png"
         />
         <p className="text-xs text-gray-400 mt-1">Example: img/fooditems/1.png</p>
+      </div>
+
+      <div>
+        <Label htmlFor="nutrition">Nutrition (JSON)</Label>
+        <Textarea
+          id="nutrition"
+          value={nutrition}
+          onChange={(e) => setNutrition(e.target.value)}
+          rows={5}
+          placeholder='{"calories": 320, "protein": 12, "carbs": 40, "fat": 10}'
+        />
+        <p className="text-xs text-gray-400 mt-1">Provide key/value pairs (kcal or grams).</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
