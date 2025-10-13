@@ -1,20 +1,50 @@
 // app/api/auth/session/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/session';
+import prisma from '@/lib/db';
 
 export async function GET() {
-  // We make this route dynamic to prevent caching
-  // This is another layer of protection against stale data
   const dynamic = 'force-dynamic';
 
-  // `getServerSession` is now async, so we must await it
   const session = await getServerSession();
 
   if (!session) {
-    // If no session, return a clear error
     return NextResponse.json({ user: null }, { status: 401 });
   }
 
-  // If session exists, return the full user object
-  return NextResponse.json({ user: session });
+  // Fetch full user details from database
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        address: true,
+        contact: true,
+      }
+    });
+
+    if (!user) {
+      return NextResponse.json({ user: null }, { status: 401 });
+    }
+
+    // Return user with all details
+    return NextResponse.json({ 
+      user: {
+        userId: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        address: user.address,
+        phone: user.contact,
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    return NextResponse.json({ user: session }, { status: 200 });
+  }
 }

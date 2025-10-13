@@ -97,7 +97,7 @@ export function ProfileModal() {
             </div>
         </DropdownMenuItem>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[50vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Your Profile</DialogTitle>
         </DialogHeader>

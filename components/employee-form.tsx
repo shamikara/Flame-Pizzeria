@@ -50,7 +50,7 @@ export function EmployeeForm({ onFormSubmit }: EmployeeFormProps) {
       firstName: "",
       lastName: "",
       email: "",
-      role: Role.WAITER, // Default role
+      role: Role.WAITER,
       salary: 40000,
     },
   });
@@ -70,41 +70,71 @@ export function EmployeeForm({ onFormSubmit }: EmployeeFormProps) {
     }
   };
 
-  const employeeRoles = Object.values(Role).filter(role => role !== Role.CUSTOMER && role !== Role.ADMIN);
+  const employeeRoles = Object.values(Role).filter(role => role !== Role.CUSTOMER && role !== Role.ADMIN && role !== Role.MANAGER);
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="firstName" render={({ field }) => (
-            <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem>
+              <FormLabel className="text-gray-200">First Name</FormLabel>
+              <FormControl>
+                <Input {...field} className="bg-gray-800 border-gray-700 text-white" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )} />
           <FormField control={form.control} name="lastName" render={({ field }) => (
-            <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem>
+              <FormLabel className="text-gray-200">Last Name</FormLabel>
+              <FormControl>
+                <Input {...field} className="bg-gray-800 border-gray-700 text-white" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )} />
         </div>
         <FormField control={form.control} name="email" render={({ field }) => (
-            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem>
+            <FormLabel className="text-gray-200">Email</FormLabel>
+            <FormControl>
+              <Input type="email" {...field} className="bg-gray-800 border-gray-700 text-white" />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
         )} />
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="role" render={({ field }) => (
-            <FormItem><FormLabel>Role</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                        {employeeRoles.map(role => (
-                            <SelectItem key={role} value={role}>{role}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            <FormMessage /></FormItem>
+            <FormItem>
+              <FormLabel className="text-gray-200">Role</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  {employeeRoles.map(role => (
+                    <SelectItem key={role} value={role} className="text-white hover:bg-gray-700">{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
           )} />
           <FormField control={form.control} name="salary" render={({ field }) => (
-            <FormItem><FormLabel>Salary (Rs.)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem>
+              <FormLabel className="text-gray-200">Salary (Rs.)</FormLabel>
+              <FormControl>
+                <Input type="number" min="0" step="0.01" {...field} className="bg-gray-800 border-gray-700 text-white" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )} />
         </div>
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Creating..." : "Create Employee"}
+        <Button type="submit" className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? "Creating..." : "Create Employee"}
         </Button>
       </form>
     </Form>

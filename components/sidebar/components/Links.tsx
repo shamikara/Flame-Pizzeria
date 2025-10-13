@@ -1,76 +1,23 @@
-// 'use client'; 
 
-// import Link from "next/link";
-// import { usePathname } from "next/navigation";
-// import { cn } from "@/lib/utils";
-// import {
-//   LayoutDashboard,
-//   ShoppingCart,
-//   Package,
-//   Users2,
-//   LineChart,
-//   User,
-//   Factory
-// } from "lucide-react";
-
-// // This data can stay the same
-// const dashboardLinks = [
-//   { href: "/dashboard/overview", label: "Overview", icon: LayoutDashboard },
-//   { href: "/dashboard/orders", label: "Orders", icon: ShoppingCart },
-//   { href: "/dashboard/foods", label: "Foods", icon: Package },
-//   { href: "/dashboard/employees", label: "Employees", icon: Users2 },
-//   { href: "/dashboard/users", label: "Customers", icon: User },
-//   { href: "/dashboard/ingredients", label: "Inventory", icon: Factory },
-//   { href: "/dashboard/reports", label: "Reports", icon: LineChart },
-// ];
-
-// export function DashboardNav() {
-//   const pathname = usePathname();
-
-//   return (
-//     <nav className="grid items-start gap-2 px-4"> {/* Added some padding here */}
-//       {dashboardLinks.map((link) => {
-//         const isActive = pathname.startsWith(link.href); // Use startsWith for better active state matching
-        
-//         return (
-//           <Link
-//             key={link.href}
-//             href={link.href}
-//             className={cn(
-//               // --- THIS IS THE PART TO CHANGE ---
-//               "flex items-center gap-3 rounded-lg px-3 py-2 text-gray-300 transition-all", // Default: light gray text
-//               "hover:bg-white/10 hover:text-white", // Hover state: semi-transparent white bg, bright white text
-//               isActive && "bg-white/20 text-white font-bold" // Active state: stronger bg, bright white text, bold
-//             )}
-//           >
-//             <link.icon className="h-4 w-4" />
-//             {link.label}
-//           </Link>
-//         );
-//       })}
-//     </nav>
-//   );
-// }
-// components/sidebar/components/Links.tsx
-// components/sidebar/components/Links.tsx
 'use client'; 
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, ShoppingCart, Package, Users2, LineChart, User, Factory
+  LayoutDashboard, ShoppingCart, Package, Users2, LineChart, User, Factory, Salad
 } from "lucide-react";
 import { UserPayload } from "@/lib/session"; // Import the type
 
 const allDashboardLinks = [
-  { href: "/dashboard/overview", label: "Overview", icon: LayoutDashboard, roles: ['ADMIN'] },
-  { href: "/dashboard/orders", label: "Orders", icon: ShoppingCart, roles: ['ADMIN', 'CHEF', 'WAITER'] },
-  { href: "/dashboard/foods", label: "Foods", icon: Package, roles: ['ADMIN', 'CHEF', 'WAITER'] },
-  { href: "/dashboard/employees", label: "Employees", icon: Users2, roles: ['ADMIN'] },
-  { href: "/dashboard/users", label: "Customers", icon: User, roles: ['ADMIN'] },
-  { href: "/dashboard/ingredients", label: "Inventory", icon: Factory, roles: ['ADMIN', 'STORE_KEEP'] },
-  { href: "/dashboard/reports", label: "Reports", icon: LineChart, roles: ['ADMIN'] },
+  { href: "/dashboard/overview", label: "Overview", icon: LayoutDashboard, roles: ['ADMIN', 'MANAGER'] },
+  { href: "/dashboard/orders", label: "Orders", icon: ShoppingCart, roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'] },
+  { href: "/dashboard/foods", label: "Foods", icon: Package, roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'] },
+  { href: "/dashboard/customizations", label: "Add-on Extras", icon: Salad, roles: ['ADMIN', 'MANAGER', 'CHEF'] },
+  { href: "/dashboard/employees", label: "Employees", icon: Users2, roles: ['ADMIN', 'MANAGER'] },
+  { href: "/dashboard/users", label: "Customers", icon: User, roles: ['ADMIN', 'MANAGER'] },
+  { href: "/dashboard/ingredients", label: "Inventory", icon: Factory, roles: ['ADMIN', 'MANAGER', 'STORE_KEEP'] },
+  { href: "/dashboard/reports", label: "Reports", icon: LineChart, roles: ['ADMIN', 'MANAGER'] },
 ];
 
 export function DashboardNav({ userRole }: { userRole: UserPayload['role'] }) {

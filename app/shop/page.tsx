@@ -4,40 +4,69 @@ import { FoodItemGrid } from "@/components/food-item-grid"
 import { prisma } from "@/lib/db"
 import { FoodItem } from "@/components/food-item-detail"
 import { Spinner } from "@/components/ui/spinner"
+import { FoodSortSelect, SortOption } from "@/components/food-sort-select"
 
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: { category?: string }
+  searchParams: Promise<{ category?: string; sort?: SortOption }>
 }) {
-  const category = searchParams?.category || "all"
+  const params = await searchParams
+  const category = params?.category || "all"
+  const sort = params?.sort || "recommended"
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Our Menu</h1>
+    <div className="container mx-auto px-4 py-8 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h1 className="text-3xl font-bold">Our Menu</h1>
+        <FoodSortSelect currentSort={sort} />
+      </div>
 
       <FoodCategoryTabs activeCategory={category} />
 
-      <Suspense fallback={<Spinner />}>
-        <FoodItems category={category} />
+      <Suspense fallback={<LoadingSkeleton />}>
+        <FoodItems category={category} sort={sort} />
       </Suspense>
     </div>
   )
 }
 
-async function FoodItems({ category }: { category: string }) {
-  const items = await getFoodItems(category)
+async function FoodItems({ category, sort }: { category: string; sort: SortOption }) {
+  const items = await getFoodItems(category, sort)
   return <FoodItemGrid items={items} />
 }
 
-async function getFoodItems(category: string): Promise<FoodItem[]> {
+function LoadingSkeleton() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20">
+      <Spinner />
+      <p className="text-lg text-muted-foreground">Loading delicious items...</p>
+    </div>
+  )
+}
+
+async function getFoodItems(categorySlug: string, sort: SortOption): Promise<FoodItem[]> {
+  const categoryName =
+    categorySlug === "all"
+      ? null
+      : categorySlug
+          .split("-")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ")
+          .replace(/And/g, "&")
+
   const dbItems = await prisma.foodItem.findMany({
-    where: category !== "all" ? { category: { name: category } } : {},
+    where: categoryName
+      ? {
+          category: {
+            name: categoryName,
+          },
+        }
+      : { isActive: true },
     include: { customizations: true, category: true },
-    orderBy: { id: "asc" },
   })
 
-  return dbItems.map(item => ({
+  const mapped = dbItems.map((item) => ({
     id: Number(item.id),
     name: item.name,
     description: item.description || "",
@@ -45,10 +74,21 @@ async function getFoodItems(category: string): Promise<FoodItem[]> {
     price: item.price,
     image: item.imageUrl || "/placeholder.svg",
     category: item.category?.name || "unknown",
-    customizations: item.customizations?.map(c => ({
-      id: Number(c.id),
-      name: c.name,
-      price: c.price,
-    })) || [],
+    foodType: item.foodType ?? 0,
+    customizations:
+      item.customizations?.map((c) => ({
+        id: Number(c.id),
+        name: c.name,
+        price: c.price,
+      })) || [],
   }))
+
+  const sorters: Record<SortOption, (a: FoodItem, b: FoodItem) => number> = {
+    recommended: (a, b) => a.id - b.id,
+    "price-asc": (a, b) => a.price - b.price,
+    "price-desc": (a, b) => b.price - a.price,
+    diet: (a, b) => (a.foodType || 0) - (b.foodType || 0) || a.name.localeCompare(b.name),
+  }
+
+  return mapped.sort(sorters[sort])
 }

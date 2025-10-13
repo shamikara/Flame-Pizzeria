@@ -10,7 +10,7 @@ export default function Footer() {
           <div>
             <Image src="img/logo.png" className=" ml-6 mb-2" alt="Flames" width={120} height={120} />
             <p className="text-sm text-muted-foreground">
-            Delicious pizza, burgers & submarines, short eats and deserts made with fresh ingredients and filled with love.
+            Delicious pizza, burgers & submarines, short eats, pasta and deserts made with fresh ingredients and filled with love.
             </p>
             <div className="flex gap-4 mt-4">
               <Link href="#" className="text-muted-foreground hover:text-primary">
@@ -47,8 +47,13 @@ export default function Footer() {
           </Link>
           </li>
           <li>
-          <Link href="/shop?category=drinks-and-deserts" className="text-muted-foreground hover:text-primary">
-            Drinks & Deserts
+          <Link href="/shop?category=pasta-corner" className="text-muted-foreground hover:text-primary">
+            Pasta Corner
+          </Link>
+          </li>
+          <li>
+          <Link href="/shop?category=drinks-and-desserts" className="text-muted-foreground hover:text-primary">
+            Drinks & Desserts
           </Link>
           </li>
               <li>

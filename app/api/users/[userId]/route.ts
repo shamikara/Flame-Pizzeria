@@ -14,10 +14,16 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession();
-    const requestedUserId = params.userId;
+    const requestedUserId = parseInt(params.userId);
 
-    if (!session || session.userId !== requestedUserId) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    // Check if user is authenticated
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is requesting their own data
+    if (session.userId !== requestedUserId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const user = await db.user.findUnique({
@@ -33,12 +39,12 @@ export async function GET(
     });
 
     if (!user) {
-      return new NextResponse('User not found', { status: 404 });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     return NextResponse.json({ user });
   } catch (error) {
     console.error('[USER_GET_ERROR]', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

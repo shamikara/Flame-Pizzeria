@@ -2,6 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { getImagePath } from "@/lib/image-utils"
 
 type FoodItem = {
   id: number
@@ -22,7 +23,7 @@ export function FeaturedItems({ items }: { items: FoodItem[] }) {
           {items.map((item) => (
             <Card key={item.id} className="overflow-hidden">
               <div className="aspect-square relative">
-                <Image src={item.image || "img/placeholder.jpg"} alt={item.name} fill className="object-cover" />
+                <Image src={getImagePath(item.image)} alt={item.name} fill className="object-cover" />
               </div>
               <CardContent className="p-4">
                 <h3 className="font-bold text-lg mb-1">{item.name}</h3>

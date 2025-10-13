@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
+import { Spinner } from '@/components/ui/spinner'
+import Link from 'next/link'
 
 interface LoginFormProps {
   searchParams?: { [key: string]: string | string[] | undefined }
@@ -26,6 +28,7 @@ export function LoginForm({ searchParams, onLoginSuccess }: LoginFormProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const defaultEmail = typeof searchParams?.email === 'string' ? searchParams.email : ''
@@ -49,11 +52,26 @@ export function LoginForm({ searchParams, onLoginSuccess }: LoginFormProps) {
       const result = await res.json()
 
       if (!res.ok) {
-        toast({ variant: 'destructive', title: 'Login Failed', description: result.error || 'An unknown error occurred.' })
+        toast({ 
+          variant: 'destructive', 
+          title: 'Login Failed', 
+          description: result.error || 'Invalid email or password.' 
+        })
         return
       }
 
-      toast({ title: 'Login Successful', description: 'Welcome back!' })
+      // Show success message
+      toast({ 
+        title: 'Login Successful', 
+        description: 'Redirecting you now...',
+        duration: 2000,
+      })
+
+      // Set redirecting state for overlay spinner
+      setIsRedirecting(true)
+
+      // Small delay to show success message
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       if (onLoginSuccess) {
         onLoginSuccess()
@@ -61,68 +79,109 @@ export function LoginForm({ searchParams, onLoginSuccess }: LoginFormProps) {
         router.refresh()
         const userRole = result.user.role
         if (userRole === 'ADMIN') router.push('/dashboard/overview')
+        else if (userRole === 'MANAGER') router.push('/dashboard/overview')
         else if (userRole === 'CHEF' || userRole === 'WAITER') router.push('/dashboard/orders')
         else if (userRole === 'STORE_KEEP') router.push('/dashboard/ingredients')
         else router.push('/shop')
       }
     } catch (error) {
       console.error('An unexpected error occurred:', error)
-      toast({ variant: 'destructive', title: 'An Unexpected Error Occurred', description: 'Please check your connection and try again.' })
-    } finally {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Connection Error', 
+        description: 'Please check your internet connection and try again.' 
+      })
       setIsLoading(false)
+      setIsRedirecting(false)
+    } finally {
+      // Don't reset loading state here - keep it until redirect completes
     }
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder="example@example.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <>
+      {/* Full-page loading overlay during redirect */}
+      {isRedirecting && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Spinner />
+            <p className="text-lg font-medium">Signing you in...</p>
+          </div>
+        </div>
+      )}
 
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    className="pr-10"
-                    {...field}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="example@example.com" 
+                    {...field} 
+                    disabled={isLoading}
+                    autoComplete="email"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((s) => !s)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Sign In
-        </Button>
-      </form>
-    </Form>
-  )}
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      className="pr-10"
+                      {...field}
+                      disabled={isLoading}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((s) => !s)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      disabled={isLoading}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="flex items-center justify-end">
+            <Link 
+              href="/forgot-password" 
+              className="text-sm text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing In...
+              </>
+            ) : (
+              'Sign In'
+            )}
+          </Button>
+        </form>
+      </Form>
+    </>
+  )
+}

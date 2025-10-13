@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -8,67 +11,334 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import db from "@/lib/db";
 import Image from "next/image";
-import { PlusCircle } from "lucide-react";
+import Link from "next/link";
+import { PlusCircle, UtensilsCrossed, DollarSign, Pencil, Trash2, Salad } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getImagePath } from "@/lib/image-utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { FoodForm } from "@/components/food-form";
+import { useToast } from "@/hooks/use-toast";
+import { Spinner } from "@/components/ui/spinner";
 
-async function getFoodItems() {
-  return db.foodItem.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: { category: true },
-  });
+type FoodItemWithCategory = {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  imageUrl: string | null;
+  isActive: boolean;
+  categoryId: number;
+  category: {
+    id: number;
+    name: string;
+  } | null;
+};
+
+async function getFoodItems(): Promise<FoodItemWithCategory[]> {
+  const res = await fetch("/api/fooditems/list", { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch food items");
+  return res.json();
 }
 
-export default async function FoodsPage() {
-  const foods = await getFoodItems();
+async function getMenuStats() {
+  const res = await fetch("/api/fooditems/stats", { cache: "no-store" });
+  if (!res.ok) {
+    return { totalItems: 0, activeItems: 0, totalCategories: 0 };
+  }
+  return res.json();
+}
+
+export default function FoodsPage() {
+  const [foods, setFoods] = useState<FoodItemWithCategory[]>([]);
+  const [stats, setStats] = useState({ totalItems: 0, activeItems: 0, totalCategories: 0 });
+  const [loading, setLoading] = useState(true);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedFood, setSelectedFood] = useState<FoodItemWithCategory | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [foodsData, statsData] = await Promise.all([
+        getFoodItems(),
+        getMenuStats(),
+      ]);
+      setFoods(foodsData);
+      setStats(statsData);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load food items",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleEditClick = (food: FoodItemWithCategory) => {
+    setSelectedFood(food);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = (food: FoodItemWithCategory) => {
+    setSelectedFood(food);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedFood) return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/fooditems?id=${selectedFood.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete food item");
+      }
+
+      toast({
+        title: "Success",
+        description: `${selectedFood.name} has been deleted.`,
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedFood(null);
+      fetchData();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete food item. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleFormSubmit = () => {
+    setAddDialogOpen(false);
+    setEditDialogOpen(false);
+    setSelectedFood(null);
+    fetchData();
+  };
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-3xl font-bold tracking-tight">Menu Items</h2>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
-        </Button>
+    <div className="p-6 md:p-10">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
+            Menu Management
+          </h2>
+          <p className="text-gray-400 mt-2">Manage your food items and menu</p>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
+            <Link href="/dashboard/customizations">
+              <Salad className="mr-2 h-4 w-4" /> Manage Extras ?
+            </Link>
+          </Button>
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Food ?
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700 max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-white">Add New Food Item</DialogTitle>
+              </DialogHeader>
+              <FoodForm onFormSubmit={handleFormSubmit} />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
-      
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="hidden w-[100px] sm:table-cell">Image</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {foods.map((food) => (
-              <TableRow key={food.id}>
-                <TableCell className="hidden sm:table-cell">
-                  <Image
-                    alt={food.name}
-                    className="aspect-square rounded-md object-cover"
-                    height="64"
-                    src={food.imageUrl || "/img/placeholder.jpg"} // Use a placeholder
-                    width="64"
-                  />
-                </TableCell>
-                <TableCell className="font-medium">{food.name}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{food.category?.name ?? 'Uncategorized'}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={food.isActive ? 'default' : 'secondary'}>
-                    {food.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">${food.price.toFixed(2)}</TableCell>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <Card className="border-gray-800 bg-gradient-to-br from-orange-500/10 to-orange-600/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Total Items</CardTitle>
+            <UtensilsCrossed className="h-5 w-5 text-orange-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.totalItems}</div>
+            <p className="text-xs text-gray-400 mt-1">All menu items</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-800 bg-gradient-to-br from-green-500/10 to-green-600/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Active Items</CardTitle>
+            <UtensilsCrossed className="h-5 w-5 text-green-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.activeItems}</div>
+            <p className="text-xs text-gray-400 mt-1">Currently available</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-800 bg-gradient-to-br from-blue-500/10 to-blue-600/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Categories</CardTitle>
+            <DollarSign className="h-5 w-5 text-blue-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.totalCategories}</div>
+            <p className="text-xs text-gray-400 mt-1">Menu categories</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Food Items Table */}
+      <div className="rounded-xl border border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900 shadow-xl overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-gray-400">
+            <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 opacity-60 animate-pulse" />
+            <Spinner /> Loading menu items...
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="border-gray-800 hover:bg-gray-800/40">
+                <TableHead className="hidden w-[100px] sm:table-cell text-gray-300">Image</TableHead>
+                <TableHead className="text-gray-300">Name</TableHead>
+                <TableHead className="text-gray-300">Category</TableHead>
+                <TableHead className="text-gray-300">Status</TableHead>
+                <TableHead className="text-right text-gray-300">Price</TableHead>
+                <TableHead className="text-right text-gray-300">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {foods.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-400">
+                    <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 opacity-60" />
+                    No menu items found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                foods.map((food) => (
+                  <TableRow key={food.id} className="border-gray-800 hover:bg-gray-800/40 transition-all">
+                    <TableCell className="hidden sm:table-cell">
+                      <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-700">
+                        <Image
+                          alt={food.name}
+                          className="object-cover"
+                          fill
+                          src={getImagePath(food.imageUrl) || "/img/placeholder.jpg"}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium text-gray-200">{food.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="border-gray-700 text-gray-300">
+                        {food.category?.name ?? "Uncategorized"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={food.isActive ? "default" : "secondary"}
+                        className={
+                          food.isActive
+                            ? "bg-green-500/20 text-green-400 border-green-500/50"
+                            : "bg-gray-500/20 text-gray-400 border-gray-500/50"
+                        }
+                      >
+                        {food.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-gray-200">
+                      Rs. {food.price.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditClick(food)}
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(food)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white">Edit Food Item</DialogTitle>
+          </DialogHeader>
+          {selectedFood && <FoodForm foodItem={selectedFood} onFormSubmit={handleFormSubmit} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">Confirm Deletion</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Are you sure you want to delete "{selectedFood?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
+              {isDeleting ? (
+                <>
+                  <Spinner /> Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

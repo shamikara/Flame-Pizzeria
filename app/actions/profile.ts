@@ -8,7 +8,7 @@ import { comparePassword, hashPassword } from "@/lib/auth";
 const profileSchema = z.object({
   firstName: z.string().min(2),
   lastName: z.string().min(2),
-  contact: z.string().optional(),
+  contact: z.string().min(10, "Phone number is required"),
   address: z.string().optional(),
 });
 

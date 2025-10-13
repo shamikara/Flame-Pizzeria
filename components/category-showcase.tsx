@@ -26,11 +26,18 @@ export function CategoryShowcase() {
       link: "/shop?category=short-eats",
     },
     {
-      id: "drinks-and-deserts",
-      name: "Drinks & Deserts",
+      id: "pasta-corner",
+      name: "Pasta Corner",
+      description: "Creamy, saucy, and bursting with flavor.",
+      image: "img/ourcategories/pasta.jpg?height=400&width=600",
+      link: "/shop?category=pasta-corner",
+    },
+    {
+      id: "drinks-and-desserts",
+      name: "Drinks & Desserts",
       description: "Island-style sweets & refreshing beverages",
       image: "img/ourcategories/desert.jpg?height=400&width=600",
-      link: "/shop?category=drinks-and-deserts",
+      link: "/shop?category=drinks-and-desserts",
     },
   ]
 
@@ -39,7 +46,7 @@ export function CategoryShowcase() {
       <div className="container px-4">
         <h2 className="text-3xl font-bold mb-8 text-center">Our Categories</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {categories.map((category) => (
             <div key={category.id} className="relative group overflow-hidden rounded-xl">
               <div className="aspect-[4/3] relative">

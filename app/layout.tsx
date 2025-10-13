@@ -5,6 +5,7 @@ import LayoutWrapper from '@/components/layout-wrapper';
 import { SessionProvider } from '@/components/session-provider'; // <-- 1. Import the SessionProvider
 import { Toaster } from '@/components/ui/toaster';           // <-- 2. Import the Toaster
 import { TidioChat } from '@/components/TidioChat';
+import Chatbot from '@/components/chatbot';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -29,7 +30,7 @@ export default function RootLayout({
           </LayoutWrapper>
         </SessionProvider>
         <Toaster />
-        <TidioChat />
+        <Chatbot />
       </body>
     </html>
   );

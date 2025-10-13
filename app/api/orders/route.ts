@@ -4,10 +4,12 @@ import prisma from '@/lib/db'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { userId, total } = body
+    const { userId, total, type, address, phone, notes, tableNumber, deliveryAddress } = body
 
-    if (!userId || !total) {
-      return NextResponse.json({ error: 'Missing userId or total' }, { status: 400 })
+    if (!userId || !total || !type || !address || !phone) {
+      return NextResponse.json({ 
+        error: 'Missing required fields: userId, total, type, address, and phone are required' 
+      }, { status: 400 })
     }
 
     // 🧹 Cleanup old pending orders (older than 30 minutes)
@@ -25,7 +27,13 @@ export async function POST(request: Request) {
       data: {
         userId,
         total,
+        type,
+        address,
+        phone,
         status: 'PENDING',
+        notes: notes || null,
+        tableNumber: tableNumber || null,
+        deliveryAddress: deliveryAddress || null,
         createdAt: new Date(),
       },
     })

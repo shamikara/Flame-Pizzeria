@@ -17,12 +17,12 @@ export async function GET() {
         // Include only the next upcoming shift for each employee
         shifts: {
           where: {
-            start: {
-              gte: new Date(), // Get shifts that start from now onwards
+            date: {
+              gte: new Date(), // Get shifts that are from today onwards
             }
           },
           orderBy: {
-            start: 'asc', // Order by the start time to get the very next one
+            date: 'asc', // Order by the date to get the very next one
           },
           take: 1, // Only take the first result
         }

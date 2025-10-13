@@ -16,7 +16,7 @@ export default async function FoodItemPage({ params }: { params: { id: string } 
 
 async function getFoodItemById(id: string): Promise<FoodItem | null> {
   const dbItem = await prisma.foodItem.findUnique({
-    where: { id },
+    where: { id: parseInt(id) },  
     include: { customizations: true, category: true },
   })
 
@@ -30,7 +30,7 @@ async function getFoodItemById(id: string): Promise<FoodItem | null> {
     price: dbItem.price,
     image: dbItem.imageUrl || "/placeholder.svg",
     category: dbItem.category?.name || "unknown",
-    customizations: dbItem.customizations?.map(c => ({
+    customizations: dbItem.customizations?.map((c: { id: any; name: any; price: any }) => ({
       id: Number(c.id),
       name: c.name,
       price: c.price,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState ,FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import "./globals.css"; // ensure styles load correctly if you’re not using layout.tsx
+import "./globals.css";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { FeaturedItems } from "@/components/featured-items";
 import { CategoryShowcase } from "@/components/category-showcase";
@@ -11,23 +11,62 @@ import { CTASection } from "@/components/cta-section";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 
+type FoodItem = {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  category: string;
+};
+
 export default function HomePage() {
   const [fadeOut, setFadeOut] = useState(false);
   const [showMain, setShowMain] = useState(false);
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [featuredItems, setFeaturedItems] = useState<FoodItem[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(true);
   const { toast } = useToast();
 
-  const handleEnter = () => {
-    setFadeOut(true);
-    setTimeout(() => {
-      setShowMain(true);
-    }, 1500); // should match CSS animation time
-  };
+  // Fetch popular items when component mounts
+  useEffect(() => {
+    const fetchPopularItems = async () => {
+      try {
+        const res = await fetch('/api/fooditems');
+        if (res.ok) {
+          const items = await res.json();
+          setFeaturedItems(items);
+        }
+      } catch (error) {
+        console.error('Failed to fetch popular items:', error);
+      } finally {
+        setIsLoadingItems(false);
+      }
+    };
+
+    fetchPopularItems();
+  }, []);
+
+    // Check if user has visited before
+    useEffect(() => {
+      const hasVisited = localStorage.getItem('hasVisitedHome');
+      if (hasVisited === 'true') {
+        setShowMain(true);
+      }
+    }, []);
+
+    const handleEnter = () => {
+      localStorage.setItem('hasVisitedHome', 'true');
+      setFadeOut(true);
+      setTimeout(() => {
+        setShowMain(true);
+      }, 1500);
+    };
 
   const handleSubscribe = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // Prevent the default form submission
+    event.preventDefault();
     setIsSubscribing(true);
 
     try {
@@ -47,7 +86,7 @@ export default function HomePage() {
         title: "Success!",
         description: result.message,
       });
-      setEmail(""); // Clear the input field on success
+      setEmail("");
 
     } catch (error: any) {
       toast({
@@ -108,14 +147,14 @@ export default function HomePage() {
                     placeholder="Enter your email"
                     className="px-5 py-3 w-full sm:w-auto rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 transition bg-white/30 text-white placeholder-white/70"
                     required
-                    value={email} // Controlled input
-                    onChange={(e) => setEmail(e.target.value)} // Update state on change
-                    disabled={isSubscribing} // Disable while submitting
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isSubscribing}
                   />
                   <button
                     type="submit"
                     className="bg-orange-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-orange-800 transition disabled:bg-orange-900 disabled:cursor-not-allowed"
-                    disabled={isSubscribing} // Disable while submitting
+                    disabled={isSubscribing}
                   >
                     {isSubscribing ? "Subscribing..." : "Subscribe"}
                   </button>
@@ -131,7 +170,13 @@ export default function HomePage() {
   return (
     <div className="container mx-auto px-4">
       <HeroCarousel promotions={promotions} />
-      <FeaturedItems items={featuredItems} />
+      {isLoadingItems ? (
+        <div className="py-12 text-center">
+          <p className="text-lg text-muted-foreground">Loading popular items...</p>
+        </div>
+      ) : (
+        <FeaturedItems items={featuredItems} />
+      )}
       <CategoryShowcase />
       <Testimonials />
       <CTASection />
@@ -172,40 +217,5 @@ const promotions = [
     image: "img/hero/B6.jpg?height=600&width=1200",
     buttonText: "Feed the Family",
     buttonLink: "/shop",
-  },
-];
-
-const featuredItems = [
-  {
-    id: 8,
-      name: "BBQ Bacon Burger",
-      description: "Beef patty, bacon, cheddar, BBQ sauce, onion rings",
-      price: 1299.00,
-      image: "img/fooditems/8.png?height=300&width=300",
-      category: "burgers-and-submarines"
-  },
-  {
-    id: 10,
-      name: "Turkey Club Sub",
-      description: "Turkey, bacon, lettuce, tomato, mayo on a fresh baked roll",
-      price: 1199.00,
-      image: "img/fooditems/10.png?height=300&width=300",
-      category: "burgers-and-submarines",
-  },
-  {
-    id: 15,
-      name: "Chicken Patty",
-      description: "Golden crust filled with curried chicken and potato",
-      price: 120,
-      image: "img/fooditems/15.png?height=300&width=300",
-      category: "short-eats",
-  },
-  {
-    id: 18,
-      name: "Sausage Roll",
-      description: "Puff pastry with local grilled sausage filling",
-      price: 150,
-      image: "img/fooditems/18.png?height=300&width=300",
-      category: "short-eats",
   },
 ];

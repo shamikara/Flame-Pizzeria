@@ -13,64 +13,45 @@ import { useCart } from "@/components/cart-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, Loader2 } from "lucide-react";
 
-// Load publishable key from env
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
 );
 
-export function StripePaymentForm() {
+interface StripePaymentFormProps {
+  orderId?: number | null;
+}
+
+export function StripePaymentForm({ orderId: propOrderId }: StripePaymentFormProps = {}) {
   const { cart } = useCart();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Create user + order + payment intent when cart changes
   useEffect(() => {
+    // Get order ID from prop or localStorage
+    const storedOrderId = propOrderId?.toString() || localStorage.getItem("last-order-id");
+    setOrderId(storedOrderId);
+
+    if (!storedOrderId) {
+      setClientSecret(null);
+      return;
+    }
+
+    if (!cart || cart.length === 0) {
+      setClientSecret(null);
+      return;
+    }
+
     let cancelled = false;
 
     async function initPayment() {
-      if (!cart || cart.length === 0) {
-        setClientSecret(null);
-        return;
-      }
-
       try {
         setIsLoading(true);
 
-        // Step 1: Ensure user exists or auto-create
-        const userEmail = localStorage.getItem("userEmail");
-        const userName = localStorage.getItem("userName") || "Guest User";
-
-        const userRes = await fetch("/api/ensure-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: userEmail, name: userName }),
-        });
-
-        const userData = await userRes.json();
-        if (!userRes.ok || !userData?.id) throw new Error("User setup failed");
-
-        // Step 2: Create a pending order
-        const orderRes = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: userData.id,
-            total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
-            status: "PENDING",
-            type: "ONLINE",
-          }),
-        });
-
-        const orderData = await orderRes.json();
-        if (!orderRes.ok || !orderData?.id)
-          throw new Error("Failed to create order");
-
-        // Save order ID for payment confirmation
-        localStorage.setItem("last-order-id", orderData.id);
-
-        // Step 3: Create PaymentIntent
         const res = await fetch("/api/create-payment-intent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -78,13 +59,14 @@ export function StripePaymentForm() {
         });
 
         const data = await res.json();
-        if (!res.ok || !data?.clientSecret)
+        if (!res.ok || !data?.clientSecret) {
           throw new Error(data?.error || "Failed to initialize payment");
+        }
 
         if (!cancelled) setClientSecret(data.clientSecret);
       } catch (e: any) {
         toast({
-          title: "Setup failed",
+          title: "Payment setup failed",
           description: e.message || "Unable to initialize payment.",
           variant: "destructive",
         });
@@ -98,7 +80,7 @@ export function StripePaymentForm() {
     return () => {
       cancelled = true;
     };
-  }, [cart, toast]);
+  }, [cart, toast, propOrderId]);
 
   const options = useMemo(
     () =>
@@ -113,24 +95,47 @@ export function StripePaymentForm() {
 
   if (!stripePromise) {
     return (
-      <div className="text-sm text-red-600">
-        Stripe not configured. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Stripe not configured. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!orderId) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please complete the billing information and place your order first.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <Card>
       <CardContent className="pt-6">
-        {isLoading && <div className="text-sm">Preparing payment...</div>}
-        {!isLoading && !clientSecret && (
+        {isLoading && (
+          <div className="flex items-center justify-center py-4 text-sm">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            Preparing payment...
+          </div>
+        )}
+        {!isLoading && !clientSecret && cart.length === 0 && (
           <div className="text-sm text-muted-foreground">
             Add items to cart to proceed with payment.
           </div>
         )}
         {options && (
           <Elements stripe={stripePromise} options={options}>
-            <InnerPaymentForm />
+            <InnerPaymentForm orderId={orderId} />
           </Elements>
         )}
       </CardContent>
@@ -138,7 +143,7 @@ export function StripePaymentForm() {
   );
 }
 
-function InnerPaymentForm() {
+function InnerPaymentForm({ orderId }: { orderId: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -169,7 +174,7 @@ function InnerPaymentForm() {
     if (stripeError) {
       toast({
         title: "Payment failed",
-        description: stripeError.message || "Try another method.",
+        description: stripeError.message || "Try another payment method.",
         variant: "destructive",
       });
       setSubmitting(false);
@@ -178,38 +183,38 @@ function InnerPaymentForm() {
 
     if (paymentIntent && paymentIntent.status === "succeeded") {
       try {
-        const orderId =
-          typeof window !== "undefined"
-            ? localStorage.getItem("last-order-id")
-            : null;
+        // Confirm payment and update order status to CONFIRMED
+        await fetch("/api/orders/confirm-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId,
+            paymentIntentId: paymentIntent.id,
+          }),
+        });
 
-        if (orderId) {
-          await fetch("/api/orders/mark-paid", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              orderId,
-              paymentIntentId: paymentIntent.id,
-              amount: paymentIntent.amount_received
-                ? paymentIntent.amount_received / 100
-                : undefined,
-            }),
-          });
-        }
+        clearCart();
+        // Store the confirmed order ID for the confirmation page
+        localStorage.setItem('last-confirmed-order-id', orderId);
+        localStorage.removeItem("last-order-id");
+
+        toast({
+          title: "Payment Successful!",
+          description: "Your order has been confirmed.",
+          duration: 5000,
+        });
+
+        setTimeout(() => {
+          router.push(`/order-confirmation?orderId=${orderId}`);
+        }, 1500);
       } catch (e) {
-        console.error("Failed to mark order as paid:", e);
+        console.error("Failed to confirm payment:", e);
+        toast({
+          title: "Payment processed",
+          description: "But failed to update order. Please contact support.",
+          variant: "destructive",
+        });
       }
-
-      clearCart();
-      toast({
-        title: "Payment Successful!",
-        description: "Your order has been placed successfully.",
-        duration: 5000,
-      });
-
-      setTimeout(() => {
-        router.push("/order-confirmation");
-      }, 1500);
     }
 
     setSubmitting(false);
@@ -218,8 +223,19 @@ function InnerPaymentForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <PaymentElement id="payment-element" />
-      <Button type="submit" className="w-full" disabled={!stripe || !elements || submitting}>
-        {submitting ? "Processing..." : "Pay now"}
+      <Button 
+        type="submit" 
+        className="w-full" 
+        disabled={!stripe || !elements || submitting}
+      >
+        {submitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Processing Payment...
+          </>
+        ) : (
+          "Pay Now"
+        )}
       </Button>
     </form>
   );

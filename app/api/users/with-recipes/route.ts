@@ -13,22 +13,20 @@ export async function GET() {
         firstName: true,
         lastName: true,
         email: true,
-        // Select all recipes for the user
-       
-        recipes: {
+        communityRecipes: {
           select: {
             id: true,
             name: true,
+            status: true,
             createdAt: true,
           },
           orderBy: {
             createdAt: 'desc',
           },
         },
-        // Also get a count of their recipes
         _count: {
           select: {
-            recipes: true,
+            communityRecipes: true,
           },
         },
       },
@@ -36,7 +34,17 @@ export async function GET() {
         createdAt: 'desc',
       },
     });
-    return NextResponse.json(customers);
+    
+    // Transform to match expected format
+    const transformedCustomers = customers.map(customer => ({
+      ...customer,
+      recipes: customer.communityRecipes,
+      _count: {
+        recipes: customer._count.communityRecipes,
+      },
+    }));
+    
+    return NextResponse.json(transformedCustomers);
   } catch (error) {
     console.error("Failed to fetch customers with recipes:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

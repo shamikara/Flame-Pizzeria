@@ -1,12 +1,18 @@
-import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { NextResponse } from "next/server";
+import prisma from "@/lib/db";
 
 export async function GET() {
   try {
-    const suppliers = await db.supplier.findMany({ orderBy: { name: 'asc' } });
+    const suppliers = await prisma.supplier.findMany({
+      orderBy: { name: "asc" },
+    });
+
     return NextResponse.json(suppliers);
-  } catch (err) {
-    console.error("Suppliers API error:", err);
-    return NextResponse.json({ error: "Failed to fetch suppliers", details: String(err) }, { status: 500 });
+  } catch (error) {
+    console.error("Error fetching suppliers:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch suppliers" },
+      { status: 500 }
+    );
   }
 }

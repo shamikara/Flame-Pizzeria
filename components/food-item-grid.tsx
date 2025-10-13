@@ -8,6 +8,9 @@ import { useCart } from "@/components/cart-provider"
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
+import { getImagePath } from "@/lib/image-utils"
+import { FoodTypeBadge } from "@/components/food-type-badge"
 
 type Customization = {
   id: number
@@ -22,6 +25,7 @@ type FoodItem = {
   price: number
   image: string
   category: string
+  foodType: number
   customizations?: Customization[]
 }
 
@@ -40,8 +44,9 @@ function FoodItemCard({ item }: { item: FoodItem }) {
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [selectedCustomizations, setSelectedCustomizations] = useState<Record<number, boolean>>({})
   const [showModal, setShowModal] = useState(false)
+  const [isAdding, setIsAdding] = useState(false)
   const router = useRouter()
-  const hasCustomizations = (item.customizations && item.customizations.length > 0)
+  const hasCustomizations = item.customizations && item.customizations.length > 0
 
   const handleCustomize = () => {
     if (!hasCustomizations) return
@@ -50,37 +55,43 @@ function FoodItemCard({ item }: { item: FoodItem }) {
   }
 
   const handleCustomizationToggle = (id: number) => {
-    setSelectedCustomizations(prev => ({
+    setSelectedCustomizations((prev) => ({
       ...prev,
       [id]: !prev[id],
     }))
   }
 
-  const handleAddToCart = (isCustomized: boolean = false) => {
+  const handleAddToCart = async (isCustomized: boolean = false) => {
+    setIsAdding(true)
+
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
     const finalCustomizations =
       isCustomized && hasCustomizations
-        ? item.customizations
-            ?.filter((c) => selectedCustomizations[c.id])
-            .map(c => ({ ...c, id: Number(c.id) })) || []
+        ? item.customizations?.filter((c) => selectedCustomizations[c.id]).map((c) => ({ ...c, id: Number(c.id) })) || []
         : []
 
     addToCart(
       {
-        productId: item.id.toString(), // <-- cast to string
+        productId: item.id.toString(),
         name: item.name,
         price: item.price,
         image: item.image,
         customizations: finalCustomizations,
       },
-      1
+      1,
     )
 
     setIsCustomizing(false)
+    setIsAdding(false)
     setShowModal(true)
   }
 
   const handleContinueShopping = () => setShowModal(false)
-  const handleGoToCart = () => { setShowModal(false); router.push('/checkout') }
+  const handleGoToCart = () => {
+    setShowModal(false)
+    router.push("/checkout")
+  }
 
   return (
     <>
@@ -88,34 +99,48 @@ function FoodItemCard({ item }: { item: FoodItem }) {
         <Link href={`/shop/${item.id}`} className="block overflow-hidden">
           <div className="aspect-square relative">
             <Image
-              src={item.image ? item.image : "img/placeholder.jpg"}
+              src={getImagePath(item.image) || "img/placeholder.jpg"}
               alt={item.name}
               fill
               className="object-cover transition-transform hover:scale-105"
             />
           </div>
         </Link>
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
           <Link href={`/shop/${item.id}`} className="block">
-            <h3 className="font-bold text-lg mb-1 hover:text-primary transition-colors">{item.name}</h3>
+            <h3 className="font-bold text-lg hover:text-primary transition-colors">{item.name}</h3>
+            <div className="flex items-center gap-2 mt-1">
+              <FoodTypeBadge type={item.foodType ?? 0} />
+            </div>
           </Link>
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{item.description}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
           <p className="font-bold">Rs. {item.price.toFixed(2)}</p>
         </CardContent>
+
         <CardFooter className="p-4 pt-0 flex gap-2">
           <Button
             variant="default"
             className="w-full"
             onClick={hasCustomizations ? handleCustomize : () => handleAddToCart(false)}
+            disabled={isAdding}
           >
-            {hasCustomizations ? "Customize" : "Add to Cart"}
+            {isAdding ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding...
+              </>
+            ) : hasCustomizations ? (
+              "Customize"
+            ) : (
+              "Add to Cart"
+            )}
           </Button>
         </CardFooter>
 
         {isCustomizing && item.customizations && (
           <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50">
             <div className="bg-white/20 backdrop-blur-sm rounded-lg p-6 max-w-md w-full border border-white/80">
-              <Image src={`/${item.image}`} className="mx-auto mb-6 rounded-md" alt={item.name} width={400} height={400} />
+              <Image src={getImagePath(item.image)} className="mx-auto mb-6 rounded-md" alt={item.name} width={400} height={400} />
               <h2 className="text-xl font-light text-center text-gray-300 mb-8">
                 Make Your {item.name} <br />
                 <span className="font-unifrakturcook !text-red-800 flame-text">Extra </span> Special?
@@ -130,6 +155,7 @@ function FoodItemCard({ item }: { item: FoodItem }) {
                         checked={selectedCustomizations[customization.id] ?? false}
                         onChange={() => handleCustomizationToggle(customization.id)}
                         className="rounded border-gray-300 text-primary"
+                        disabled={isAdding}
                       />
                       <span>{customization.name}</span>
                     </div>
@@ -141,21 +167,29 @@ function FoodItemCard({ item }: { item: FoodItem }) {
                 <div className="flex justify-between items-center">
                   <span className="font-bold">Total Price:</span>
                   <span className="font-bold text-primary">
-                    Rs. {(
+                    Rs.{" "}
+                    {(
                       item.price +
                       item.customizations
-                        .filter(c => selectedCustomizations[c.id])
+                        .filter((c) => selectedCustomizations[c.id])
                         .reduce((sum, c) => sum + c.price, 0)
                     ).toFixed(2)}
                   </span>
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-2">
-                <Button variant="outline" className="border border-white/80" onClick={() => setIsCustomizing(false)}>
+                <Button variant="outline" className="border border-white/80" onClick={() => setIsCustomizing(false)} disabled={isAdding}>
                   Cancel
                 </Button>
-                <Button onClick={() => handleAddToCart(true)}>
-                  Add to Cart
+                <Button onClick={() => handleAddToCart(true)} disabled={isAdding}>
+                  {isAdding ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    "Add to Cart"
+                  )}
                 </Button>
               </div>
             </div>
@@ -171,8 +205,12 @@ function FoodItemCard({ item }: { item: FoodItem }) {
           <div className="flex flex-col gap-4">
             <p>Would you like to continue shopping or proceed to checkout?</p>
             <div className="flex gap-2">
-              <Button onClick={handleContinueShopping} className="w-full">Continue Shopping</Button>
-              <Button onClick={handleGoToCart} className="w-full bg-primary hover:bg-primary/90">Go to Checkout</Button>
+              <Button onClick={handleContinueShopping} className="w-full">
+                Continue Shopping
+              </Button>
+              <Button onClick={handleGoToCart} className="w-full bg-primary hover:bg-primary/90">
+                Go to Checkout
+              </Button>
             </div>
           </div>
         </DialogContent>

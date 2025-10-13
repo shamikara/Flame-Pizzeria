@@ -6,15 +6,13 @@ import { revalidatePath } from "next/cache";
 
 export async function approveRecipe(recipeId: string) {
   try {
-    await db.recipe.update({
+    await db.communityRecipe.update({
       where: { id: recipeId },
       data: { status: RecipeStatus.APPROVED },
     });
 
-    // When a recipe is approved, we need to revalidate both the dashboard page
-    // and the public-facing recipe board page to show the changes.
     revalidatePath('/dashboard/users');
-    revalidatePath('/recipes-board'); // Use the correct path for your public recipe page
+    revalidatePath('/recipes-board');
 
     return { success: true };
   } catch (error) {
@@ -25,7 +23,7 @@ export async function approveRecipe(recipeId: string) {
 
 export async function rejectRecipe(recipeId: string) {
   try {
-    await db.recipe.update({
+    await db.communityRecipe.update({
       where: { id: recipeId },
       data: { status: RecipeStatus.REJECTED },
     });

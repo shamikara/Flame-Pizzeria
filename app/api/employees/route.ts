@@ -54,3 +54,77 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const employeeId = searchParams.get('id');
+
+    if (!employeeId) {
+      return NextResponse.json({ error: 'Employee ID is required' }, { status: 400 });
+    }
+
+    // Get employee to find associated user
+    const employee = await db.employee.findUnique({
+      where: { id: parseInt(employeeId) },
+      include: { user: true },
+    });
+
+    if (!employee) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
+    // Delete in transaction: first employee, then user
+    await db.$transaction(async (prisma) => {
+      // Delete employee record
+      await prisma.employee.delete({
+        where: { id: parseInt(employeeId) },
+      });
+
+      // Delete associated user
+      await prisma.user.delete({
+        where: { id: employee.userId },
+      });
+    });
+
+    return NextResponse.json({ message: 'Employee deleted successfully' }, { status: 200 });
+  } catch (error) {
+    console.error('Failed to delete employee:', error);
+    return NextResponse.json({ error: 'Failed to delete employee' }, { status: 500 });
+  }
+}
+
+export async function GET() {
+  try {
+    const employees = await db.employee.findMany({
+      include: {
+        user: {
+          select: {
+            id: true, // ✅ Add employee user ID
+            firstName: true,
+            lastName: true,
+            role: true
+          }
+        }
+      },
+      orderBy: {
+        user: {
+          firstName: 'asc'
+        }
+      }
+    });
+
+    // Format for the shift management table
+    const formattedEmployees = employees.map(emp => ({
+      id: emp.id,
+      name: `${emp.user.firstName} ${emp.user.lastName}`,
+      role: emp.user.role,
+      userId: emp.user.id // ✅ Include user ID
+    }));
+
+    return NextResponse.json(formattedEmployees);
+  } catch (error) {
+    console.error("Failed to fetch employees:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}

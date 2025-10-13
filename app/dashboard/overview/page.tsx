@@ -5,15 +5,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DollarSign, ShoppingCart, Users, UtensilsCrossed } from "lucide-react";
+import { DollarSign, ShoppingCart, Users, UtensilsCrossed, TrendingUp, TrendingDown } from "lucide-react";
 import db from "@/lib/db";
 import { OrderStatus, Role } from "@prisma/client";
 
 import { SalesChart } from "@/components/charts/sales-chart";
 import { PopularItemsChart } from "@/components/charts/popular-items-chart";
 import { EmployeeHoursChart } from "@/components/charts/employee-hours-chart";
-
-// --- Data Fetching Functions (as defined in Step 2) ---
 
 async function getDashboardStats() {
   const today = new Date();
@@ -52,7 +50,7 @@ async function getWeeklySalesData() {
     date.setDate(today.getDate() - i);
     dailySales[date.toISOString().split('T')[0]] = 0;
   }
-  orders.forEach(order => {
+  orders.forEach((order: { createdAt: { toISOString: () => string; }; total: number; }) => {
     const dateString = order.createdAt.toISOString().split('T')[0];
     if (dailySales[dateString] !== undefined) dailySales[dateString] += order.total;
   });
@@ -72,32 +70,70 @@ async function getWeeklySalesData() {
 
 async function getTopSellingItems() {
   const aggregatedItems = await db.orderItem.groupBy({ by: ['foodItemId'], _sum: { quantity: true }, orderBy: { _sum: { quantity: 'desc' } }, take: 10 });
-  const foodItemIds = aggregatedItems.map(item => item.foodItemId);
+  const foodItemIds = aggregatedItems.map((item: { foodItemId: any; }) => item.foodItemId);
   const foodItems = await db.foodItem.findMany({ where: { id: { in: foodItemIds } }, select: { id: true, name: true } });
-  const foodItemMap = new Map(foodItems.map(item => [item.id, item.name]));
-  return aggregatedItems.map(item => ({ name: foodItemMap.get(item.foodItemId) || 'Unknown', total: item._sum.quantity || 0 }));
+  const foodItemMap = new Map(foodItems.map((item: { id: any; name: any; }) => [item.id, item.name]));
+  return aggregatedItems.map((item: { foodItemId: unknown; _sum: { quantity: any; }; }) => ({ name: foodItemMap.get(item.foodItemId) || 'Unknown', total: item._sum.quantity || 0 }));
 }
 
 async function getEmployeeWorkHours() {
   const last30Days = new Date();
   last30Days.setDate(last30Days.getDate() - 30);
+
   const shifts = await db.shift.findMany({
-    where: { start: { gte: last30Days } },
-    select: { start: true, end: true, employee: { select: { user: { select: { firstName: true, lastName: true } } } } },
+    where: {
+      date: { gte: last30Days },
+      status: "COMPLETED" // Only count completed shifts for accurate hours
+    },
+    select: {
+      startTime: true,
+      endTime: true,
+      date: true,
+      employee: {
+        select: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          }
+        }
+      }
+    },
   });
+
   const hoursByEmployee: { [key: string]: number } = {};
-  shifts.forEach(shift => {
+
+  shifts.forEach((shift: { employee: { user: { firstName: any; lastName: any; }; }; startTime: string; endTime: string; }) => {
     const name = `${shift.employee.user.firstName} ${shift.employee.user.lastName}`;
-    const duration = (shift.end.getTime() - shift.start.getTime()) / (1000 * 60 * 60);
+
+    // Parse time strings (assuming format like "09:00" or "14:30")
+    const parseTime = (timeStr: string) => {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes; // Convert to minutes for easier calculation
+    };
+
+    const startMinutes = parseTime(shift.startTime);
+    const endMinutes = parseTime(shift.endTime);
+
+    // Calculate duration in hours
+    let duration = (endMinutes - startMinutes) / 60;
+
+    // Handle overnight shifts (if end time is before start time, it's next day)
+    if (duration < 0) {
+      duration += 24; // Add 24 hours for overnight shifts
+    }
+
     hoursByEmployee[name] = (hoursByEmployee[name] || 0) + duration;
   });
-  return Object.entries(hoursByEmployee).map(([name, value]) => ({ name, value: Math.round(value) }));
+
+  return Object.entries(hoursByEmployee).map(([name, value]) => ({
+    name,
+    value: Math.round(value * 10) / 10 // Round to 1 decimal place
+  }));
 }
 
-
-// --- The Main Page Component ---
 export default async function OverviewPage() {
-  // Fetch all data in parallel
   const [stats, weeklySales, topItems, employeeHours] = await Promise.all([
     getDashboardStats(),
     getWeeklySalesData(),
@@ -106,31 +142,95 @@ export default async function OverviewPage() {
   ]);
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
+    <div className="flex-1 space-y-6 p-6 md:p-10">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          Dashboard Overview
+        </h2>
+        <p className="text-gray-400 mt-2">Welcome back! Here's what's happening today.</p>
+      </div>
       
       {/* Stat Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Revenue</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">Rs. {stats.revenue.toFixed(2)}</div></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Orders</CardTitle><ShoppingCart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">+{stats.orders}</div></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">New Customers (Today)</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">+{stats.customers}</div></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Active Menu Items</CardTitle><UtensilsCrossed className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats.menuItems}</div></CardContent></Card>
+        <Card className="border-gray-800 bg-gradient-to-br from-blue-500/10 to-blue-600/5 hover:shadow-lg hover:shadow-blue-500/20 transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Total Revenue</CardTitle>
+            <DollarSign className="h-5 w-5 text-blue-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">Rs. {stats.revenue.toFixed(2)}</div>
+            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+              <TrendingUp className="h-3 w-3 text-green-400" />
+              All time earnings
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-800 bg-gradient-to-br from-green-500/10 to-green-600/5 hover:shadow-lg hover:shadow-green-500/20 transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Total Orders</CardTitle>
+            <ShoppingCart className="h-5 w-5 text-green-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">+{stats.orders}</div>
+            <p className="text-xs text-gray-400 mt-1">Lifetime orders</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-800 bg-gradient-to-br from-purple-500/10 to-purple-600/5 hover:shadow-lg hover:shadow-purple-500/20 transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">New Customers</CardTitle>
+            <Users className="h-5 w-5 text-purple-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">+{stats.customers}</div>
+            <p className="text-xs text-gray-400 mt-1">Joined today</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-800 bg-gradient-to-br from-orange-500/10 to-orange-600/5 hover:shadow-lg hover:shadow-orange-500/20 transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Menu Items</CardTitle>
+            <UtensilsCrossed className="h-5 w-5 text-orange-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.menuItems}</div>
+            <p className="text-xs text-gray-400 mt-1">Active items</p>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader><CardTitle>Weekly Sales</CardTitle><CardDescription>Comparison of sales between this week and last week.</CardDescription></CardHeader>
-          <CardContent className="pl-2"><SalesChart data={weeklySales} /></CardContent>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4 border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
+          <CardHeader>
+            <CardTitle className="text-gray-200">Weekly Sales</CardTitle>
+            <CardDescription className="text-gray-400">Comparison of sales between this week and last week</CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <SalesChart data={weeklySales} />
+          </CardContent>
         </Card>
-        <Card className="col-span-3">
-          <CardHeader><CardTitle>Employee Work Hours</CardTitle><CardDescription>Total hours worked in the last 30 days.</CardDescription></CardHeader>
-          <CardContent><EmployeeHoursChart data={employeeHours} /></CardContent>
+
+        <Card className="col-span-3 border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
+          <CardHeader>
+            <CardTitle className="text-gray-200">Employee Work Hours</CardTitle>
+            <CardDescription className="text-gray-400">Total hours worked in the last 30 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmployeeHoursChart data={employeeHours} />
+          </CardContent>
         </Card>
       </div>
-      <Card>
-          <CardHeader><CardTitle>Top 10 Selling Items</CardTitle><CardDescription>The most popular items based on quantity sold.</CardDescription></CardHeader>
-          <CardContent><PopularItemsChart data={topItems} /></CardContent>
+
+      <Card className="border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
+        <CardHeader>
+          <CardTitle className="text-gray-200">Top 10 Selling Items</CardTitle>
+          <CardDescription className="text-gray-400">The most popular items based on quantity sold</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PopularItemsChart data={topItems} />
+        </CardContent>
       </Card>
     </div>
   );
