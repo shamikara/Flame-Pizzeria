@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { z } from 'zod';
-import { MeasurementUnit } from '@prisma/client';
+import { measurement_unit } from '@prisma/client';
 
 const createSchema = z.object({
   name: z.string(),
   stock: z.number(),
-  unit: z.nativeEnum(MeasurementUnit),
+  unit: z.nativeEnum(measurement_unit),
   restockThreshold: z.number(),
   supplierId: z.string().optional(), 
 });

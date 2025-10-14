@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeForm } from '@/components/employee-form';
-import { LeaveStatus } from '@prisma/client';
+import { leave_status } from '@prisma/client';
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
 import ShiftChart from '@/components/shift-chart';
@@ -204,8 +204,8 @@ export default function EmployeesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={employee.leaveStatus === LeaveStatus.ACTIVE ? "default" : "secondary"}
-                          className={employee.leaveStatus === LeaveStatus.ACTIVE ? "bg-green-500/20 text-green-400 border-green-500/50" : ""}>
+                        <Badge variant={employee.leaveStatus === leave_status.ACTIVE ? "default" : "secondary"}
+                          className={employee.leaveStatus === leave_status.ACTIVE ? "bg-green-500/20 text-green-400 border-green-500/50" : ""}>
                           {employee.leaveStatus}
                         </Badge>
                       </TableCell>

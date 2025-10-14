@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/db";
-import { OrderStatus } from "@prisma/client";
+import { order_status } from "@prisma/client";
 
 // ============================================
 // SALES REPORT
@@ -9,7 +9,7 @@ import { OrderStatus } from "@prisma/client";
 export async function generateSalesReport(startDate?: string, endDate?: string) {
   try {
     const whereClause: any = {
-      status: { in: [OrderStatus.DELIVERED, OrderStatus.CONFIRMED] }
+      status: { in: [order_status.DELIVERED, order_status.CONFIRMED] }
     };
 
     if (startDate && endDate) {
@@ -51,7 +51,7 @@ export async function generateSalesReport(startDate?: string, endDate?: string) 
       }
     });
 
-    const flattenedData = orders.map(order => ({
+    const flattenedData = orders.map((order: { id: any; createdAt: { toISOString: () => string; toTimeString: () => string; }; user: { firstName: any; lastName: any; email: any; }; type: any; status: any; items: any[]; total: number; }) => ({
       order_id: order.id,
       date: order.createdAt.toISOString().split('T')[0],
       time: order.createdAt.toTimeString().split(' ')[0],
@@ -59,12 +59,12 @@ export async function generateSalesReport(startDate?: string, endDate?: string) 
       customer_email: order.user.email,
       order_type: order.type,
       status: order.status,
-      items_count: order.items.reduce((sum, item) => sum + item.quantity, 0),
+      items_count: order.items.reduce((sum: any, item: { quantity: any; }) => sum + item.quantity, 0),
       total_amount: `Rs. ${order.total.toFixed(2)}`,
     }));
 
     // Calculate summary
-    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+    const totalRevenue = orders.reduce((sum: any, order: { total: any; }) => sum + order.total, 0);
     const totalOrders = orders.length;
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
@@ -97,7 +97,7 @@ export async function generateInventoryReport() {
       orderBy: { name: 'asc' },
     });
 
-    const flattenedData = ingredients.map(ing => ({
+    const flattenedData = ingredients.map((ing: { name: any; supplier: { name: any; }; stock: number; unit: any; restockThreshold: number; expiryDate: { toISOString: () => string; }; }) => ({
       ingredient_name: ing.name,
       supplier_name: ing.supplier?.name || 'N/A',
       current_stock: `${ing.stock} ${ing.unit}`,
@@ -107,7 +107,7 @@ export async function generateInventoryReport() {
       status: ing.stock <= ing.restockThreshold ? 'Low Stock' : 'In Stock',
     }));
 
-    const lowStockCount = ingredients.filter(ing => ing.stock <= ing.restockThreshold).length;
+    const lowStockCount = ingredients.filter((ing: { stock: number; restockThreshold: number; }) => ing.stock <= ing.restockThreshold).length;
 
     return { 
       success: true, 
@@ -148,7 +148,7 @@ export async function generateSalaryReport(month: string, year: string) {
 
     const employeeSalaries: { [key: number]: any } = {};
 
-    shifts.forEach(shift => {
+    shifts.forEach((shift: { employee: { id: any; user: { firstName: any; lastName: any; email: any; }; position: any; hourlyRate: number; }; end: { getTime: () => number; }; start: { getTime: () => number; }; }) => {
       const empId = shift.employee.id;
       const hours = (shift.end.getTime() - shift.start.getTime()) / (1000 * 60 * 60);
       
@@ -198,7 +198,7 @@ export async function generateSalaryReport(month: string, year: string) {
 export async function generateSummaryReport(startDate?: string, endDate?: string) {
   try {
     const whereClause: any = {
-      status: { in: [OrderStatus.DELIVERED, OrderStatus.CONFIRMED] }
+      status: { in: [order_status.DELIVERED, order_status.CONFIRMED] }
     };
 
     if (startDate && endDate) {
@@ -220,18 +220,18 @@ export async function generateSummaryReport(startDate?: string, endDate?: string
       }
     });
 
-    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+    const totalRevenue = orders.reduce((sum: any, order: { total: any; }) => sum + order.total, 0);
     const totalOrders = orders.length;
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     // Get unique customers
-    const uniqueCustomers = new Set(orders.map(o => o.userId));
+    const uniqueCustomers = new Set(orders.map((o: { userId: any; }) => o.userId));
     const totalCustomers = uniqueCustomers.size;
 
     // Top selling items
     const itemSales: { [key: number]: { name: string; quantity: number; revenue: number } } = {};
     
-    orders.forEach(order => {
+    orders.forEach((order: { items: any[]; }) => {
       order.items.forEach(item => {
         if (!itemSales[item.foodItemId]) {
           itemSales[item.foodItemId] = {
@@ -283,19 +283,19 @@ export async function generateBudgetForecast() {
 
     const orders = await prisma.order.findMany({
       where: {
-        status: OrderStatus.DELIVERED,
+        status: order_status.DELIVERED,
         createdAt: { gte: currentMonthStart, lte: currentMonthEnd },
       },
     });
 
-    const currentRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+    const currentRevenue = orders.reduce((sum: any, o: { total: any; }) => sum + o.total, 0);
     const currentOrderCount = orders.length;
 
     const predictedRevenue = currentRevenue * 1.1;
     const predictedOrderCount = Math.ceil(currentOrderCount * 1.1);
 
     const ingredients = await prisma.ingredient.findMany();
-    const totalPredictedExpenses = ingredients.reduce((sum, ing) => {
+    const totalPredictedExpenses = ingredients.reduce((sum: number, ing: { restockThreshold: number; }) => {
       const monthlyUsage = ing.restockThreshold * 2;
       return sum + (monthlyUsage * 50);
     }, 0);
@@ -331,7 +331,7 @@ export async function generateInventoryForecast() {
       include: { supplier: true },
     });
 
-    const forecastData = ingredients.map(ing => {
+    const forecastData = ingredients.map((ing: { restockThreshold: number; stock: number; name: any; unit: any; }) => {
       const monthlyUsage = ing.restockThreshold * 1.5;
       const predictedStock = Math.max(0, ing.stock - monthlyUsage);
       const recommendedOrder = predictedStock < ing.restockThreshold 
@@ -352,7 +352,7 @@ export async function generateInventoryForecast() {
       };
     });
 
-    const needsRestockCount = forecastData.filter(item => item.priority !== 'LOW').length;
+    const needsRestockCount = forecastData.filter((item: { priority: string; }) => item.priority !== 'LOW').length;
     const nextMonth = new Date();
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     const nextMonthName = nextMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -379,7 +379,7 @@ export async function generateSalesPrediction() {
 
     const orders = await prisma.order.findMany({
       where: {
-        status: OrderStatus.DELIVERED,
+        status: order_status.DELIVERED,
         createdAt: { gte: currentMonthStart },
       },
       include: {
@@ -391,7 +391,7 @@ export async function generateSalesPrediction() {
 
     const itemSales: { [key: number]: { name: string; quantity: number } } = {};
     
-    orders.forEach(order => {
+    orders.forEach((order: { items: any[]; }) => {
       order.items.forEach(item => {
         if (!itemSales[item.foodItemId]) {
           itemSales[item.foodItemId] = {
@@ -409,7 +409,7 @@ export async function generateSalesPrediction() {
       predicted_quantity_sold: Math.ceil(item.quantity * 1.1),
     }));
 
-    const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+    const totalRevenue = orders.reduce((sum: any, o: { total: any; }) => sum + o.total, 0);
     const predictedRevenue = totalRevenue * 1.1;
     const predictedOrders = Math.ceil(orders.length * 1.1);
 

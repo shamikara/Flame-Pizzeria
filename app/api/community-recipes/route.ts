@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getServerSession } from "@/lib/session";
-import { RecipeStatus } from "@prisma/client";
+import { recipe_status } from "@prisma/client";
 
 // GET - Fetch approved recipes for public board
 export async function GET() {
   try {
     const recipes = await prisma.communityRecipe.findMany({
-      where: { status: RecipeStatus.APPROVED },
+      where: { status: recipe_status.APPROVED },
       include: {
         author: {
           select: {
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         description,
         imageUrl,
         authorId: session.userId,
-        status: RecipeStatus.PENDING,
+        status: recipe_status.PENDING,
       },
     });
 

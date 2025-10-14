@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, PackageOpen, AlertTriangle, Clock } from "lucide-react";
-import { Ingredient, Supplier } from "@prisma/client";
+import { ingredient, supplier } from "@prisma/client";
 import { IngredientForm } from "@/components/ingredient-form";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -27,11 +27,11 @@ import { Badge } from "@/components/ui/badge";
 import { PackagePlus } from "lucide-react";
 import { RestockForm } from "@/components/restock-form";
 
-type IngredientWithSupplier = Ingredient & { supplier: Supplier | null };
+type IngredientWithSupplier = ingredient & { supplier: supplier | null };
 
 export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState<IngredientWithSupplier[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [suppliers, setSuppliers] = useState<supplier[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 

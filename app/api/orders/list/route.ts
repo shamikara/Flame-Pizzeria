@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/db'
-import { OrderStatus } from '@prisma/client'
+import { order_status } from '@prisma/client'
 
 export async function GET() {
   try {
@@ -9,7 +9,7 @@ export async function GET() {
     try {
       await prisma.order.deleteMany({
         where: {
-          status: OrderStatus.PENDING,
+          status: order_status.PENDING,
           createdAt: { lt: thirtyMinutesAgo },
         },
       });
@@ -34,7 +34,7 @@ export async function GET() {
       take: 100,
     })
 
-    const payload = orders.map((o) => ({
+    const payload = orders.map((o: { id: any; total: any; status: any; createdAt: any; address: any; phone: any; user: { firstName: any; lastName: any; }; items: { id: any; quantity: any; price: any; foodItem: any; customizations: any; }[]; }) => ({
       id: o.id,
       total: o.total,
       status: o.status,
@@ -45,7 +45,7 @@ export async function GET() {
         firstName: o.user.firstName,
         lastName: o.user.lastName,
       },
-      items: o.items.map((item) => ({
+      items: o.items.map((item: { id: any; quantity: any; price: any; foodItem: any; customizations: any; }) => ({
         id: item.id,
         quantity: item.quantity,
         price: item.price,
