@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { ShoppingCart, Menu, X, LogOut, User as UserIcon, LayoutDashboard, Sun, Moon } from "lucide-react"
+import { ShoppingCart, Menu, X, LogOut, User as UserIcon, LayoutDashboard, Sun, Moon, Loader2 } from "lucide-react"
 import { useCart } from "@/components/cart-provider"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
@@ -30,6 +30,7 @@ export default function Header() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [showNotifications, setShowNotifications] = useState(false)
   const [themeMounted, setThemeMounted] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const { resolvedTheme, setTheme } = useTheme()
   const { itemCount } = useCart();
   const { user } = useSession()
@@ -38,10 +39,17 @@ export default function Header() {
   const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/dashboard');
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.refresh();
-    router.push('/login');
-    window.location.reload();
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      router.refresh()
+      router.push('/login')
+      window.location.reload()
+    } catch (error) {
+      console.error('Failed to logout:', error)
+      setLoggingOut(false)
+    }
   };
 
   useEffect(() => {
@@ -265,8 +273,12 @@ export default function Header() {
                 <ProfileModal />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-50">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
+                  {loggingOut ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogOut className="mr-2 h-4 w-4" />
+                  )}
+                  <span>{loggingOut ? 'Logging out...' : 'Logout'}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -317,8 +329,13 @@ export default function Header() {
           </Link>
           {renderThemeToggle('mobile')}
           {user ? (
-            <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="text-left text-lg font-medium text-red-500">
-              Logout
+            <button
+              onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+              className="flex items-center gap-2 text-left text-lg font-medium text-red-500"
+              disabled={loggingOut}
+            >
+              {loggingOut && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loggingOut ? 'Logging out...' : 'Logout'}
             </button>
           ) : (
             <Link href="/login" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>

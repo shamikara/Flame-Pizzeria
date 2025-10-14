@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { loadStripe } from "@stripe/stripe-js";
+import { loadStripe, type StripeElementsOptions } from "@stripe/stripe-js";
 import {
   Elements,
   PaymentElement,
@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
@@ -30,6 +31,13 @@ export function StripePaymentForm({ orderId: propOrderId }: StripePaymentFormPro
   const [isLoading, setIsLoading] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { resolvedTheme } = useTheme();
+  const [elementsTheme, setElementsTheme] = useState<"dark" | "light" | null>(null);
+
+  useEffect(() => {
+    if (!resolvedTheme) return;
+    setElementsTheme(resolvedTheme === "dark" ? "dark" : "light");
+  }, [resolvedTheme]);
 
   useEffect(() => {
     // Get order ID from prop or localStorage
@@ -82,16 +90,37 @@ export function StripePaymentForm({ orderId: propOrderId }: StripePaymentFormPro
     };
   }, [cart, toast, propOrderId]);
 
-  const options = useMemo(
-    () =>
-      clientSecret
-        ? ({
-            clientSecret,
-            appearance: { theme: "stripe" },
-          } as const)
-        : undefined,
-    [clientSecret]
-  );
+  const prefersDark = elementsTheme === "dark";
+
+  const options = useMemo<StripeElementsOptions | undefined>(() => {
+    if (!clientSecret || !elementsTheme) return undefined;
+    return {
+      clientSecret,
+      appearance: prefersDark
+        ? {
+            theme: "night",
+            variables: {
+              colorPrimary: "#8b5cf6",
+              colorBackground: "#0f172a",
+              colorText: "#f8fafc",
+              colorDanger: "#ef4444",
+              borderRadius: "10px",
+              fontFamily: "Inter, sans-serif",
+            },
+          }
+        : {
+            theme: "stripe",
+            variables: {
+              colorPrimary: "#2563eb",
+              colorBackground: "#ffffff",
+              colorText: "#111827",
+              colorDanger: "#dc2626",
+              borderRadius: "8px",
+              fontFamily: "Inter, sans-serif",
+            },
+          },
+    };
+  }, [clientSecret, elementsTheme, prefersDark]);
 
   if (!stripePromise) {
     return (
@@ -134,7 +163,11 @@ export function StripePaymentForm({ orderId: propOrderId }: StripePaymentFormPro
           </div>
         )}
         {options && (
-          <Elements stripe={stripePromise} options={options}>
+          <Elements
+            key={`${options.clientSecret}-${prefersDark ? "dark" : "light"}`}
+            stripe={stripePromise}
+            options={options}
+          >
             <InnerPaymentForm orderId={orderId} />
           </Elements>
         )}
@@ -221,7 +254,7 @@ function InnerPaymentForm({ orderId }: { orderId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 ">
       <PaymentElement id="payment-element" />
       <Button 
         type="submit" 

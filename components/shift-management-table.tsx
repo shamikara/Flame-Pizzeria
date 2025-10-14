@@ -23,7 +23,8 @@ import {
     Loader2
 } from "lucide-react"
 import { toast } from "sonner"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 
 type ShiftName = "Morning" | "Evening" | "Night"
 type ShiftStatus = "SCHEDULED" | "ON_DUTY" | "COMPLETED" | "ABSENT"
@@ -77,6 +78,16 @@ interface EmployeeOption {
     id: number
     name: string
     role: string
+    leadershipTitle: string | null
+}
+
+const LEADERSHIP_TITLES = new Set(["Manager", "Assistant Manager", "Head Chef", "Sous Chef"])
+const LEADERSHIP_ROLES = new Set(["MANAGER", "ADMIN"])
+const isLeadershipEmployee = (employee?: EmployeeOption | null) => {
+    if (!employee) return false
+    const role = employee.role?.toUpperCase() ?? ""
+    if (LEADERSHIP_ROLES.has(role)) return true
+    return employee.leadershipTitle ? LEADERSHIP_TITLES.has(employee.leadershipTitle) : false
 }
 
 const SHIFT_ICONS: Record<ShiftName, React.ComponentType<{ className?: string }>> = {
@@ -96,6 +107,28 @@ const SHIFT_OPTIONS: { value: ShiftName; label: string }[] = [
     { value: "Night", label: "Night (19:00 – 24:00)" }
 ]
 
+const ROLE_THEME: Record<string, { label: string; bg: string; border: string; text: string }> = {
+    MANAGER: { label: "Manager", bg: "bg-emerald-900/50", border: "border-emerald-500/40", text: "text-emerald-200" },
+    CHEF: { label: "Chef", bg: "bg-orange-900/40", border: "border-orange-500/40", text: "text-orange-200" },
+    STORE_KEEP: { label: "Store Keeper", bg: "bg-sky-900/40", border: "border-sky-500/40", text: "text-sky-200" },
+    KITCHEN_HELPER: { label: "Kitchen Helper", bg: "bg-purple-900/40", border: "border-purple-500/40", text: "text-purple-200" },
+    CASHIER: { label: "Cashier", bg: "bg-yellow-900/40", border: "border-yellow-500/40", text: "text-yellow-200" },
+    DELIVERY: { label: "Delivery", bg: "bg-indigo-900/40", border: "border-indigo-500/40", text: "text-indigo-200" },
+    DELIVERY_PERSON: { label: "Delivery", bg: "bg-indigo-900/40", border: "border-indigo-500/40", text: "text-indigo-200" },
+    DEFAULT: { label: "Other Roles", bg: "bg-gray-900/70", border: "border-gray-700", text: "text-gray-200" }
+}
+
+const ROLE_LEGEND = Object.entries(ROLE_THEME)
+    .filter(([key]) => key !== "DEFAULT")
+    .reduce<Record<string, { label: string; bg: string; border: string; text: string }>>((acc, [_, value]) => {
+        if (!acc[value.label]) {
+            acc[value.label] = value
+        }
+        return acc
+    }, {})
+
+const resolveRoleTheme = (role?: string | null) => ROLE_THEME[role?.toUpperCase() ?? ""] ?? ROLE_THEME.DEFAULT
+
 export default function ShiftManagementTable({ currentDate = new Date() }: ShiftManagementTableProps) {
     const [visibleMonth, setVisibleMonth] = useState(startOfMonth(currentDate))
     const [monthlyData, setMonthlyData] = useState<MonthlyShiftSummary[]>([])
@@ -113,6 +146,31 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
         notes: ""
     })
 
+    const selectedShiftSummary = useMemo(() => {
+        if (!selectedDay) return null
+        return selectedDay.shifts[newShift.shiftName]
+    }, [selectedDay, newShift.shiftName])
+
+    const leaderAlreadyScheduled = selectedShiftSummary?.leaderOnDuty ?? false
+    const leaderRequired = newShift.shiftName !== "Night" && !leaderAlreadyScheduled
+
+    const selectedEmployee = useMemo(
+        () => employees.find((emp) => String(emp.id) === newShift.employeeId) ?? null,
+        [employees, newShift.employeeId]
+    )
+
+    const leadershipAvailable = useMemo(
+        () => employees.some((emp) => isLeadershipEmployee(emp)),
+        [employees]
+    )
+
+    useEffect(() => {
+        if (!leaderRequired) return
+        if (!newShift.employeeId) return
+        if (selectedEmployee && !isLeadershipEmployee(selectedEmployee)) {
+            setNewShift((prev) => ({ ...prev, employeeId: "" }))
+        }
+    }, [leaderRequired, newShift.employeeId, selectedEmployee])
 
     useEffect(() => {
         const loadEmployees = async () => {
@@ -127,7 +185,8 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                         data.map((emp: any) => ({
                             id: emp.id,
                             name: `${emp.name ?? `${emp.user?.firstName ?? ""} ${emp.user?.lastName ?? ""}`}`.trim(),
-                            role: emp.role ?? emp.user?.role ?? "UNKNOWN"
+                            role: emp.role ?? emp.user?.role ?? "UNKNOWN",
+                            leadershipTitle: emp.leadershipTitle ?? emp.user?.leadershipTitle ?? null
                         }))
                     )
                 } else {
@@ -232,10 +291,23 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
             if (!response.ok) {
                 const body = await response.json().catch(() => ({}))
                 if (body?.violations?.length) {
-                    body.violations.forEach((msg: string) => toast.error(msg))
+                    const firstLeadershipViolation = body.violations.find((msg: string) =>
+                        msg.toLowerCase().includes("first morning") || msg.toLowerCase().includes("first evening")
+                    )
+
+                    if (firstLeadershipViolation) {
+                        toast.error(firstLeadershipViolation, {
+                            description: "Assign a Manager or Chef before adding other roles."
+                        })
+                    }
+
+                    body.violations
+                        .filter((msg: string) => msg !== firstLeadershipViolation)
+                        .forEach((msg: string) => toast.error(msg))
                 } else {
                     toast.error(body?.error ?? "Failed to create shift")
                 }
+
                 return
             }
 
@@ -332,23 +404,23 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                                 </TooltipTrigger>
                                 <TooltipContent sideOffset={8} className="z-50 max-w-xs space-y-1 rounded-md border border-gray-700 bg-gray-900/95 p-3 shadow-xl">
                                     {slot && slot.assignments.length > 0 ? (
-                                        
+
                                         slot.assignments.map((assignment) => {
                                             const ROLE_THEME: Record<
-                                            string,
-                                            { bg: string; border: string; text: string }
-                                        > = {
-                                            MANAGER: { bg: "bg-emerald-900/50", border: "border-emerald-500/40", text: "text-emerald-200" },
-                                            CHEF: { bg: "bg-orange-900/40", border: "border-orange-500/40", text: "text-orange-200" },
-                                            STORE_KEEP: { bg: "bg-sky-900/40", border: "border-sky-500/40", text: "text-sky-200" },
-                                            KITCHEN_HELPER: { bg: "bg-purple-900/40", border: "border-purple-500/40", text: "text-purple-200" },
-                                            CASHIER: { bg: "bg-yellow-900/40", border: "border-yellow-500/40", text: "text-yellow-200" },
-                                            DELIVERY: { bg: "bg-indigo-900/40", border: "border-indigo-500/40", text: "text-indigo-200" },
-                                            DEFAULT: { bg: "bg-gray-900/70", border: "border-gray-700", text: "text-gray-200" },
-                                        }
+                                                string,
+                                                { bg: string; border: string; text: string }
+                                            > = {
+                                                MANAGER: { bg: "bg-emerald-900/50", border: "border-emerald-500/40", text: "text-emerald-200" },
+                                                CHEF: { bg: "bg-orange-900/40", border: "border-orange-500/40", text: "text-orange-200" },
+                                                STORE_KEEP: { bg: "bg-sky-900/40", border: "border-sky-500/40", text: "text-sky-200" },
+                                                KITCHEN_HELPER: { bg: "bg-purple-900/40", border: "border-purple-500/40", text: "text-purple-200" },
+                                                CASHIER: { bg: "bg-yellow-900/40", border: "border-yellow-500/40", text: "text-yellow-200" },
+                                                DELIVERY: { bg: "bg-indigo-900/40", border: "border-indigo-500/40", text: "text-indigo-200" },
+                                                DEFAULT: { bg: "bg-gray-900/70", border: "border-gray-700", text: "text-gray-200" },
+                                            }
 
-                                        const getRoleTheme = (role?: string | null) =>
-                                            ROLE_THEME[role?.toUpperCase() ?? ""] ?? ROLE_THEME.DEFAULT
+                                            const getRoleTheme = (role?: string | null) =>
+                                                ROLE_THEME[role?.toUpperCase() ?? ""] ?? ROLE_THEME.DEFAULT
 
                                             const theme = getRoleTheme(assignment.employee.role)
                                             return (
@@ -402,7 +474,18 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                             <p className="text-sm text-gray-400">
                                 Ensure coverage per shift and role. Click a date to review and add assignments.
                             </p>
+                            <div className="flex flex-row flex-wrap items-center gap-3">
+                                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-300">
+                                    {Object.entries(ROLE_LEGEND).map(([label, theme]) => (
+                                        <div key={label} className="flex items-center gap-2">
+                                            <span className={`h-2 w-6 rounded-full border ${theme.bg} ${theme.border}`} />
+                                            <span>{label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
+
                         <div className="flex items-center gap-2">
                             <Button variant="ghost" className="text-gray-300 hover:text-white" onClick={() => handleMonthChange("prev")}>
                                 <ChevronLeft className="h-4 w-4" />
@@ -454,7 +537,7 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                 )}
 
                 <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                    <DialogContent className="bg-gray-900 text-white sm:max-w-[60vw]">
+                    <DialogContent className="bg-gray-900 text-white sm:max-w-[90vw] max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>Create Shift</DialogTitle>
                             <DialogDescription className="text-sm text-gray-400">
@@ -474,11 +557,31 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                                         <SelectValue placeholder="Select employee" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-gray-900 text-white">
-                                        {employees.map((emp) => (
-                                            <SelectItem key={emp.id} value={String(emp.id)}>
-                                                {emp.name} — {emp.role}
-                                            </SelectItem>
-                                        ))}
+                                        {leaderRequired && (
+                                            <div className="px-2 py-1 text-xs text-orange-400">
+                                                Morning and Evening shifts must start with a Manager or Chef
+                                            </div>
+                                        )}
+                                        {leaderRequired && !leadershipAvailable && (
+                                            <div className="px-2 py-2 text-xs text-red-400">
+                                                No leadership staff available for this shift.
+                                            </div>
+                                        )}
+                                        {employees.map((emp) => {
+                                            const value = String(emp.id)
+                                            const blocked = leaderRequired && !isLeadershipEmployee(emp)
+                                            return (
+                                                <SelectItem
+                                                    key={emp.id}
+                                                    value={value}
+                                                    disabled={blocked}
+                                                    className={blocked ? "text-gray-500 opacity-60" : undefined}
+                                                >
+                                                    {emp.name} — {emp.role}
+                                                    {emp.leadershipTitle ? ` (${emp.leadershipTitle})` : ""}
+                                                </SelectItem>
+                                            )
+                                        })}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -544,7 +647,7 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                                         const Icon = SHIFT_ICONS[shiftName]
 
                                         return (
-                                            <div key={shiftName} className="flex h-[90vh] flex-col rounded-md border border-gray-800 bg-gray-900/70 p-3">
+                                            <div key={shiftName} className="flex max-h-96 flex-col rounded-md border border-gray-800 bg-gray-900/70 p-3 overflow-y-auto">
                                                 <div className="flex items-center justify-between text-xs text-gray-400">
                                                     <span className="flex items-center gap-2 text-sm text-gray-200">
                                                         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800">

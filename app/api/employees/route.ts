@@ -100,12 +100,13 @@ export async function GET() {
       include: {
         user: {
           select: {
-            id: true, // ✅ Add employee user ID
+            id: true,
             firstName: true,
             lastName: true,
             role: true
           }
-        }
+        },
+        leadership: true
       },
       orderBy: {
         user: {
@@ -119,7 +120,8 @@ export async function GET() {
       id: emp.id,
       name: `${emp.user.firstName} ${emp.user.lastName}`,
       role: emp.user.role,
-      userId: emp.user.id // ✅ Include user ID
+      leadershipTitle: emp.leadership?.position ?? null,
+      userId: emp.user.id
     }));
 
     return NextResponse.json(formattedEmployees);

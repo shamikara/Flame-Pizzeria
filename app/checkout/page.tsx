@@ -20,7 +20,7 @@ export default function CheckoutPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-slate-900/60 backdrop-blur-sm rounded-lg shadow p-4">
+          <div className="bg-neutral-100/60 backdrop-blur-sm rounded-lg shadow p-4 dark:bg-neutral-900/60">
             <h2 className="text-2xl font-semibold ml-5 my-4">Billing Information</h2>
             <CheckoutForm onOrderCreated={handleOrderCreated} />
             

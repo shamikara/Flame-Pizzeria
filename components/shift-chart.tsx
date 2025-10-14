@@ -23,7 +23,7 @@ interface ShiftChartProps {
 
 interface ApiShift {
   id: number
-  name: ShiftName
+  name: string
   startTime: string
   endTime: string
   status: "SCHEDULED" | "ON_DUTY" | "COMPLETED" | "ABSENT"
@@ -64,6 +64,47 @@ const SHIFT_SECTIONS: Record<ShiftName, { label: string; timeRange: string }> = 
   Morning: { label: "Morning", timeRange: "05:00 — 12:00" },
   Evening: { label: "Evening", timeRange: "12:00 — 19:00" },
   Night: { label: "Night", timeRange: "19:00 — 24:00" }
+}
+
+function normalizeShiftName(rawName: string | null | undefined): ShiftName | null {
+  if (!rawName) return null
+
+  const name = rawName.trim().toLowerCase()
+  if (!name) return null
+
+  const normalized = name.replace(/\s+/g, " ")
+
+  if (
+    normalized.includes("morning") ||
+    normalized.includes("am") ||
+    normalized.includes("open") ||
+    normalized.includes("breakfast") ||
+    normalized.includes("day")
+  ) {
+    return "Morning"
+  }
+
+  if (
+    normalized.includes("evening") ||
+    normalized.includes("pm") ||
+    normalized.includes("swing") ||
+    normalized.includes("dinner") ||
+    normalized.includes("afternoon")
+  ) {
+    return "Evening"
+  }
+
+  if (
+    normalized.includes("night") ||
+    normalized.includes("overnight") ||
+    normalized.includes("graveyard") ||
+    normalized.includes("close") ||
+    normalized.includes("closing")
+  ) {
+    return "Night"
+  }
+
+  return null
 }
 
 const LEADERSHIP_TITLES = new Set(["Manager", "Assistant Manager", "Head Chef", "Sous Chef"])
@@ -140,7 +181,8 @@ export default function ShiftChart({ currentDate = new Date() }: ShiftChartProps
       setLoading(true)
       setError(null)
       try {
-        const response = await fetch(`/api/shifts?date=${selectedDate}`)
+        const response = await fetch(`/api/shifts?date=${selectedDate}`, { cache: "no-store", headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } })
+
         if (!response.ok) {
           setError(`Failed to load shifts (${response.status})`)
           setSections([])
@@ -155,12 +197,13 @@ export default function ShiftChart({ currentDate = new Date() }: ShiftChartProps
         }
 
         for (const shift of data) {
-          if (!grouped[shift.name]) continue
+          const normalizedName = normalizeShiftName(shift.name)
+          if (!normalizedName) continue
 
           const leadershipTitle = shift.employee.leadership?.position ?? null
           const employeeIsLeader = isLeadership(shift.employee.user.role, leadershipTitle)
 
-          grouped[shift.name].assignments.push({
+          grouped[normalizedName].assignments.push({
             id: shift.id,
             status: shift.status,
             notes: shift.notes,

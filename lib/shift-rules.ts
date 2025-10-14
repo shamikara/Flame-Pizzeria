@@ -69,7 +69,7 @@ export function getShiftRuleViolations(input: ValidateShiftInput): string[] {
   )
 
   validateDuplicateDailyAssignments({ candidate, shiftName, sameDayAssignments, violations })
-  validateRoleAvailability({ candidate, shiftName, targetDate, violations })
+  validateRoleAvailability({ candidate, shiftName, targetDate, dayAssignments, violations })
   validateLeadershipCoverage({ candidate, shiftName, dayAssignments, violations })
   validateDoubleShiftCooldown({ candidate, shiftName, targetDate, previousDayAssignments, violations })
 
@@ -115,11 +115,13 @@ function validateRoleAvailability({
   candidate,
   shiftName,
   targetDate,
+  dayAssignments,
   violations
 }: {
   candidate: EmployeeWithRelations
   shiftName: ShiftName
   targetDate: Date
+  dayAssignments: ShiftAssignmentInfo[]
   violations: string[]
 }) {
   const role = candidate.user.role
@@ -142,13 +144,15 @@ function validateRoleAvailability({
     violations.push("Delivery staff cannot be assigned to the Night shift")
   }
 
-  if ((shiftName === "Morning" || shiftName === "Evening") && !isLeader) {
-    // Only warn if there is no leader already scheduled for this shift;
-    // the final check happens in validateLeadershipCoverage with the collective roster.
-    // This message guides schedulers when they try to assign a non-leader before a leader.
-    violations.push(
-      `${shiftName} shift requires a Manager, Head Chef, or Sous Chef on duty before adding other roles`
-    )
+  if (shiftName === "Morning" || shiftName === "Evening") {
+    const shiftAssignments = dayAssignments.filter((assignment) => assignment.name === shiftName)
+    const shiftHasLeader = shiftAssignments.some((assignment) => isLeadership(assignment.employee))
+
+    if (!isLeader && !shiftHasLeader) {
+      violations.push(
+        `First ${shiftName.toLowerCase()} assignment must be a Manager, Head Chef, or Sous Chef`
+      )
+    }
   }
 }
 
