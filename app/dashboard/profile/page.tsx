@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import db from "@/lib/db";
 import { ProfileForm } from "@/components/profile-form";
 import { getServerSession } from "@/lib/session";
-import { Role } from "@prisma/client";
+import { user_role } from "@prisma/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 
@@ -31,7 +31,7 @@ export default async function ProfilePage() {
 
   // Only customers and admins can edit their profiles
   // Employees cannot edit their own profiles
-  const isEmployee = user.role !== Role.CUSTOMER && user.role !== Role.ADMIN && user.role !== Role.MANAGER;
+  const isEmployee = user.role !== user_role.CUSTOMER && user.role !== user_role.ADMIN && user.role !== user_role.MANAGER;
 
   if (isEmployee) {
     return (

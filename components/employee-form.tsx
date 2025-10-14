@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Role } from "@prisma/client";
+import { user_role } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -16,7 +16,7 @@ const formSchema = z.object({
   firstName: z.string().min(2, "First name is too short."),
   lastName: z.string().min(2, "Last name is too short."),
   email: z.string().email("Invalid email address."),
-  role: z.nativeEnum(Role),
+  role: z.nativeEnum(user_role),
   salary: z.coerce.number().min(0, "Salary must be a positive number."),
 });
 
@@ -50,7 +50,7 @@ export function EmployeeForm({ onFormSubmit }: EmployeeFormProps) {
       firstName: "",
       lastName: "",
       email: "",
-      role: Role.WAITER,
+      role: user_role.WAITER,
       salary: 40000,
     },
   });
@@ -70,7 +70,7 @@ export function EmployeeForm({ onFormSubmit }: EmployeeFormProps) {
     }
   };
 
-  const employeeRoles = Object.values(Role).filter(role => role !== Role.CUSTOMER && role !== Role.ADMIN && role !== Role.MANAGER);
+  const employeeRoles = Object.values(user_role).filter(role => role !== user_role.CUSTOMER && role !== user_role.ADMIN && role !== user_role.MANAGER);
 
   return (
     <Form {...form}>
@@ -116,7 +116,7 @@ export function EmployeeForm({ onFormSubmit }: EmployeeFormProps) {
                 </FormControl>
                 <SelectContent className="bg-gray-800 border-gray-700">
                   {employeeRoles.map(role => (
-                    <SelectItem key={role} value={role} className="text-white hover:bg-gray-700">{role}</SelectItem>
+                    <SelectItem key={user_role} value={user_role} className="text-white hover:bg-gray-700">{user_role}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

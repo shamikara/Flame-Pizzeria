@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { Role } from '@prisma/client';
+import { user_role } from '@prisma/client';
 import prisma from '@/lib/db';
 
 export async function GET() {
   try {
     const customers = await prisma.user.findMany({
       where: {
-        role: Role.CUSTOMER,
+        role: user_role.CUSTOMER,
       },
       select: {
         id: true,

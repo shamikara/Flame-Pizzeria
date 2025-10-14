@@ -1,4 +1,4 @@
-import { Role, type Shift, type Employee, type Leadership } from "@prisma/client"
+import { user_role, type shift, type employee, type leadership } from "@prisma/client"
 
 /**
  * Canonical shift blocks used across the app.
@@ -21,19 +21,19 @@ export const LEADERSHIP_ROLES = new Set([
   "Sous Chef"
 ])
 
-const MANAGERIAL_PRISMA_ROLES = new Set<Role>([Role.MANAGER, Role.ADMIN])
+const MANAGERIAL_PRISMA_ROLES = new Set<user_role>([user_role.MANAGER, user_role.ADMIN])
 
-export interface EmployeeWithRelations extends Employee {
+export interface EmployeeWithRelations extends employee {
   user: {
     id: number
     firstName: string
     lastName: string
-    role: Role
+    role: user_role
   }
-  leadership?: Leadership | null
+  leadership?: leadership | null
 }
 
-export interface ShiftAssignmentInfo extends Shift {
+export interface ShiftAssignmentInfo extends shift {
   employee: EmployeeWithRelations
 }
 
@@ -131,7 +131,7 @@ function validateRoleAvailability({
     MANAGERIAL_PRISMA_ROLES.has(role) ||
     (leadershipTitle !== undefined && LEADERSHIP_ROLES.has(leadershipTitle))
 
-  if (role === Role.STORE_KEEP) {
+  if (role === user_role.STORE_KEEP) {
     if (shiftName !== "Morning") {
       violations.push("Store Keeper can only work the Morning shift")
     }
@@ -140,7 +140,7 @@ function validateRoleAvailability({
     }
   }
 
-  if (role === Role.DELIVERY_PERSON && shiftName === "Night") {
+  if (role === user_role.DELIVERY_PERSON && shiftName === "Night") {
     violations.push("Delivery staff cannot be assigned to the Night shift")
   }
 

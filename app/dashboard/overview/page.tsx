@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/card";
 import { DollarSign, ShoppingCart, Users, UtensilsCrossed, TrendingUp, TrendingDown } from "lucide-react";
 import db from "@/lib/db";
-import { OrderStatus, Role } from "@prisma/client";
+import { order_status, user_role } from "@prisma/client";
 
 import { SalesChart } from "@/components/charts/sales-chart";
 import { PopularItemsChart } from "@/components/charts/popular-items-chart";
@@ -19,14 +19,14 @@ async function getDashboardStats() {
 
   const totalRevenue = await db.order.aggregate({
     _sum: { total: true },
-    where: { status: OrderStatus.DELIVERED },
+    where: { status: order_status.DELIVERED },
   });
 
   const totalOrders = await db.order.count();
   const newCustomersToday = await db.user.count({
-    where: { role: Role.CUSTOMER, createdAt: { gte: today } },
+    where: { role: user_role.CUSTOMER, createdAt: { gte: today } },
   });
-  const totalMenuItems = await db.foodItem.count({ where: { isActive: true } });
+  const totalMenuItems = await db.fooditem.count({ where: { isActive: true } });
   
   return {
     revenue: totalRevenue._sum.total ?? 0,
@@ -41,7 +41,7 @@ async function getWeeklySalesData() {
   const last14Days = new Date(today);
   last14Days.setDate(today.getDate() - 13);
   const orders = await db.order.findMany({
-    where: { status: OrderStatus.DELIVERED, createdAt: { gte: last14Days } },
+    where: { status: order_status.DELIVERED, createdAt: { gte: last14Days } },
     select: { total: true, createdAt: true },
   });
   const dailySales: { [key: string]: number } = {};
@@ -69,9 +69,9 @@ async function getWeeklySalesData() {
 }
 
 async function getTopSellingItems() {
-  const aggregatedItems = await db.orderItem.groupBy({ by: ['foodItemId'], _sum: { quantity: true }, orderBy: { _sum: { quantity: 'desc' } }, take: 10 });
+  const aggregatedItems = await db.orderitem.groupBy({ by: ['foodItemId'], _sum: { quantity: true }, orderBy: { _sum: { quantity: 'desc' } }, take: 10 });
   const foodItemIds = aggregatedItems.map((item: { foodItemId: any; }) => item.foodItemId);
-  const foodItems = await db.foodItem.findMany({ where: { id: { in: foodItemIds } }, select: { id: true, name: true } });
+  const foodItems = await db.fooditem.findMany({ where: { id: { in: foodItemIds } }, select: { id: true, name: true } });
   const foodItemMap = new Map(foodItems.map((item: { id: any; name: any; }) => [item.id, item.name]));
   return aggregatedItems.map((item: { foodItemId: unknown; _sum: { quantity: any; }; }) => ({ name: foodItemMap.get(item.foodItemId) || 'Unknown', total: item._sum.quantity || 0 }));
 }

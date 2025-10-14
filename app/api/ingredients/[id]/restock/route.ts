@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getServerSession } from "@/lib/session";
-import { Role } from "@prisma/client";
+import { user_role } from "@prisma/client";
 
-export async function PATCH(
+export async function PATCH(    
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -15,8 +15,8 @@ export async function PATCH(
     }
 
     // Only admins, managers, and storekeepers can restock
-    const allowedRoles = [Role.ADMIN, Role.MANAGER, Role.STORE_KEEP];
-    if (!allowedRoles.includes(session.role as Role)) {
+    const allowedRoles = [user_role.ADMIN, user_role.MANAGER, user_role.STORE_KEEP];
+    if (!allowedRoles.includes(session.role as user_role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

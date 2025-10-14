@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { z } from 'zod';
-import { Role } from '@prisma/client';
+import { user_role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const createEmployeeSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
   email: z.string().email(),
-  role: z.nativeEnum(Role),
+  role: z.nativeEnum(user_role),
   salary: z.number(),
 });
 
