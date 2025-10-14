@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import { OrderStatus } from "@prisma/client";
+import { order_status } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const order = await prisma.order.update({
       where: { id: parseInt(orderId) },
       data: { 
-        status: OrderStatus.CONFIRMED,
+        status: order_status.CONFIRMED,
       },
     });
 

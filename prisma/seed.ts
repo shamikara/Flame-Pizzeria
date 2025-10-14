@@ -1,4 +1,4 @@
-import { PrismaClient, Role, OrderStatus, OrderType, MeasurementUnit, PaymentMethod, PaymentStatus, AlertSeverity, LeaveStatus } from "@prisma/client";
+import { PrismaClient, user_role, order_status, order_type, measurement_unit, payment_method, payment_status, alert_severity, leave_status } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -18,7 +18,7 @@ async function main() {
     data: {
       name: "Flour",
       stock: 100,
-      unit: MeasurementUnit.KG,
+      unit: measurement_unit.KG,
       restockThreshold: 10,
       supplierId: supplier.id,
     },
@@ -29,7 +29,7 @@ async function main() {
   const drinkCategory = await prisma.category.create({ data: { name: "Drinks" } });
 
   // 4. Food Items
-  const margherita = await prisma.foodItem.create({
+  const margherita = await prisma.fooditem.create({
     data: {
       name: "Margherita Pizza",
       description: "Classic tomato sauce, fresh mozzarella, basil",
@@ -39,7 +39,7 @@ async function main() {
     },
   });
 
-  const faluda = await prisma.foodItem.create({
+  const faluda = await prisma.fooditem.create({
     data: {
       name: "Faluda",
       description: "Rose milk with ice cream, basil seeds, jelly & syrup",
@@ -60,7 +60,7 @@ async function main() {
           {
             ingredientId: ingredient.id,
             quantity: 0.05,
-            unit: MeasurementUnit.KG,
+            unit: measurement_unit.KG,
           },
         ],
       },
@@ -74,7 +74,7 @@ async function main() {
       lastName: "User",
       email: "admin@example.com",
       password: "password",
-      role: Role.ADMIN,
+      role: user_role.ADMIN,
     },
   });
 
@@ -84,7 +84,7 @@ async function main() {
       lastName: "User",
       email: "chef@example.com",
       password: "password",
-      role: Role.CHEF,
+      role: user_role.CHEF,
     },
   });
 
@@ -94,7 +94,7 @@ async function main() {
       lastName: "User",
       email: "manager@example.com",
       password: "password",
-      role: Role.MANAGER,
+      role: user_role.MANAGER,
     },
   });
 
@@ -104,7 +104,7 @@ async function main() {
       lastName: "User",
       email: "waiter@example.com",
       password: "password",
-      role: Role.WAITER,
+      role: user_role.WAITER,
     },
   });
 
@@ -114,7 +114,7 @@ async function main() {
       lastName: "User",
       email: "delivery@example.com",
       password: "password",
-      role: Role.DELIVERY_PERSON,
+      role: user_role.DELIVERY_PERSON,
     },
   });
 
@@ -124,7 +124,7 @@ async function main() {
       lastName: "User",
       email: "helper@example.com",
       password: "password",
-      role: Role.KITCHEN_HELPER,
+      role: user_role.KITCHEN_HELPER,
     },
   });
 
@@ -137,19 +137,19 @@ async function main() {
         lastName: "User",
         email: `customer${i}@example.com`,
         password: "password",
-        role: Role.CUSTOMER,
+        role: user_role.CUSTOMER,
       },
     });
     customers.push(customer);
   }
 
   // 7. Employees linked to users
-  const adminEmployee = await prisma.employee.create({ data: { userId: adminUser.id, salary: 2000, leaveStatus: LeaveStatus.ACTIVE } });
-  const chefEmployee = await prisma.employee.create({ data: { userId: chefUser.id, salary: 1500, leaveStatus: LeaveStatus.ACTIVE } });
-  const managerEmployee = await prisma.employee.create({ data: { userId: managerUser.id, salary: 1800, leaveStatus: LeaveStatus.ACTIVE } });
-  const waiterEmployee = await prisma.employee.create({ data: { userId: waiterUser.id, salary: 1000, leaveStatus: LeaveStatus.ACTIVE } });
-  const deliveryEmployee = await prisma.employee.create({ data: { userId: deliveryUser.id, salary: 1200, leaveStatus: LeaveStatus.ACTIVE } });
-  const helperEmployee = await prisma.employee.create({ data: { userId: helperUser.id, salary: 800, leaveStatus: LeaveStatus.ACTIVE } });
+  const adminEmployee = await prisma.employee.create({ data: { userId: adminUser.id, salary: 2000, leaveStatus: leave_status.ACTIVE } });
+  const chefEmployee = await prisma.employee.create({ data: { userId: chefUser.id, salary: 1500, leaveStatus: leave_status.ACTIVE } });
+  const managerEmployee = await prisma.employee.create({ data: { userId: managerUser.id, salary: 1800, leaveStatus: leave_status.ACTIVE } });
+  const waiterEmployee = await prisma.employee.create({ data: { userId: waiterUser.id, salary: 1000, leaveStatus: leave_status.ACTIVE } });
+  const deliveryEmployee = await prisma.employee.create({ data: { userId: deliveryUser.id, salary: 1200, leaveStatus: leave_status.ACTIVE } });
+  const helperEmployee = await prisma.employee.create({ data: { userId: helperUser.id, salary: 800, leaveStatus: leave_status.ACTIVE } });
 
   // 8. Sample Recipe for Margherita
   const recipe = await prisma.recipe.create({
@@ -164,7 +164,7 @@ async function main() {
           {
             ingredientId: ingredient.id,
             quantity: 0.2,
-            unit: MeasurementUnit.KG,
+            unit: measurement_unit.KG,
           },
         ],
       },
@@ -175,8 +175,8 @@ async function main() {
   const order = await prisma.order.create({
     data: {
       total: 1549,
-      status: OrderStatus.PENDING,
-      type: OrderType.DELIVERY,
+      status: order_status.PENDING,
+      type: order_type.DELIVERY,
       address: "123 Main St",
       phone: "+94110000000",
       userId: customers[0].id,
@@ -201,8 +201,8 @@ async function main() {
         create: [
           {
             amount: 1549,
-            method: PaymentMethod.CARD,
-            status: PaymentStatus.COMPLETED,
+            method: payment_method.CARD,
+            status: payment_status.COMPLETED,
           },
         ],
       },
@@ -217,10 +217,10 @@ async function main() {
   });
 
   // 10. Sample Inventory Alert
-  await prisma.inventoryAlert.create({
+  await prisma.inventoryalert.create({
     data: {
       message: "Flour stock low",
-      severity: AlertSeverity.LOW,
+      severity: alert_severity.LOW,
       ingredientId: ingredient.id,
     },
   });
@@ -236,14 +236,14 @@ async function main() {
   });
 
   // 12. Newsletter subscription
-  await prisma.newsletterSubscription.create({
+  await prisma.newslettersubscription.create({
     data: {
       email: "subscriber@example.com",
     },
   });
 
   // 13. Audit Log
-  await prisma.auditLog.create({
+  await prisma.auditlog.create({
     data: {
       action: "Seed Data Created",
       entityType: "All",

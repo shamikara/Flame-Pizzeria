@@ -3,6 +3,8 @@ import { createContext, useContext, ReactNode, useState, useEffect } from 'react
 import { useRouter } from 'next/navigation';
 
 type UserPayload = {
+  phone: string;
+  address: string;
   id: string;
   email: string;
   firstName: string;

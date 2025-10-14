@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getServerSession } from "@/lib/session";
 import { hashPassword } from "@/lib/auth";
-import { OrderType, OrderStatus } from "@prisma/client";
+import { order_type, order_status } from "@prisma/client";
 import { sign } from 'jsonwebtoken';
 import { serialize } from 'cookie';
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     try {
       const deletedOrders = await prisma.order.deleteMany({
         where: {
-          status: OrderStatus.PENDING,
+          status: order_status.PENDING,
           createdAt: {
             lt: thirtyMinutesAgo,
           },
@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
     const order = await prisma.order.create({
       data: {
         userId: finalUserId,
-        status: OrderStatus.PENDING,
-        type: OrderType.DELIVERY,
+        status: order_status.PENDING,
+        type: order_type.DELIVERY,
         total: calculateTotal(cartItems),
         address,
         phone,

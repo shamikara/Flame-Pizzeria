@@ -23,14 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { OrderStatus, OrderType } from "@prisma/client";
+import { order_status, order_type } from "@prisma/client";
 
 // --- Form Schema for Validation ---
 const formSchema = z.object({
   userId: z.string().min(1, "Customer is required."),
   total: z.coerce.number().min(0, "Total must be a positive number."),
-  status: z.nativeEnum(OrderStatus),
-  type: z.nativeEnum(OrderType),
+  status: z.nativeEnum(order_status),
+  type: z.nativeEnum(order_type),
   // Optional fields
   tableNumber: z.string().optional(),
   deliveryAddress: z.string().optional(),
@@ -70,8 +70,8 @@ export function OrderForm({ users, onFormSubmit }: OrderFormProps) {
     defaultValues: {
       userId: "",
       total: 0,
-      status: OrderStatus.PENDING,
-      type: OrderType.DINE_IN,
+      status: order_status.PENDING,
+      type: order_type.DINE_IN,
       tableNumber: "",
       deliveryAddress: "",
     },
@@ -142,7 +142,7 @@ export function OrderForm({ users, onFormSubmit }: OrderFormProps) {
               <FormItem>
                 <FormLabel>Status</FormLabel>
                 <Select
-                  onValueChange={(v) => field.onChange(v as OrderStatus)}
+                  onValueChange={(v) => field.onChange(v as order_status)}
                   defaultValue={field.value}
                 >
                   <FormControl>
@@ -151,7 +151,7 @@ export function OrderForm({ users, onFormSubmit }: OrderFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {(Object.values(OrderStatus) as OrderStatus[]).map(
+                    {(Object.values(order_status) as order_status[]).map(
                       (status) => (
                         <SelectItem key={status} value={status}>
                           {status}
@@ -171,7 +171,7 @@ export function OrderForm({ users, onFormSubmit }: OrderFormProps) {
               <FormItem>
                 <FormLabel>Order Type</FormLabel>
                 <Select
-                  onValueChange={(v) => field.onChange(v as OrderType)}
+                  onValueChange={(v) => field.onChange(v as order_type)}
                   defaultValue={field.value}
                 >
                   <FormControl>
@@ -180,7 +180,7 @@ export function OrderForm({ users, onFormSubmit }: OrderFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {(Object.values(OrderType) as OrderType[]).map((type) => (
+                    {(Object.values(order_type) as order_type[]).map((type) => (
                       <SelectItem key={type} value={type}>
                         {type}
                       </SelectItem>
