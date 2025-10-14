@@ -24,6 +24,7 @@ export const LEADERSHIP_ROLES = new Set([
 const MANAGERIAL_PRISMA_ROLES = new Set<user_role>([user_role.MANAGER, user_role.ADMIN])
 
 export interface EmployeeWithRelations extends employee {
+  id: employee["id"]
   user: {
     id: number
     firstName: string
@@ -34,6 +35,8 @@ export interface EmployeeWithRelations extends employee {
 }
 
 export interface ShiftAssignmentInfo extends shift {
+  name: shift["name"]
+  employeeId: shift["employeeId"]
   employee: EmployeeWithRelations
 }
 
