@@ -57,7 +57,7 @@
     "cmdk": "1.0.4",
     "cookie": "^1.0.2",
     "crypto": "latest",
-    "date-fns": "4.1.0",
+    "date-fns": "^3.6.0",
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",
     "jose": "^6.0.11",
