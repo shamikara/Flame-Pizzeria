@@ -36,7 +36,7 @@ export async function GET() {
     });
     
     // Transform to match expected format
-    const transformedCustomers = customers.map(customer => ({
+    const transformedCustomers = customers.map((customer: { communityRecipes: any; _count: { communityRecipes: any; }; }) => ({
       ...customer,
       recipes: customer.communityRecipes,
       _count: {

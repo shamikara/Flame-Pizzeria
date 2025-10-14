@@ -6,7 +6,7 @@ export async function GET() {
     const now = new Date()
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
-    const items = await prisma.orderItem.findMany({
+    const items = await prisma.orderitem.findMany({
       where: { order: { createdAt: { gte: startOfDay } } },
       include: { foodItem: { select: { name: true } } },
     })

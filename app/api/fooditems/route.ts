@@ -18,7 +18,7 @@ export async function GET() {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    const orderItems = await prisma.orderItem.findMany({
+    const orderItems = await prisma.orderitem.findMany({
       where: {
         order: {
           createdAt: { gte: thirtyDaysAgo },
@@ -60,7 +60,7 @@ export async function GET() {
       }))
 
     if (popularItems.length < 4) {
-      const additionalItems = await prisma.foodItem.findMany({
+      const additionalItems = await prisma.fooditem.findMany({
         where: {
           isActive: true,
           id: { notIn: popularItems.map((item) => item.id) },
@@ -70,7 +70,7 @@ export async function GET() {
         orderBy: { createdAt: 'desc' },
       })
 
-      const formattedAdditional = additionalItems.map((item) => ({
+      const formattedAdditional = additionalItems.map((item: { id: any; name: any; description: any; price: any; imageUrl: any; category: { name: any }; foodType: any; nutrition: any }) => ({
         id: item.id,
         name: item.name,
         description: item.description || '',
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
   try {
     const data = foodItemSchema.parse(await request.json())
 
-    const newFoodItem = await prisma.foodItem.create({
+    const newFoodItem = await prisma.fooditem.create({
       data: {
         name: data.name,
         description: data.description,
@@ -130,7 +130,7 @@ export async function PUT(request: Request) {
 
     const data = foodItemSchema.parse(await request.json())
 
-    const updatedFoodItem = await prisma.foodItem.update({
+    const updatedFoodItem = await prisma.fooditem.update({
       where: { id: parseInt(id) },
       data: {
         name: data.name,
@@ -164,7 +164,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Food item ID is required' }, { status: 400 })
     }
 
-    await prisma.foodItem.delete({
+    await prisma.fooditem.delete({
       where: { id: parseInt(id) },
     })
 

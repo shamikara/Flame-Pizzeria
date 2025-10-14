@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const defaultPassword = await bcrypt.hash('password123', 10);
 
     // Use a transaction to ensure both User and Employee are created successfully
-    const result = await db.$transaction(async (prisma) => {
+    const result = await db.$transaction(async (prisma: { user: { create: (arg0: { data: { firstName: unknown; lastName: unknown; email: unknown; password: string; role: unknown; }; }) => any; }; employee: { create: (arg0: { data: { userId: any; salary: unknown; }; }) => any; }; }) => {
       const newUser = await prisma.user.create({
         data: {
           firstName: data.firstName,
@@ -75,7 +75,7 @@ export async function DELETE(request: Request) {
     }
 
     // Delete in transaction: first employee, then user
-    await db.$transaction(async (prisma) => {
+    await db.$transaction(async (prisma: { employee: { delete: (arg0: { where: { id: number; }; }) => any; }; user: { delete: (arg0: { where: { id: any; }; }) => any; }; }) => {
       // Delete employee record
       await prisma.employee.delete({
         where: { id: parseInt(employeeId) },
@@ -116,7 +116,7 @@ export async function GET() {
     });
 
     // Format for the shift management table
-    const formattedEmployees = employees.map(emp => ({
+    const formattedEmployees = employees.map((emp: { id: any; user: { firstName: any; lastName: any; role: any; id: any; }; leadership: { position: any; }; }) => ({
       id: emp.id,
       name: `${emp.user.firstName} ${emp.user.lastName}`,
       role: emp.user.role,

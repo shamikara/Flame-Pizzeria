@@ -71,12 +71,12 @@ async function getFoodItems(categorySlug: string, sort: SortOption, search: stri
     ]
   }
 
-  const dbItems = await prisma.foodItem.findMany({
+  const dbItems = await prisma.fooditem.findMany({
     where,
     include: { customizations: true, category: true },
   })
 
-  const mapped = dbItems.map((item) => ({
+  const mapped = dbItems.map((item: { id: any; name: any; description: any; price: any; imageUrl: any; category: { name: any }; foodType: any; nutrition: any; customizations: any[] }) => ({
     id: Number(item.id),
     name: item.name,
     description: item.description || "",
