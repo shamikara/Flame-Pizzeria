@@ -3,8 +3,8 @@ import db from '@/lib/db';
 
 export async function GET() {
   try {
-    const totalItems = await db.foodItem.count();
-    const activeItems = await db.foodItem.count({ where: { isActive: true } });
+    const totalItems = await db.fooditem.count();
+    const activeItems = await db.fooditem.count({ where: { isActive: true } });
     const totalCategories = await db.category.count();
     
     return NextResponse.json({ totalItems, activeItems, totalCategories });

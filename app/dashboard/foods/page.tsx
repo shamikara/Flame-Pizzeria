@@ -158,7 +158,7 @@ export default function FoodsPage() {
     <div className="p-6 md:p-10">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from.orange-400 to-red-400 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
             Menu Management
           </h2>
           <p className="text-gray-400 mt-2">Manage your food items and menu</p>
@@ -187,10 +187,9 @@ export default function FoodsPage() {
                 </div>
               )}
             </div>
-
           </form>
           <div className="flex gap-2">
-            <Button asChild variant="outline" className="border-purple-500/50 text-purple-400 hover.bg-purple-500/10">
+            <Button asChild variant="outline" className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
               <Link href="/dashboard/customizations">
                 <Salad className="mr-2 h-4 w-4" /> Manage Extras ?
               </Link>
@@ -201,7 +200,7 @@ export default function FoodsPage() {
                   <PlusCircle className="mr-2 h-4 w-4" /> Add New Food ?
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm.max-w-md bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700 max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-md bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700 max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-white">Add New Food Item</DialogTitle>
                 </DialogHeader>
@@ -215,34 +214,34 @@ export default function FoodsPage() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3 mb-6">
         <Card className="border-gray-800 bg-gradient-to-br from-orange-500/10 to-orange-600/5">
-          <CardHeader className="flex.flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm.font-medium text-gray-300">Total Items</CardTitle>
-            <UtensilsCrossed className="h-5 w-5 text.orange-400" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Total Items</CardTitle>
+            <UtensilsCrossed className="h-5 w-5 text-orange-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text.white">{stats.totalItems}</div>
+            <div className="text-2xl font-bold text-white">{stats.totalItems}</div>
             <p className="text-xs text-gray-400 mt-1">All menu items</p>
           </CardContent>
         </Card>
 
         <Card className="border-gray-800 bg-gradient-to-br from-green-500/10 to-green-600/5">
-          <CardHeader className="flex flex-row.items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-300">Active Items</CardTitle>
-            <UtensilsCrossed className="h-5 w-5 text.green-400" />
+            <UtensilsCrossed className="h-5 w-5 text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text.white">{stats.activeItems}</div>
-            <p className="text-xs.text-gray-400 mt-1">Currently available</p>
+            <div className="text-2xl font-bold text-white">{stats.activeItems}</div>
+            <p className="text-xs text-gray-400 mt-1">Currently available</p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-800.bg-gradient-to-br from-blue-500/10 to-blue-600/5">
-          <CardHeader className="flex flex-row items-center justify-between.space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium.text-gray-300">Categories</CardTitle>
-            <DollarSign className="h-5 w-5 text.blue-400" />
+        <Card className="border-gray-800 bg-gradient-to-br from-blue-500/10 to-blue-600/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Categories</CardTitle>
+            <DollarSign className="h-5 w-5 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text.white">{stats.totalCategories}</div>
+            <div className="text-2xl font-bold text-white">{stats.totalCategories}</div>
             <p className="text-xs text-gray-400 mt-1">Menu categories</p>
           </CardContent>
         </Card>
@@ -252,7 +251,7 @@ export default function FoodsPage() {
       <div className="rounded-xl border border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900 shadow-xl overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-gray-400">
-            <UtensilsCrossed className="w-10 h-10 mx-auto.mb-3.opacity-60 animate-pulse" />
+            <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 opacity-60 animate-pulse" />
             <Spinner /> Loading menu items...
           </div>
         ) : (
@@ -270,8 +269,8 @@ export default function FoodsPage() {
             <TableBody>
               {filteredFoods.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8.text-gray-400">
-                    <UtensilsCrossed className="w-10 h-10.mx-auto mb-3.opacity-60" />
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-400">
+                    <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 opacity-60" />
                     No menu items found
                   </TableCell>
                 </TableRow>
@@ -290,7 +289,7 @@ export default function FoodsPage() {
                     </TableCell>
                     <TableCell className="font-medium text-gray-200">{food.name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="border-gray-700 text.gray-300">
+                      <Badge variant="outline" className="border-gray-700 text-gray-300">
                         {food.category?.name ?? "Uncategorized"}
                       </Badge>
                     </TableCell>
@@ -300,13 +299,13 @@ export default function FoodsPage() {
                         className={
                           food.isActive
                             ? "bg-green-500/20 text-green-400 border-green-500/50"
-                            : "bg-gray-500/20 text.gray-400 border-gray-500/50"
+                            : "bg-gray-500/20 text-gray-400 border-gray-500/50"
                         }
                       >
                         {food.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right.font-semibold text-gray-200">
+                    <TableCell className="text-right font-semibold text-gray-200">
                       Rs. {food.price.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -315,7 +314,7 @@ export default function FoodsPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditClick(food)}
-                          className="text-blue-400 hover:text-blue-300.hover:bg-blue-500/10"
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -323,7 +322,7 @@ export default function FoodsPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteClick(food)}
-                          className="text.red-400 hover:text-red-300.hover:bg-red-500/10"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -339,9 +338,9 @@ export default function FoodsPage() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm.max-w-md bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-md bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text.white">Edit Food Item</DialogTitle>
+            <DialogTitle className="text-white">Edit Food Item</DialogTitle>
           </DialogHeader>
           {selectedFood && <FoodForm foodItem={selectedFood as any} onFormSubmit={handleFormSubmit} />}
         </DialogContent>
@@ -349,10 +348,10 @@ export default function FoodsPage() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-gradient-to-b from-gray-900 to-gray-800 border border.gray-700">
+        <DialogContent className="bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700">
           <DialogHeader>
-            <DialogTitle className="text.white">Confirm Deletion</DialogTitle>
-            <DialogDescription className="text.gray-400">
+            <DialogTitle className="text-white">Confirm Deletion</DialogTitle>
+            <DialogDescription className="text-gray-400">
               Are you sure you want to delete "{selectedFood?.name}"? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>

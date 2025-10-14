@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name and description are required" }, { status: 400 });
     }
 
-    const recipe = await prisma.communityRecipe.create({
+    const recipe = await prisma.communityrecipe.create({
       data: {
         name,
         description,
