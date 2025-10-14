@@ -6,7 +6,7 @@ import { recipe_status } from "@prisma/client";
 // GET - Fetch approved recipes for public board
 export async function GET() {
   try {
-    const recipes = await prisma.communityRecipe.findMany({
+    const recipes = await prisma.communityrecipe.findMany({
       where: { status: recipe_status.APPROVED },
       include: {
         author: {

@@ -3,7 +3,7 @@ import db from '@/lib/db';
 
 export async function GET() {
   try {
-    const foods = await db.foodItem.findMany({
+    const foods = await db.fooditem.findMany({
       orderBy: { createdAt: 'desc' },
       include: { category: true },
     });

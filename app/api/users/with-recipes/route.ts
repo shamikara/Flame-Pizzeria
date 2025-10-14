@@ -13,7 +13,7 @@ export async function GET() {
         firstName: true,
         lastName: true,
         email: true,
-        communityRecipes: {
+        communityrecipes: {
           select: {
             id: true,
             name: true,
@@ -26,7 +26,7 @@ export async function GET() {
         },
         _count: {
           select: {
-            communityRecipes: true,
+            communityrecipes: true,
           },
         },
       },
@@ -36,11 +36,11 @@ export async function GET() {
     });
     
     // Transform to match expected format
-    const transformedCustomers = customers.map((customer: { communityRecipes: any; _count: { communityRecipes: any; }; }) => ({
+    const transformedCustomers = customers.map((customer: { communityrecipes: any; _count: { communityrecipes: any; }; }) => ({
       ...customer,
-      recipes: customer.communityRecipes,
+      recipes: customer.communityrecipes,
       _count: {
-        recipes: customer._count.communityRecipes,
+        recipes: customer._count.communityrecipes,
       },
     }));
     

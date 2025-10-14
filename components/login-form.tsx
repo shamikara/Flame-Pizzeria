@@ -57,6 +57,7 @@ export function LoginForm({ searchParams, onLoginSuccess }: LoginFormProps) {
           title: 'Login Failed', 
           description: result.error || 'Invalid email or password.' 
         })
+        setIsLoading(false)
         return
       }
 

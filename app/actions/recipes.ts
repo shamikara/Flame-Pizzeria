@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 export async function approveRecipe(recipeId: string) {
   try {
-    await db.communityRecipe.update({
+    await db.communityrecipe.update({
       where: { id: recipeId },
       data: { status: recipe_status.APPROVED },
     });
@@ -23,7 +23,7 @@ export async function approveRecipe(recipeId: string) {
 
 export async function rejectRecipe(recipeId: string) {
   try {
-    await db.communityRecipe.update({
+    await db.communityrecipe.update({
       where: { id: recipeId },
       data: { status: recipe_status.REJECTED },
     });

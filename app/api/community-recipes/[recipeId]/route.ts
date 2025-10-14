@@ -14,7 +14,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const recipe = await prisma.communityRecipe.findUnique({
+    const recipe = await prisma.communityrecipe.findUnique({
       where: { id: params.recipeId },
     });
 
@@ -27,7 +27,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await prisma.communityRecipe.delete({
+    await prisma.communityrecipe.delete({
       where: { id: params.recipeId },
     });
 

@@ -13,7 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const recipes = await prisma.communityRecipe.findMany({
+    const recipes = await prisma.communityrecipe.findMany({
       where: { authorId: session.userId },
       include: {
         author: {
