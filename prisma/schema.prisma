@@ -7,9 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//
-// ENUMS
-//
+// ========================= ENUMS =========================
+
 enum Role {
   ADMIN
   MANAGER
@@ -77,24 +76,23 @@ enum RecipeStatus {
   REJECTED
 }
 
-//
-// MODELS
-//
+// ========================= MODELS =========================
 
 model User {
-  id               Int               @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   firstName        String
   lastName         String
-  email            String            @unique
+  email            String    @unique
   password         String
   address          String?
   contact          String?
-  role             Role              @default(CUSTOMER)
-  isActive         Boolean           @default(true)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  role             Role      @default(CUSTOMER)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   resetToken       String?
   resetTokenExpiry DateTime?
+
   employee         Employee?
   orders           Order[]
   ratings          Rating[]
@@ -136,7 +134,7 @@ model FoodItem {
   price       Float
   imageUrl    String?
   isActive    Boolean  @default(true)
-  foodType    Int      @default(0) @db.TinyInt // bitmask: 1=Veg, 2=Egg, 4=Dairy, 8=Meat, 16=Seafood
+  foodType    Int      @default(0) @db.TinyInt // 1=Veg, 2=Egg, 4=Dairy, 8=Meat, 16=Seafood
   nutrition   Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -277,13 +275,12 @@ model Recipe {
 }
 
 model RecipeIngredient {
-  id       Int             @id @default(autoincrement())
-  quantity Float
-  unit     MeasurementUnit
-
-  recipe       Recipe     @relation(fields: [recipeId], references: [id])
+  id           Int             @id @default(autoincrement())
+  quantity     Float
+  unit         MeasurementUnit
+  recipe       Recipe          @relation(fields: [recipeId], references: [id])
   recipeId     Int
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  ingredient   Ingredient      @relation(fields: [ingredientId], references: [id])
   ingredientId Int
 }
 
@@ -373,40 +370,39 @@ model Notification {
 
 model Shift {
   id         Int      @id @default(autoincrement())
-  name       String // "Morning", "Evening", "Night"
-  startTime  String // "09:00"
-  endTime    String // "17:00"
+  name       String
+  startTime  String
+  endTime    String
   date       DateTime
   employeeId Int
-  status     String   @default("SCHEDULED") // SCHEDULED, ON_DUTY, COMPLETED, ABSENT
+  status     String   @default("SCHEDULED")
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
- // @@unique([date, employeeId])
   @@index([date, employeeId])
   @@index([status])
 }
 
 model Leadership {
   id         Int     @id @default(autoincrement())
-  employeeId Int     @unique // drop @unique if multiples allowed
+  employeeId Int     @unique
   position   String? @db.VarChar(191)
 
   employee Employee @relation(fields: [employeeId], references: [id])
 }
 
 model CateringRequest {
-  id          String   @id @default(uuid())
-  eventType   String
-  eventDate   DateTime
-  guestCount  Int
-  contactName String
-  contactEmail String
-  menuItems   Json     // { pizza: 10, pasta: 5, etc }
+  id              String   @id @default(uuid())
+  eventType       String
+  eventDate       DateTime
+  guestCount      Int
+  contactName     String
+  contactEmail    String
+  menuItems       Json // { pizza: 10, pasta: 5, etc }
   specialRequests String?
-  status      String   @default("PENDING") // "PENDING", "CONFIRMED", "COMPLETED"
-  createdAt   DateTime @default(now())
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now())
 }

@@ -24,7 +24,7 @@ type Category = {
   name: string;
 };
 
-type FoodFormProps = {
+export type FoodFormProps = {
   foodItem?: {
     id: number;
     name: string;

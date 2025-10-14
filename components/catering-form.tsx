@@ -6,10 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { sendEmail } from '@/lib/email';
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 export function CateringForm() {
+    const { toast } = useToast();
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         eventType: '',
@@ -38,7 +42,17 @@ export function CateringForm() {
             return;
         }
 
+        const showToast = (payload?: { title?: string; message?: string; variant?: string }) => {
+            if (!payload) return;
+            toast({
+                title: payload.title,
+                description: payload.message,
+                variant: payload.variant === 'error' ? 'destructive' : 'default'
+            });
+        };
+
         try {
+            setIsSubmitting(true);
             const response = await fetch('/api/catering', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -59,31 +73,35 @@ export function CateringForm() {
                 })
             });
 
+            const result = await response.json();
+
             if (response.ok) {
-                const result = await response.json();
-
-                const emailResult = await sendEmail({
-                    to: formData.contactEmail,
-                    subject: 'Your Catering Request',
-                    template: 'catering-confirmation',
-                    data: {
-                        name: formData.contactName,
-                        requestId: result.id
+                showToast(
+                    result.toast ?? {
+                        title: 'Request submitted',
+                        message: `We have received your catering request (#${result.id}).`
                     }
-                });
-
-                if (!emailResult.success) {
-                    console.warn('Email failed:', emailResult.error);
-                }
-
-                alert(`Request submitted! ID: ${result.id}`);
+                );
                 resetForm();
-            } else {
-                throw new Error('Server responded with error');
+                return;
             }
+
+            showToast(
+                result.toast ?? {
+                    title: 'Submission failed',
+                    message: result.error || 'Please try again or contact support.',
+                    variant: 'error'
+                }
+            );
         } catch (error) {
             console.error('Submission error:', error);
-            alert('Failed to submit request. Please try again.');
+            toast({
+                title: 'Submission failed',
+                description: 'Please try again later.',
+                variant: 'destructive'
+            });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -279,12 +297,28 @@ export function CateringForm() {
 
             <div className="flex justify-between">
                 {step > 1 && (
-                    <Button variant="outline" onClick={() => setStep(step - 1)}>
+                    <Button
+                        variant="outline"
+                        onClick={() => setStep(step - 1)}
+                        disabled={isSubmitting}
+                    >
                         Back
                     </Button>
                 )}
-                <Button onClick={() => (step < 2 ? setStep(step + 1) : handleSubmit())}>
-                    {step === 2 ? 'Submit Request' : 'Continue'}
+                <Button
+                    onClick={() => (step < 2 ? setStep(step + 1) : handleSubmit())}
+                    disabled={step === 2 && isSubmitting}
+                >
+                    {step === 2 && isSubmitting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Submitting...
+                        </>
+                    ) : step === 2 ? (
+                        'Submit Request'
+                    ) : (
+                        'Continue'
+                    )}
                 </Button>
             </div>
         </div>

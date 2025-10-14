@@ -343,7 +343,7 @@ export default function FoodsPage() {
           <DialogHeader>
             <DialogTitle className="text.white">Edit Food Item</DialogTitle>
           </DialogHeader>
-          {selectedFood && <FoodForm foodItem={selectedFood} onFormSubmit={handleFormSubmit} />}
+          {selectedFood && <FoodForm foodItem={selectedFood as any} onFormSubmit={handleFormSubmit} />}
         </DialogContent>
       </Dialog>
 
