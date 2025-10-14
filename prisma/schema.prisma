@@ -9,7 +9,7 @@ datasource db {
 
 // ========================= ENUMS =========================
 
-enum Role {
+enum user_role {
   ADMIN
   MANAGER
   STORE_KEEP
@@ -20,7 +20,7 @@ enum Role {
   CUSTOMER
 }
 
-enum OrderStatus {
+enum order_status {
   PENDING
   CONFIRMED
   PREPARING
@@ -31,18 +31,18 @@ enum OrderStatus {
   REFUNDED
 }
 
-enum OrderType {
+enum order_type {
   DINE_IN
   DELIVERY
   TAKEAWAY
 }
 
-enum LeaveStatus {
+enum leave_status {
   ACTIVE
   ON_LEAVE
 }
 
-enum MeasurementUnit {
+enum measurement_unit {
   KG
   G
   L
@@ -50,27 +50,27 @@ enum MeasurementUnit {
   PIECE
 }
 
-enum AlertSeverity {
+enum alert_severity {
   LOW
   EXPIRING
   OUT
   CRITICAL
 }
 
-enum PaymentMethod {
+enum payment_method {
   CASH
   CARD
   ONLINE
 }
 
-enum PaymentStatus {
+enum payment_status {
   PENDING
   COMPLETED
   FAILED
   REFUNDED
 }
 
-enum RecipeStatus {
+enum recipe_status {
   PENDING
   APPROVED
   REJECTED
@@ -78,7 +78,7 @@ enum RecipeStatus {
 
 // ========================= MODELS =========================
 
-model User {
+model user {
   id               Int       @id @default(autoincrement())
   firstName        String
   lastName         String
@@ -86,48 +86,48 @@ model User {
   password         String
   address          String?
   contact          String?
-  role             Role      @default(CUSTOMER)
+  role             user_role      @default(CUSTOMER)
   isActive         Boolean   @default(true)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   resetToken       String?
   resetTokenExpiry DateTime?
 
-  employee         Employee?
-  orders           Order[]
-  ratings          Rating[]
-  recipes          Recipe[]
-  communityRecipes CommunityRecipe[]
-  recipeComments   RecipeComment[]
-  notifications    Notification[]
+  employee         employee?
+  orders           order[]
+  ratings          rating[]
+  recipes          recipe[]
+  communityRecipes communityrecipe[]
+  recipeComments   recipecomment[]
+  notifications    notification[]
 }
 
-model Employee {
+model employee {
   id          Int         @id @default(autoincrement())
-  user        User        @relation(fields: [userId], references: [id])
+  user        user        @relation(fields: [userId], references: [id])
   userId      Int         @unique
   salary      Float
-  leaveStatus LeaveStatus @default(ACTIVE)
+  leaveStatus leave_status @default(ACTIVE)
   joinedAt    DateTime    @default(now())
   isActive    Boolean     @default(true)
 
-  shifts          Shift[]
-  preparedOrders  Order[]     @relation("OrderPreparedBy")
-  deliveredOrders Order[]     @relation("OrderDeliveredBy")
-  deliveries      Delivery[]
-  leadership      Leadership?
+  shifts          shift[]
+  preparedOrders  order[]     @relation("OrderPreparedBy")
+  deliveredOrders order[]     @relation("OrderDeliveredBy")
+  deliveries      delivery[]
+  leadership      leadership?
 }
 
-model Category {
+model category {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  foodItems FoodItem[]
+  foodItems fooditem[]
 }
 
-model FoodItem {
+model fooditem {
   id          Int      @id @default(autoincrement())
   name        String
   description String?
@@ -139,38 +139,38 @@ model FoodItem {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  category       Category        @relation(fields: [categoryId], references: [id])
+  category       category        @relation(fields: [categoryId], references: [id])
   categoryId     Int
-  recipe         Recipe?
-  orderItems     OrderItem[]
-  ratings        Rating[]
-  customizations Customization[]
+  recipe         recipe?
+  orderItems     orderitem[]
+  ratings        rating[]
+  customizations customization[]
 }
 
-model Customization {
+model customization {
   id          Int                       @id @default(autoincrement())
   name        String
   price       Float
-  foodItem    FoodItem                  @relation(fields: [foodItemId], references: [id])
+  foodItem    fooditem                  @relation(fields: [foodItemId], references: [id])
   foodItemId  Int
-  ingredients CustomizationIngredient[]
+  ingredients customizationingredient[]
 }
 
-model CustomizationIngredient {
+model customizationingredient {
   id              Int             @id @default(autoincrement())
-  customization   Customization   @relation(fields: [customizationId], references: [id])
+  customization   customization   @relation(fields: [customizationId], references: [id])
   customizationId Int
-  ingredient      Ingredient      @relation(fields: [ingredientId], references: [id])
+  ingredient      ingredient      @relation(fields: [ingredientId], references: [id])
   ingredientId    Int
   quantity        Float
-  unit            MeasurementUnit
+  unit            measurement_unit
 }
 
-model Order {
+model order {
   id              Int         @id @default(autoincrement())
   total           Float
-  status          OrderStatus @default(PENDING)
-  type            OrderType
+  status          order_status @default(PENDING)
+  type            order_type
   notes           String?
   address         String
   phone           String
@@ -179,73 +179,73 @@ model Order {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  user          User           @relation(fields: [userId], references: [id])
+  user          user           @relation(fields: [userId], references: [id])
   userId        Int
-  preparedBy    Employee?      @relation(name: "OrderPreparedBy", fields: [preparedById], references: [id])
+  preparedBy    employee?      @relation(name: "OrderPreparedBy", fields: [preparedById], references: [id])
   preparedById  Int?
-  deliveredBy   Employee?      @relation(name: "OrderDeliveredBy", fields: [deliveredById], references: [id])
+  deliveredBy   employee?      @relation(name: "OrderDeliveredBy", fields: [deliveredById], references: [id])
   deliveredById Int?
-  notifications Notification[]
-  items         OrderItem[]
-  payments      Payment[]
-  delivery      Delivery?
+  notifications notification[]
+  items         orderitem[]
+  payments      payment[]
+  delivery      delivery?
 }
 
-model OrderItem {
+model orderitem {
   id             Int     @id @default(autoincrement())
   quantity       Int
   price          Float
   specialNotes   String?
   customizations Json?
 
-  order      Order    @relation(fields: [orderId], references: [id])
+  order      order    @relation(fields: [orderId], references: [id])
   orderId    Int
-  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+  foodItem   fooditem @relation(fields: [foodItemId], references: [id])
   foodItemId Int
 }
 
-model Payment {
+model payment {
   id            Int           @id @default(autoincrement())
   amount        Float
-  method        PaymentMethod
-  status        PaymentStatus
+  method        payment_method
+  status        payment_status
   transactionId String?
   createdAt     DateTime      @default(now())
 
-  order   Order @relation(fields: [orderId], references: [id])
+  order   order @relation(fields: [orderId], references: [id])
   orderId Int
 }
 
-model Delivery {
+model delivery {
   id        Int       @id @default(autoincrement())
   startTime DateTime
   endTime   DateTime?
   status    String    @default("pending")
 
-  order      Order    @relation(fields: [orderId], references: [id])
+  order      order    @relation(fields: [orderId], references: [id])
   orderId    Int      @unique
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   employee @relation(fields: [employeeId], references: [id])
   employeeId Int
 }
 
-model Ingredient {
+model ingredient {
   id               Int             @id @default(autoincrement())
   name             String          @unique
   stock            Float           @default(0)
-  unit             MeasurementUnit
+  unit             measurement_unit
   expiryDate       DateTime?
   restockThreshold Float           @default(5)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
-  supplier                 Supplier?                 @relation(fields: [supplierId], references: [id])
+  supplier                 supplier?                 @relation(fields: [supplierId], references: [id])
   supplierId               Int?
-  inventoryAlerts          InventoryAlert[]
-  recipeIngredients        RecipeIngredient[]
-  customizationIngredients CustomizationIngredient[]
+  inventoryAlerts          inventoryalert[]
+  recipeIngredients        recipeingredient[]
+  customizationIngredients customizationingredient[]
 }
 
-model Supplier {
+model supplier {
   id        Int      @id @default(autoincrement())
   name      String
   contact   String
@@ -254,10 +254,10 @@ model Supplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ingredients Ingredient[]
+  ingredients ingredient[]
 }
 
-model Recipe {
+model recipe {
   id          Int      @id @default(autoincrement())
   name        String
   description String
@@ -266,82 +266,82 @@ model Recipe {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  foodItem    FoodItem           @relation(fields: [foodItemId], references: [id])
+  foodItem    fooditem           @relation(fields: [foodItemId], references: [id])
   foodItemId  Int                @unique
-  author      User               @relation(fields: [authorId], references: [id])
+  author      user               @relation(fields: [authorId], references: [id])
   authorId    Int
-  ingredients RecipeIngredient[]
-  comments    RecipeComment[]
+  ingredients recipeingredient[]
+  comments    recipecomment[]
 }
 
-model RecipeIngredient {
+model recipeingredient {
   id           Int             @id @default(autoincrement())
   quantity     Float
-  unit         MeasurementUnit
-  recipe       Recipe          @relation(fields: [recipeId], references: [id])
+  unit         measurement_unit
+  recipe       recipe          @relation(fields: [recipeId], references: [id])
   recipeId     Int
-  ingredient   Ingredient      @relation(fields: [ingredientId], references: [id])
+  ingredient   ingredient      @relation(fields: [ingredientId], references: [id])
   ingredientId Int
 }
 
-model RecipeComment {
+model recipecomment {
   id        Int      @id @default(autoincrement())
   content   String   @db.Text
   createdAt DateTime @default(now())
 
-  author   User   @relation(fields: [authorId], references: [id])
+  author   user   @relation(fields: [authorId], references: [id])
   authorId Int
-  recipe   Recipe @relation(fields: [recipeId], references: [id])
+  recipe   recipe @relation(fields: [recipeId], references: [id])
   recipeId Int
 }
 
-model CommunityRecipe {
+model communityrecipe {
   id          String       @id @default(cuid())
   name        String
   description String       @db.Text
   imageUrl    String?
-  status      RecipeStatus @default(PENDING)
+  status      recipe_status @default(PENDING)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  author   User @relation(fields: [authorId], references: [id])
+  author   user @relation(fields: [authorId], references: [id])
   authorId Int
 
   @@index([status])
   @@index([authorId])
 }
 
-model Rating {
+model rating {
   id        Int      @id @default(autoincrement())
   stars     Int
   comment   String?  @db.Text
   createdAt DateTime @default(now())
 
-  user       User     @relation(fields: [userId], references: [id])
+  user       user     @relation(fields: [userId], references: [id])
   userId     Int
-  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+  foodItem   fooditem @relation(fields: [foodItemId], references: [id])
   foodItemId Int
 }
 
-model InventoryAlert {
+model inventoryalert {
   id         Int           @id @default(autoincrement())
   message    String
-  severity   AlertSeverity
+  severity   alert_severity
   resolved   Boolean       @default(false)
   resolvedAt DateTime?
   createdAt  DateTime      @default(now())
 
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  ingredient   ingredient @relation(fields: [ingredientId], references: [id])
   ingredientId Int
 }
 
-model NewsletterSubscription {
+model newslettersubscription {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   createdAt DateTime @default(now())
 }
 
-model AuditLog {
+model auditlog {
   id         Int      @id @default(autoincrement())
   action     String
   entityType String
@@ -352,7 +352,7 @@ model AuditLog {
   createdAt  DateTime @default(now())
 }
 
-model Notification {
+model notification {
   id        Int      @id @default(autoincrement())
   message   String   @db.Text
   type      String   @default("ORDER_READY")
@@ -361,14 +361,14 @@ model Notification {
   userId    Int
   createdAt DateTime @default(now())
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
   @@index([createdAt])
 }
 
-model Shift {
+model shift {
   id         Int      @id @default(autoincrement())
   name       String
   startTime  String
@@ -380,22 +380,22 @@ model Shift {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([date, employeeId])
   @@index([status])
 }
 
-model Leadership {
+model leadership {
   id         Int     @id @default(autoincrement())
   employeeId Int     @unique
   position   String? @db.VarChar(191)
 
-  employee Employee @relation(fields: [employeeId], references: [id])
+  employee employee @relation(fields: [employeeId], references: [id])
 }
 
-model CateringRequest {
-  id              String   @id @default(uuid())
+model cateringrequest {
+  id              Int   @id @default(autoincrement())
   eventType       String
   eventDate       DateTime
   guestCount      Int

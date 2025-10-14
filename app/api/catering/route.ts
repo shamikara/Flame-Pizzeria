@@ -6,7 +6,7 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
     
-    const cateringRequest = await prisma.cateringRequest.create({
+    const cateringRequest = await prisma.cateringrequest.create({
       data: {
         ...data,
         eventDate: new Date(data.eventDate),

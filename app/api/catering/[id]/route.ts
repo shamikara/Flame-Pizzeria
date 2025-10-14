@@ -7,7 +7,7 @@ export async function PATCH(
 ) {
   const { status } = await request.json();
   
-  await prisma.cateringRequest.update({
+  await prisma.cateringrequest.update({
     where: { id: params.id },
     data: { status }
   });
