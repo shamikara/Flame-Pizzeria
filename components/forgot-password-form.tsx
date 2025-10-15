@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { sendEmail } from '@/lib/email';
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
@@ -23,21 +22,9 @@ export function ForgotPasswordForm() {
       const result = await response.json();
 
       if (response.ok) {
-        const resetLink = `${window.location.origin}/reset-password?token=${result.token}`;
-        
-        const emailResult = await sendEmail({
-          to: email,
-          subject: 'Password Reset',
-          template: 'password-reset',
-          data: { resetLink }
-        });
-
-        setMessage(emailResult.success 
-          ? 'Password reset link sent! Check your email.' 
-          : 'Email failed: ' + emailResult.error
-        );
+        setMessage(result.message ?? 'Password reset link sent! Check your email.');
       } else {
-        setMessage(result.error || 'Failed to send reset link');
+        setMessage(result.error || result.message || 'Failed to send reset link');
       }
     } catch (error) {
       setMessage('An error occurred');

@@ -26,7 +26,7 @@ export async function GET() {
         },
       },
       include: {
-        fooditem: {
+        foodItem: {
           include: { category: true },
         },
       },
@@ -39,7 +39,7 @@ export async function GET() {
       if (!itemCounts[foodItemId]) {
         itemCounts[foodItemId] = {
           count: 0,
-          item: orderItem.fooditem,
+          item: orderItem.foodItem,
         }
       }
       itemCounts[foodItemId].count += orderItem.quantity
@@ -93,7 +93,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const data = fooditemSchema.parse(await request.json())
+    const data = foodItemSchema.parse(await request.json())
 
     const newFoodItem = await prisma.fooditem.create({
       data: {
@@ -128,7 +128,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Food item ID is required' }, { status: 400 })
     }
 
-    const data = fooditemSchema.parse(await request.json())
+    const data = foodItemSchema.parse(await request.json())
 
     const updatedFoodItem = await prisma.fooditem.update({
       where: { id: parseInt(id) },

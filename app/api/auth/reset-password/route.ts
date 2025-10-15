@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const { token, password } = await request.json();
     
     // 1. Verify token exists and isn't expired
-    const resetRequest = await prisma.passwordReset.findUnique({
+    const resetRequest = await prisma.passwordreset.findUnique({
       where: { token }
     });
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     });
 
     // 3. Delete used token
-    await prisma.passwordReset.delete({ where: { token } });
+    await prisma.passwordreset.delete({ where: { token } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

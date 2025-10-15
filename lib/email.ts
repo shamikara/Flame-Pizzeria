@@ -66,9 +66,12 @@ const realEmailService = (key: string) => {
   };
 };
 
-const emailService = process.env.NODE_ENV === 'development' && !apiKey
-  ? mockEmailService
-  : realEmailService(apiKey!);
+const emailService = apiKey
+  ? realEmailService(apiKey)
+  : (() => {
+      console.warn('[Email] RESEND_API_KEY is not configured. Falling back to mock email service.');
+      return mockEmailService;
+    })();
 
 type EmailTemplate = 
   | 'catering-confirmation' 
