@@ -4,7 +4,7 @@ import db from "@/lib/db";
 import { recipe_status } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-export async function approveRecipe(recipeId: string) {
+export async function approveRecipe(recipeId: number) {
   try {
     await db.communityrecipe.update({
       where: { id: recipeId },
@@ -21,7 +21,7 @@ export async function approveRecipe(recipeId: string) {
   }
 }
 
-export async function rejectRecipe(recipeId: string) {
+export async function rejectRecipe(recipeId: number) {
   try {
     await db.communityrecipe.update({
       where: { id: recipeId },

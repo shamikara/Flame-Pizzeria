@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 
 type Recipe = {
-  id: string;
+  id: number;
   name: string;
   description: string;
   imageUrl: string | null;
@@ -84,7 +84,7 @@ export default function RecipesBoardPage() {
     }
   }, [user]);
 
-  const handleDelete = async (recipeId: string) => {
+  const handleDelete = async (recipeId: number) => {
     if (!confirm("Are you sure you want to delete this recipe?")) return;
 
     try {
@@ -109,17 +109,17 @@ export default function RecipesBoardPage() {
     <div className="container mx-auto py-12 px-4">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Community Recipe Board</h1>
-        
+
         <div className="flex gap-3">
           {user && (
             <>
-             <Button 
-  variant={showMyRecipes ? "default" : "outline"}
-  onClick={handleToggleView}
->
-  {showMyRecipes ? "View All Recipes" : "My Recipes"}
-</Button>
-              
+              <Button
+                variant={showMyRecipes ? "default" : "outline"}
+                onClick={handleToggleView}
+              >
+                {showMyRecipes ? "View All Recipes" : "My Recipes"}
+              </Button>
+
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
@@ -130,11 +130,11 @@ export default function RecipesBoardPage() {
                   <DialogHeader>
                     <DialogTitle>Share Your Recipe</DialogTitle>
                   </DialogHeader>
-                  <CommunityRecipeForm 
+                  <CommunityRecipeForm
                     onSuccess={() => {
                       setIsDialogOpen(false);
                       fetchMyRecipes();
-                    }} 
+                    }}
                   />
                 </DialogContent>
               </Dialog>
@@ -158,7 +158,7 @@ export default function RecipesBoardPage() {
               key={recipe.id}
               className="bg-white/20 backdrop-blur-md rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all hover:bg-white/30 relative"
             >
-              <div 
+              <div
                 className="cursor-pointer"
                 onClick={() => setSelected(recipe)}
               >
@@ -185,7 +185,7 @@ export default function RecipesBoardPage() {
                 <div className="absolute top-2 right-2 flex gap-2">
                   <Badge variant={
                     recipe.status === 'APPROVED' ? 'default' :
-                    recipe.status === 'REJECTED' ? 'destructive' : 'secondary'
+                      recipe.status === 'REJECTED' ? 'destructive' : 'secondary'
                   }>
                     {recipe.status}
                   </Badge>
@@ -217,7 +217,7 @@ export default function RecipesBoardPage() {
               >
                 <X className="h-6 w-6" />
               </button>
-              
+
               {selected.imageUrl && (
                 <div className="relative w-full h-[400px] rounded-md mb-4">
                   <Image
@@ -228,7 +228,7 @@ export default function RecipesBoardPage() {
                   />
                 </div>
               )}
-              
+
               <h2 className="text-2xl font-bold mb-2">{selected.name}</h2>
               <p className="text-sm text-muted-foreground mb-4">
                 ✍️ By {selected.author.firstName} {selected.author.lastName} — {new Date(selected.createdAt).toLocaleDateString()}

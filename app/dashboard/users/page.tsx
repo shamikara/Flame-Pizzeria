@@ -16,13 +16,13 @@ import { Check, X, Users as UsersIcon } from 'lucide-react';
 import { Spinner } from "@/components/ui/spinner";
 
 type RecipeData = {
-  id: string;
+  id: number;
   name: string;
   status: string;
 };
 
 type UserWithRecipes = {
-  id: string;
+  id: number;
   firstName: string | null;
   lastName: string | null;
   email: string;
@@ -60,9 +60,10 @@ export default function UsersPage() {
     fetchData();
   }, []);
   
-  const handleApprove = (recipeId: string) => {
+  const handleApprove = (recipeId: number) => {
     startTransition(async () => {
       const result = await approveRecipe(recipeId);
+
       if (result.success) {
         toast({ title: "Success", description: "Recipe approved and published." });
         fetchData();
@@ -72,9 +73,10 @@ export default function UsersPage() {
     });
   };
   
-  const handleReject = (recipeId: string) => {
+  const handleReject = (recipeId: number) => {
     startTransition(async () => {
       const result = await rejectRecipe(recipeId);
+
        if (result.success) {
         toast({ title: "Success", description: "Recipe has been rejected." });
         fetchData();

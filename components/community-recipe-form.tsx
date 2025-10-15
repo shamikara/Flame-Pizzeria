@@ -41,13 +41,38 @@ export function CommunityRecipeForm({ onSuccess }: CommunityRecipeFormProps) {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) {
+      setImagePreview(null);
+      return;
     }
+
+    if (file.type !== "image/png") {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PNG image.",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      setImagePreview(null);
+      return;
+    }
+
+    if (file.size > 500 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Image must be 500KB or smaller.",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      setImagePreview(null);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -61,6 +86,7 @@ export function CommunityRecipeForm({ onSuccess }: CommunityRecipeFormProps) {
       if (fileInput?.files?.[0]) {
         const formData = new FormData();
         formData.append('image', fileInput.files[0]);
+        formData.append('recipeName', data.name);
 
         const uploadRes = await fetch('/api/upload/recipe-image', {
           method: 'POST',

@@ -5,7 +5,7 @@ import { getServerSession } from "@/lib/session";
 // DELETE - Delete recipe (only by author)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { recipeId: string } }
+  { params }: { params: { recipeId: number } }
 ) {
   try {
     const session = await getServerSession();
@@ -15,7 +15,7 @@ export async function DELETE(
     }
 
     const recipe = await prisma.communityrecipe.findUnique({
-      where: { id: params.recipeId },
+      where: { id: Number(params.recipeId) },
     });
 
     if (!recipe) {
@@ -28,7 +28,7 @@ export async function DELETE(
     }
 
     await prisma.communityrecipe.delete({
-      where: { id: params.recipeId },
+      where: { id: Number(params.recipeId) },
     });
 
     return NextResponse.json({ success: true, message: "Recipe deleted" });
