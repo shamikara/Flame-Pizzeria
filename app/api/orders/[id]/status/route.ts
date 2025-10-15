@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/db'
+import { getServerSession, type UserPayload } from '@/lib/session'
 
 const ALLOWED_STATUSES = [
   'PENDING',
@@ -16,6 +17,25 @@ type AllowedStatus = typeof ALLOWED_STATUSES[number]
 
 export async function PATCH(request: Request, context: { params: { id: string } }) {
   try {
+    const session = await getServerSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const role = session.role
+
+    const rolePermissions: Record<UserPayload['role'], readonly AllowedStatus[]> = {
+      ADMIN: ALLOWED_STATUSES,
+      MANAGER: ALLOWED_STATUSES,
+      CHEF: ['PREPARING', 'READY_FOR_PICKUP'],
+      WAITER: ['OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'],
+      STORE_KEEP: [],
+      CUSTOMER: [],
+      DELIVERY_PERSON: [],
+      KITCHEN_HELPER: [],
+      STAFF: []
+    }
+
     const { id } = context.params
     const { status } = await request.json()
 
@@ -26,11 +46,26 @@ export async function PATCH(request: Request, context: { params: { id: string } 
       )
     }
 
-    // Get the order before updating to check if it's being marked as ready
+    if (!rolePermissions[role]?.includes(status as AllowedStatus)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const orderBeforeUpdate = await prisma.order.findUnique({
       where: { id: parseInt(id, 10) },
-      select: { id: true, status: true, user: { select: { firstName: true, lastName: true } } }
+      select: {
+        id: true,
+        status: true,
+        user: { select: { firstName: true, lastName: true } },
+      },
     })
+
+    if (!orderBeforeUpdate) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    if (orderBeforeUpdate.status === 'DELIVERED' && orderBeforeUpdate.status !== status) {
+      return NextResponse.json({ error: 'Delivered orders cannot be modified' }, { status: 400 })
+    }
 
     const updated = await prisma.order.update({
       where: { id: parseInt(id, 10) },
@@ -42,33 +77,29 @@ export async function PATCH(request: Request, context: { params: { id: string } 
       },
     })
 
-    // If order is being marked as READY_FOR_PICKUP, create notifications
-    if (status === 'READY_FOR_PICKUP' && orderBeforeUpdate && orderBeforeUpdate.status !== 'READY_FOR_PICKUP') {
+    if (status === 'READY_FOR_PICKUP' && orderBeforeUpdate.status !== 'READY_FOR_PICKUP') {
       try {
-        // Get all staff users (not customers) to notify
         const staffUsers = await prisma.user.findMany({
           where: {
             role: { in: ['ADMIN', 'MANAGER', 'WAITER', 'CHEF'] },
-            isActive: true
+            isActive: true,
           },
-          select: { id: true, firstName: true, lastName: true }
+          select: { id: true, firstName: true, lastName: true },
         })
 
-        // Create notifications for all staff
-        const notifications = staffUsers.map(user => ({
+        const notifications = staffUsers.map((user) => ({
           message: `Order #${orderBeforeUpdate.id} is ready for pickup! Customer: ${orderBeforeUpdate.user.firstName} ${orderBeforeUpdate.user.lastName}`,
           type: 'ORDER_READY' as const,
           orderId: orderBeforeUpdate.id,
-          userId: user.id
+          userId: user.id,
         }))
 
         if (notifications.length > 0) {
           await prisma.notification.createMany({
-            data: notifications
+            data: notifications,
           })
         }
       } catch (notificationError) {
-        // Don't fail the order update if notifications fail
         console.error('Failed to create notifications:', notificationError)
       }
     }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { MoreHorizontal, Eye, Printer, ShoppingBag } from "lucide-react";
 import { PopularItemsPieChart } from "@/components/charts/popular-items-pie-chart";
 import { Spinner } from "@/components/ui/spinner";
+import { useSession, SessionUserRole } from "@/components/session-provider";
 
 type Customization = {
   name: string;
@@ -80,45 +82,82 @@ const statusColorMap: Record<string, string> = {
   REFUNDED: "bg-orange-500/20 text-orange-400 border-orange-500/50",
 };
 
+const roleStatusMap: Record<SessionUserRole, readonly string[]> = {
+  ADMIN: [
+    "CONFIRMED",
+    "PREPARING",
+    "READY_FOR_PICKUP",
+    "OUT_FOR_DELIVERY",
+    "DELIVERED",
+    "CANCELLED",
+    "REFUNDED",
+  ],
+  MANAGER: [
+    "CONFIRMED",
+    "PREPARING",
+    "READY_FOR_PICKUP",
+    "OUT_FOR_DELIVERY",
+    "DELIVERED",
+    "CANCELLED",
+    "REFUNDED",
+  ],
+  CHEF: ["PREPARING", "READY_FOR_PICKUP"],
+  WAITER: ["OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"],
+  STORE_KEEP: [],
+  DELIVERY_PERSON: [],
+  KITCHEN_HELPER: [],
+  STAFF: [],
+  CUSTOMER: [],
+};
+
+const requiresConfirmation = new Set(["DELIVERED"]);
+
 export default function OrdersPage() {
+  const { user } = useSession();
+  const allowedStatuses = useMemo<readonly string[]>(() => {
+    if (!user) return [];
+    return roleStatusMap[user.role] ?? [];
+  }, [user]);
+
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
+  const [pendingAction, setPendingAction] = useState<{ orderId: number; status: string } | null>(null);
+
   const [popularItems, setPopularItems] = useState<PopularItemData[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchAllData = async () => {
     try {
-      setIsLoading(true)
-  
+      setIsLoading(true);
+
       const [ordersRes, popularItemsRes] = await Promise.all([
         fetch("/api/orders/list"),
-        fetch("/api/orders/today-popular")
-      ])
-  
-      const rawOrders = await ordersRes.json().catch(() => [])
+        fetch("/api/orders/today-popular"),
+      ]);
+
+      const rawOrders = await ordersRes.json().catch(() => []);
       const normalizedOrders = Array.isArray(rawOrders)
         ? rawOrders
         : Array.isArray(rawOrders?.orders)
           ? rawOrders.orders
-          : []
-      setOrders(normalizedOrders)
-  
-      const rawPopular = await popularItemsRes.json().catch(() => [])
-      setPopularItems(Array.isArray(rawPopular) ? rawPopular : [])
+          : [];
+      setOrders(normalizedOrders);
+
+      const rawPopular = await popularItemsRes.json().catch(() => []);
+      setPopularItems(Array.isArray(rawPopular) ? rawPopular : []);
     } catch (err) {
-      console.error("Failed to fetch dashboard data", err)
-      setOrders([])
-      setPopularItems([])
+      console.error("Failed to fetch dashboard data", err);
+      setOrders([]);
+      setPopularItems([]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
-  
-  const orderList = Array.isArray(orders) ? orders : []
-  const totalOrders = orderList.length
-  const pendingCount = orderList.filter((o) => o.status === "PENDING").length
-  const deliveredCount = orderList.filter((o) => o.status === "DELIVERED").length
-  
+  };
+
+  const orderList = Array.isArray(orders) ? orders : [];
+  const totalOrders = orderList.length;
+  const pendingCount = orderList.filter((o) => o.status === "PENDING").length;
+  const deliveredCount = orderList.filter((o) => o.status === "DELIVERED").length;
 
   const updateStatus = async (orderId: number, status: string) => {
     try {
@@ -132,6 +171,14 @@ export default function OrdersPage() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const triggerStatusChange = (orderId: number, status: string) => {
+    if (requiresConfirmation.has(status)) {
+      setPendingAction({ orderId, status });
+      return;
+    }
+    updateStatus(orderId, status);
   };
 
   useEffect(() => {
@@ -322,17 +369,23 @@ export default function OrdersPage() {
                         <DropdownMenuItem onClick={() => setSelectedOrder(order)} className="text-gray-200 hover:bg-gray-700">
                           <Eye className="mr-2 h-4 w-4" /> View Details
                         </DropdownMenuItem>
-                        <Separator className="bg-gray-700" />
-                        <DropdownMenuLabel className="text-gray-400 text-xs">Update Status</DropdownMenuLabel>
-                        {["CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "DELIVERED"].map(status => (
-                          <DropdownMenuItem
-                            key={status}
-                            onClick={() => updateStatus(order.id, status)}
-                            className="text-gray-200 hover:bg-gray-700"
-                          >
-                            {status.replace(/_/g, ' ')}
-                          </DropdownMenuItem>
-                        ))}
+                        {user?.role !== "ADMIN" && order.status === "DELIVERED" ? null : (
+                          <>
+                            <Separator className="bg-gray-700" />
+                            <DropdownMenuLabel className="text-gray-400 text-xs">Update Status</DropdownMenuLabel>
+                            {["CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED", "REFUNDED"]
+                              .filter((status) => allowedStatuses.includes(status))
+                              .map((status) => (
+                                <DropdownMenuItem
+                                  key={status}
+                                  onClick={() => triggerStatusChange(order.id, status)}
+                                  className="text-gray-200 hover:bg-gray-700"
+                                >
+                                  {status.replace(/_/g, " ")}
+                                </DropdownMenuItem>
+                              ))}
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -398,11 +451,39 @@ export default function OrdersPage() {
                 <span className="font-bold text-2xl text-blue-400">Rs. {selectedOrder.total.toFixed(2)}</span>
               </div>
 
-              <Button onClick={handlePrintReceipt} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600">
-                <Printer className="mr-2 h-4 w-4" /> Print Receipt
-              </Button>
+              {user?.role !== "CHEF" && (
+                <Button onClick={handlePrintReceipt} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600">
+                  <Printer className="mr-2 h-4 w-4" /> Print Receipt
+                </Button>
+              )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pendingAction} onOpenChange={(open) => !open && setPendingAction(null)}>
+        <DialogContent className="max-w-md bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-white">Confirm Status Change</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-300">
+            Marking an order as DELIVERED cannot be undone. Are you sure you want to continue?
+          </p>
+          <div className="mt-6 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setPendingAction(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (pendingAction) {
+                  updateStatus(pendingAction.orderId, pendingAction.status);
+                  setPendingAction(null);
+                }
+              }}
+            >
+              Confirm
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -9,11 +9,23 @@ type UserPayload = {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'ADMIN' | 'MANAGER' | 'STAFF' | 'CUSTOMER';
+  role:
+    | 'ADMIN'
+    | 'MANAGER'
+    | 'CHEF'
+    | 'WAITER'
+    | 'STORE_KEEP'
+    | 'DELIVERY_PERSON'
+    | 'KITCHEN_HELPER'
+    | 'STAFF'
+    | 'CUSTOMER';
 };
 
+export type SessionUser = UserPayload;
+export type SessionUserRole = SessionUser['role'];
+
 type SessionContextType = {
-  user: UserPayload | null;
+  user: SessionUser | null;
   isLoading: boolean;
   handleLogout: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -22,7 +34,7 @@ type SessionContextType = {
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserPayload | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 

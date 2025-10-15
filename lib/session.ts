@@ -8,7 +8,16 @@ import { type JwtPayload } from 'jsonwebtoken';
 // The UserPayload type remains the same
 export interface UserPayload extends JwtPayload {
   userId: number;
-  role: 'ADMIN' | 'MANAGER' | 'CHEF' | 'WAITER' | 'STORE_KEEP' | 'CUSTOMER';
+  role:
+    | 'ADMIN'
+    | 'MANAGER'
+    | 'CHEF'
+    | 'WAITER'
+    | 'STORE_KEEP'
+    | 'DELIVERY_PERSON'
+    | 'KITCHEN_HELPER'
+    | 'STAFF'
+    | 'CUSTOMER';
   email: string;
   firstName?: string;
 }

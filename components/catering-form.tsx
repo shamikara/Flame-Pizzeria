@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,11 +14,23 @@ export function CateringForm() {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const MIN_GUESTS = 9;
+    const MAX_GUESTS = 101;
+    const MIN_LEAD_DAYS = 5;
+
+    const minEventDate = useMemo(() => {
+        const baseline = new Date();
+        baseline.setHours(0, 0, 0, 0);
+        baseline.setDate(baseline.getDate() + MIN_LEAD_DAYS);
+        return baseline;
+    }, []);
+
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         eventType: '',
-        eventDate: new Date(),
+        eventDate: minEventDate,
         guestCount: 50,
+
         contactName: '',
         contactEmail: '',
         venueAddress: '',
@@ -33,9 +45,17 @@ export function CateringForm() {
         const newErrors: Record<string, string> = {};
         if (!formData.contactName) newErrors.contactName = 'Name is required';
         if (!formData.contactEmail.includes('@')) newErrors.contactEmail = 'Valid email required';
-        if (formData.guestCount < 10) newErrors.guestCount = 'Minimum 10 guests';
+        if (formData.guestCount < MIN_GUESTS || formData.guestCount > MAX_GUESTS) {
+            newErrors.guestCount = `Guest count must be between ${MIN_GUESTS} and ${MAX_GUESTS}`;
+        }
         if (!formData.venueAddress.trim()) newErrors.venueAddress = 'Venue address is required';
         if (!formData.serviceStyle) newErrors.serviceStyle = 'Select a service style';
+
+        const selectedEventDate = new Date(formData.eventDate);
+        selectedEventDate.setHours(0, 0, 0, 0);
+        if (selectedEventDate < minEventDate) {
+            newErrors.eventDate = `Event date must be at least ${MIN_LEAD_DAYS} days from today`;
+        }
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
@@ -108,7 +128,8 @@ export function CateringForm() {
     const resetForm = () => {
         setFormData({
             eventType: '',
-            eventDate: new Date(),
+            eventDate: minEventDate,
+
             guestCount: 50,
             contactName: '',
             contactEmail: '',
@@ -151,19 +172,42 @@ export function CateringForm() {
                             <Calendar
                                 mode="single"
                                 selected={formData.eventDate}
-                                onSelect={(date) => date && setFormData({ ...formData, eventDate: date })}
+                                onSelect={(date) => {
+                                    if (!date) return;
+                                    setFormData({ ...formData, eventDate: date });
+                                    setErrors({ ...errors, eventDate: '' });
+                                }}
+                                fromDate={minEventDate}
+                                disabled={{ before: minEventDate }}
                             />
+                            {errors.eventDate && (
+                                <p className="text-sm text-red-500">{errors.eventDate}</p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">
+                                Events must be scheduled at least {MIN_LEAD_DAYS} days in advance.
+                            </p>
+
                         </div>
                         <div >
                             <label className="block text-sm mb-1">Guest Count</label>
                             <Input
                                 type="number"
-                                min={10}
+                                min={MIN_GUESTS}
+                                max={MAX_GUESTS}
                                 value={formData.guestCount}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, guestCount: parseInt(e.target.value) || 0 })
-                                }
+                                onChange={(e) => {
+                                    const value = parseInt(e.target.value, 10);
+                                    setFormData({
+                                        ...formData,
+                                        guestCount: Number.isNaN(value) ? 0 : value,
+                                    });
+                                    setErrors({ ...errors, guestCount: '' });
+                                }}
                             />
+                            <p className="text-xs text-gray-400 mt-1">
+                                Guest count must be between {MIN_GUESTS} and {MAX_GUESTS}.
+                            </p>
+
                             {errors.guestCount && (
                                 <p className="text-sm text-red-500">{errors.guestCount}</p>
                             )}

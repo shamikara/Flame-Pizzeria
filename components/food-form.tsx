@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,22 +38,45 @@ export type FoodFormProps = {
     nutrition?: Record<string, number> | null;
   };
   onFormSubmit: () => void;
+  nextFoodId?: number;
 };
 
-export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
+export function FoodForm({ foodItem, onFormSubmit, nextFoodId }: FoodFormProps) {
   const [name, setName] = useState(foodItem?.name || "");
   const [description, setDescription] = useState(foodItem?.description || "");
   const [price, setPrice] = useState(foodItem?.price?.toString() || "");
-  const [imageUrl, setImageUrl] = useState(foodItem?.imageUrl || "");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
   const [categoryId, setCategoryId] = useState(foodItem?.categoryId?.toString() || "");
   const [foodType, setFoodType] = useState<number>(foodItem?.foodType ?? 0);
-  const [nutrition, setNutrition] = useState<string>(
-    JSON.stringify(
-      foodItem?.nutrition ?? { calories: 0, protein: 0, carbs: 0, fat: 0 },
-      null,
-      2
-    )
-  );
+  const [nutritionValues, setNutritionValues] = useState<Record<string, string>>(() => {
+    const defaults = {
+      calories: "",
+      protein: "",
+      carbs: "",
+      fat: "",
+      fiber: "",
+      sugar: "",
+      sodium: "",
+      potassium: "",
+      calcium: "",
+      iron: "",
+      water: "",
+    };
+
+    if (!foodItem?.nutrition) {
+      return defaults;
+    }
+
+    return Object.entries(foodItem.nutrition).reduce<Record<string, string>>(
+      (acc, [key, value]) => {
+        acc[key] = value?.toString?.() ?? "";
+        return acc;
+      },
+      defaults
+    );
+  });
+  
   const [isActive, setIsActive] = useState(foodItem?.isActive ?? true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,6 +101,23 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
     fetchCategories();
   }, []);
 
+  const nutritionFields = useMemo(
+    () => [
+      { key: "calories", label: "Calories (kcal)" },
+      { key: "protein", label: "Protein (g)" },
+      { key: "carbs", label: "Carbohydrates (g)" },
+      { key: "fat", label: "Fat (g)" },
+      { key: "fiber", label: "Fiber (g)" },
+      { key: "sugar", label: "Sugar (g)" },
+      { key: "sodium", label: "Sodium (mg)" },
+      { key: "potassium", label: "Potassium (mg)" },
+      { key: "calcium", label: "Calcium (mg)" },
+      { key: "iron", label: "Iron (mg)" },
+      { key: "water", label: "Water (g)" },
+    ],
+    []
+  );
+
   const toggleFoodType = (bit: number, checked: boolean | string) => {
     setFoodType((prev) => {
       const isChecked = checked === true;
@@ -84,36 +125,82 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
     });
   };
 
+  const handleNutritionChange = (key: string, rawValue: string) => {
+    if (!rawValue || /^\d*(\.\d*)?$/.test(rawValue)) {
+      setNutritionValues((prev) => ({ ...prev, [key]: rawValue }));
+    }
+  };
+
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) {
+      setImageFile(null);
+      return;
+    }
+
+    if (file.type !== "image/png") {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PNG image.",
+        variant: "destructive",
+      });
+      event.target.value = "";
+      setImageFile(null);
+      return;
+    }
+
+    if (file.size > 500 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Image must be 500KB or smaller.",
+        variant: "destructive",
+      });
+      event.target.value = "";
+      setImageFile(null);
+      return;
+    }
+
+    setImageFile(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      let parsedNutrition: Record<string, number> | null = null;
-      try {
-        parsedNutrition = nutrition.trim() ? JSON.parse(nutrition) : null;
-      } catch (error) {
-        throw new Error("Nutrition must be valid JSON");
+      const nutritionPayload = Object.entries(nutritionValues).reduce<Record<string, number>>((acc, [key, value]) => {
+        if (value.trim() !== "") {
+          acc[key] = parseFloat(value);
+        }
+        return acc;
+      }, {});
+
+      if (!foodItem && !imageFile) {
+        throw new Error("Please upload a PNG image for the new food item");
       }
 
-      const payload = {
-        name,
-        description: description || null,
-        price: parseFloat(price),
-        imageUrl: imageUrl || null,
-        categoryId: parseInt(categoryId),
-        isActive,
-        foodType,
-        nutrition: parsedNutrition,
-      };
+      if (!categoryId) {
+        throw new Error("Please select a category");
+      }
 
       const url = foodItem ? `/api/fooditems?id=${foodItem.id}` : "/api/fooditems";
       const method = foodItem ? "PUT" : "POST";
 
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("description", description);
+      formData.append("price", price);
+      formData.append("categoryId", categoryId);
+      formData.append("isActive", JSON.stringify(isActive));
+      formData.append("foodType", JSON.stringify(foodType));
+      formData.append("nutrition", JSON.stringify(nutritionPayload));
+      if (imageFile) {
+        formData.append("image", imageFile);
+      }
+
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       if (!res.ok) {
@@ -121,10 +208,18 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
         throw new Error(error.error || "Failed to save food item");
       }
 
+      // Ensure the file input clears
+      const fileInput = document.getElementById("imageFile") as HTMLInputElement | null;
+      if (fileInput) {
+        fileInput.value = "";
+      }
+
       toast({
         title: "Success",
         description: `Food item ${foodItem ? "updated" : "created"} successfully!`,
       });
+
+      setImageFile(null);
 
       onFormSubmit();
     } catch (error: any) {
@@ -134,12 +229,14 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
         variant: "destructive",
       });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
+  const imageHintId = foodItem?.id ?? nextFoodId;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">
       <div>
         <Label htmlFor="name">Name *</Label>
         <Input
@@ -173,29 +270,6 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
           required
           placeholder="0.00"
         />
-      </div>
-
-      <div>
-        <Label htmlFor="imageUrl">Image URL</Label>
-        <Input
-          id="imageUrl"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          placeholder="img/fooditems/pizza.png"
-        />
-        <p className="text-xs text-gray-400 mt-1">Example: img/fooditems/1.png</p>
-      </div>
-
-      <div>
-        <Label htmlFor="nutrition">Nutrition (JSON)</Label>
-        <Textarea
-          id="nutrition"
-          value={nutrition}
-          onChange={(e) => setNutrition(e.target.value)}
-          rows={5}
-          placeholder='{"calories": 320, "protein": 12, "carbs": 40, "fat": 10}'
-        />
-        <p className="text-xs text-gray-400 mt-1">Provide key/value pairs (kcal or grams).</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -239,6 +313,49 @@ export function FoodForm({ foodItem, onFormSubmit }: FoodFormProps) {
             ))}
           </div>
         </div>
+      </div>
+
+      <div>
+        <Label>Nutrition</Label>
+        <div className="overflow-hidden rounded-md border border-gray-700">
+          <div className="grid grid-cols-2 bg-gray-800/80 text-xs uppercase tracking-wide text-gray-400">
+            <div className="px-3 py-2">Nutrient</div>
+            <div className="px-3 py-2">Value</div>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {nutritionFields.map((field) => (
+              <div key={field.key} className="grid grid-cols-2">
+                <div className="px-3 py-2 text-sm text-gray-300 flex items-center">
+                  {field.label}
+                </div>
+                <div className="px-3 py-2">
+                  <Input
+                    inputMode="decimal"
+                    value={nutritionValues[field.key] ?? ""}
+                    onChange={(event) => handleNutritionChange(field.key, event.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="imageFile">Upload Image *</Label>
+        <Input
+          id="imageFile"
+          type="file"
+          accept="image/png"
+          onChange={handleImageFileChange}
+        />
+        <p className="text-xs text-gray-400">
+          PNG only, up to 500KB. Saved as `img/fooditems/{imageHintId ?? "next"}.png`.
+        </p>
+        {imageFile && (
+          <div className="text-xs text-gray-400">Selected file: {imageFile.name}</div>
+        )}
       </div>
 
       <div className="flex items-center space-x-2">

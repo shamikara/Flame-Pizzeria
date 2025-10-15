@@ -1,6 +1,83 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { z } from 'zod'
+import { promises as fs } from 'fs'
+import path from 'path'
+
+const MAX_IMAGE_SIZE = 500 * 1024 // 500KB
+const IMAGE_DIR = path.join(process.cwd(), 'public', 'img', 'fooditems')
+
+const sanitizeFileName = (name: string) => {
+  const base = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return base || 'food'
+}
+
+const ensureImageConstraints = (file: File | null, requireImage: boolean) => {
+  if (!file) {
+    if (requireImage) {
+      throw new Error('Image file is required and must be a PNG under 500KB')
+    }
+    return
+  }
+
+  if (file.type !== 'image/png') {
+    throw new Error('Only PNG images are allowed')
+  }
+
+  if (file.size > MAX_IMAGE_SIZE) {
+    throw new Error('Image must be 500KB or smaller')
+  }
+}
+
+const saveImageFile = async (foodName: string, file: File | null) => {
+  if (!file) return null
+
+  await fs.mkdir(IMAGE_DIR, { recursive: true })
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const fileName = `${sanitizeFileName(foodName)}.png`
+  const filePath = path.join(IMAGE_DIR, fileName)
+
+  await fs.writeFile(filePath, buffer)
+  return `img/fooditems/${fileName}`
+}
+
+const formDataSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  price: z.string().min(1),
+  categoryId: z.string().min(1),
+  isActive: z.string().min(1),
+  foodType: z.string().min(1),
+  nutrition: z.string().nullable().optional(),
+})
+
+const parseNutrition = (raw: string | null | undefined) => {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error('Nutrition must be an object')
+    }
+
+    const numericEntries = Object.entries(parsed).reduce<Record<string, number>>((acc, [key, value]) => {
+      const num = Number(value)
+      if (!Number.isFinite(num)) {
+        throw new Error(`Nutrition value for ${key} must be a number`)
+      }
+      acc[key] = num
+      return acc
+    }, {})
+
+    return Object.keys(numericEntries).length ? numericEntries : null
+  } catch (error) {
+    throw new Error('Invalid nutrition data. Please check your values.')
+  }
+}
 
 const fooditemSchema = z.object({
   name: z.string().min(1),
@@ -93,29 +170,63 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const data = foodItemSchema.parse(await request.json())
+    const formData = await request.formData()
+    const imageFile = formData.get('image') as File | null
+
+    const parsed = formDataSchema.safeParse({
+      name: formData.get('name'),
+      description: formData.get('description') ?? '',
+      price: formData.get('price'),
+      categoryId: formData.get('categoryId'),
+      isActive: formData.get('isActive'),
+      foodType: formData.get('foodType'),
+      nutrition: formData.get('nutrition'),
+    })
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+    }
+
+    ensureImageConstraints(imageFile, true)
+
+    const price = Number(parsed.data.price)
+    const categoryId = Number(parsed.data.categoryId)
+    const foodType = Number(parsed.data.foodType)
+    const isActive = parsed.data.isActive === 'true'
+
+    if (!Number.isFinite(price) || price <= 0) {
+      throw new Error('Price must be a positive number')
+    }
+    if (!Number.isInteger(categoryId)) {
+      throw new Error('Category is invalid')
+    }
+    if (!Number.isInteger(foodType)) {
+      throw new Error('Food type is invalid')
+    }
+
+    const nutrition = parseNutrition(parsed.data.nutrition ?? null)
+    const nutritionJson = nutrition ? JSON.parse(JSON.stringify(nutrition)) : null
+    const imageUrl = await saveImageFile(parsed.data.name, imageFile)
 
     const newFoodItem = await prisma.fooditem.create({
       data: {
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        imageUrl: data.imageUrl,
-        categoryId: data.categoryId,
-        isActive: data.isActive,
-        foodType: data.foodType,
-        nutrition: data.nutrition ?? null,
+        name: parsed.data.name,
+        description: parsed.data.description?.trim() || null,
+        price,
+        categoryId,
+        isActive,
+        foodType,
+        nutrition: nutritionJson,
+        imageUrl,
       },
       include: { category: true },
     })
 
     return NextResponse.json(newFoodItem, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to create food item:', error)
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Internal Server Error'
+    return NextResponse.json({ error: message }, { status: 400 })
   }
 }
 
@@ -128,30 +239,73 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Food item ID is required' }, { status: 400 })
     }
 
-    const data = foodItemSchema.parse(await request.json())
+    const existing = await prisma.fooditem.findUnique({ where: { id: Number(id) } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Food item not found' }, { status: 404 })
+    }
 
-    const updatedFoodItem = await prisma.fooditem.update({
-      where: { id: parseInt(id) },
+    const formData = await request.formData()
+    const imageFile = formData.get('image') as File | null
+
+    const parsed = formDataSchema.safeParse({
+      name: formData.get('name'),
+      description: formData.get('description') ?? '',
+      price: formData.get('price'),
+      categoryId: formData.get('categoryId'),
+      isActive: formData.get('isActive'),
+      foodType: formData.get('foodType'),
+      nutrition: formData.get('nutrition'),
+    })
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+    }
+
+    ensureImageConstraints(imageFile, false)
+
+    const price = Number(parsed.data.price)
+    const categoryId = Number(parsed.data.categoryId)
+    const foodType = Number(parsed.data.foodType)
+    const isActive = parsed.data.isActive === 'true'
+
+    if (!Number.isFinite(price) || price <= 0) {
+      throw new Error('Price must be a positive number')
+    }
+    if (!Number.isInteger(categoryId)) {
+      throw new Error('Category is invalid')
+    }
+    if (!Number.isInteger(foodType)) {
+      throw new Error('Food type is invalid')
+    }
+
+    const nutrition = parseNutrition(parsed.data.nutrition ?? null)
+    const nutritionJson = nutrition ? JSON.parse(JSON.stringify(nutrition)) : null
+
+    let imageUrl = existing.imageUrl
+    if (imageFile) {
+      imageUrl = await saveImageFile(parsed.data.name, imageFile)
+    }
+
+    const updated = await prisma.fooditem.update({
+      where: { id: Number(id) },
       data: {
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        imageUrl: data.imageUrl,
-        categoryId: data.categoryId,
-        isActive: data.isActive,
-        foodType: data.foodType,
-        nutrition: data.nutrition ?? null,
+        name: parsed.data.name,
+        description: parsed.data.description?.trim() || null,
+        price,
+        categoryId,
+        isActive,
+        foodType,
+        nutrition: nutritionJson,
+        imageUrl,
       },
       include: { category: true },
     })
 
-    return NextResponse.json(updatedFoodItem)
-  } catch (error) {
+    return NextResponse.json(updated)
+  } catch (error: any) {
     console.error('Failed to update food item:', error)
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Internal Server Error'
+    return NextResponse.json({ error: message }, { status: 400 })
   }
 }
 

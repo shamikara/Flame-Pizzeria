@@ -108,7 +108,7 @@ export default function UsersPage() {
         ) : (
           <Accordion type="single" collapsible className="w-full">
             {customers.map((customer) => (
-              <AccordionItem value={customer.id} key={customer.id} className="border-gray-800">
+              <AccordionItem value={customer.id.toString()} key={customer.id} className="border-gray-800">
                 <AccordionTrigger className="hover:no-underline hover:bg-gray-800/40 px-4 rounded-lg transition-all">
                   <div className="flex items-center gap-4">
                     <Avatar>
