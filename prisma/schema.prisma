@@ -189,6 +189,7 @@ model order {
   items         orderitem[]
   payments      payment[]
   delivery      delivery?
+  inventoryDeducted Boolean @default(false)
 }
 
 model orderitem {

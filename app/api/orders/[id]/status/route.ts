@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { getServerSession, type UserPayload } from '@/lib/session'
+import { deductInventoryForOrder, InventoryError } from '@/lib/inventory'
 
 const ALLOWED_STATUSES = [
   'PENDING',
@@ -14,6 +15,8 @@ const ALLOWED_STATUSES = [
 ] as const
 
 type AllowedStatus = typeof ALLOWED_STATUSES[number]
+
+const INVENTORY_DEDUCTION_STATUSES = new Set<AllowedStatus>(['CONFIRMED'])
 
 export async function PATCH(request: Request, context: { params: { id: string } }) {
   try {
@@ -50,11 +53,14 @@ export async function PATCH(request: Request, context: { params: { id: string } 
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    const orderId = parseInt(id, 10)
+
     const orderBeforeUpdate = await prisma.order.findUnique({
-      where: { id: parseInt(id, 10) },
+      where: { id: orderId },
       select: {
         id: true,
         status: true,
+        inventoryDeducted: true,
         user: { select: { firstName: true, lastName: true } },
       },
     })
@@ -67,15 +73,79 @@ export async function PATCH(request: Request, context: { params: { id: string } 
       return NextResponse.json({ error: 'Delivered orders cannot be modified' }, { status: 400 })
     }
 
-    const updated = await prisma.order.update({
-      where: { id: parseInt(id, 10) },
-      data: { status: status as AllowedStatus },
-      select: {
-        id: true,
-        status: true,
-        updatedAt: true,
-      },
-    })
+    const shouldDeductInventory = INVENTORY_DEDUCTION_STATUSES.has(status as AllowedStatus)
+
+    let orderDetailsForNotifications = orderBeforeUpdate
+    let updated
+
+    try {
+      const txResult = await prisma.$transaction(async (tx) => {
+        const orderWithIngredients = await tx.order.findUnique({
+          where: { id: orderId },
+          include: {
+            user: { select: { firstName: true, lastName: true } },
+            items: {
+              include: {
+                foodItem: {
+                  include: {
+                    recipe: {
+                      include: {
+                        ingredients: {
+                          include: {
+                            ingredient: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        })
+
+        if (!orderWithIngredients) {
+          throw new Error('ORDER_NOT_FOUND')
+        }
+
+        if (shouldDeductInventory && !orderWithIngredients.inventoryDeducted) {
+          await deductInventoryForOrder(orderWithIngredients, tx)
+        }
+
+        const updatedOrder = await tx.order.update({
+          where: { id: orderId },
+          data: {
+            status: status as AllowedStatus,
+            inventoryDeducted: shouldDeductInventory
+              ? true
+              : orderWithIngredients.inventoryDeducted,
+          },
+          select: {
+            id: true,
+            status: true,
+            updatedAt: true,
+          },
+        })
+
+        return { updatedOrder, orderWithIngredients }
+      })
+
+      updated = txResult.updatedOrder
+      orderDetailsForNotifications = txResult.orderWithIngredients
+    } catch (transactionError) {
+      if (transactionError instanceof InventoryError) {
+        return NextResponse.json(
+          { error: transactionError.message, code: transactionError.code },
+          { status: 400 }
+        )
+      }
+
+      if ((transactionError as Error).message === 'ORDER_NOT_FOUND') {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      }
+
+      throw transactionError
+    }
 
     if (status === 'READY_FOR_PICKUP' && orderBeforeUpdate.status !== 'READY_FOR_PICKUP') {
       try {

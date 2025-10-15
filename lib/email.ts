@@ -1,149 +1,158 @@
-import { Resend } from 'resend';
+import { Resend } from "resend"
 
-const apiKey = process.env.RESEND_API_KEY;
-
-interface EmailResult {
-  success: boolean;
-  toastTitle: string;
-  toastMessage: string;
-  data?: { id: string };
+type EmailResult = {
+  success: boolean
+  toastTitle: string
+  toastMessage: string
+  data?: { id: string }
+  errorCode?: string
 }
 
-// Mock email service for development
-const mockEmailService = {
-  sendEmail: async (params: any): Promise<EmailResult> => {
-    console.log('[Email Mock] Would send email:', {
-      to: params.to,
-      subject: params.subject
-    });
-    return {
-      success: true,
-      toastTitle: 'Request Submitted',
-      toastMessage: 'We would send an email in production',
-      data: { id: 'mock-email-id' }
-    };
+type TemplateName = "catering-confirmation" | "password-reset" | "order-confirmation"
+
+type TemplateData = {
+  "catering-confirmation": {
+    name: string
+    requestId: number | string
+    eventDate?: string
+    guestCount?: number
   }
-};
-
-// Real email service for production
-const realEmailService = (key: string) => {
-  if (!key) {
-    console.error('Resend API key is missing');
-    throw new Error('Email service not configured');
+  "password-reset": {
+    resetLink: string
   }
+  "order-confirmation": {
+    orderId: number | string
+  }
+}
 
-  const resend = new Resend(key);
+const apiKey = process.env.RESEND_API_KEY
+const fromAddress =
+  process.env.RESEND_FROM_EMAIL ?? "Flames Pizzeria <no-reply@flamespizzeria.com>"
 
-  return {
-    sendEmail: async (params: any): Promise<EmailResult> => {
-      try {
-        const { error, data } = await resend.emails.send(params);
-        
-        if (error) {
-          console.error('Email failed:', error);
-          return {
-            success: false,
-            toastTitle: 'Submission Error',
-            toastMessage: 'Failed to send confirmation email'
-          };
-        }
+const isConfigured = Boolean(apiKey)
+const resendClient = apiKey ? new Resend(apiKey) : null
 
-        return {
-          success: true,
-          toastTitle: 'Request Submitted',
-          toastMessage: 'We\'ve received your request and sent a confirmation',
-          data
-        };
-      } catch (err) {
-        console.error('Email error:', err);
-        return {
-          success: false,
-          toastTitle: 'Service Error',
-          toastMessage: 'Failed to process your request'
-        };
-      }
-    }
-  };
-};
+const logMockSend = ({ to, subject, html }: { to: string | string[]; subject: string; html: string }) => {
+  console.info("[Email Mock]", { to, subject, preview: html.slice(0, 120) })
+}
 
-const emailService = apiKey
-  ? realEmailService(apiKey)
-  : (() => {
-      console.warn('[Email] RESEND_API_KEY is not configured. Falling back to mock email service.');
-      return mockEmailService;
-    })();
-
-type EmailTemplate = 
-  | 'catering-confirmation' 
-  | 'password-reset'
-  | 'order-confirmation';
-
-export async function sendEmail({
+export async function sendEmail<T extends TemplateName>({
   to,
   subject,
   template,
-  data
+  data,
 }: {
-  to: string;
-  subject: string;
-  template: EmailTemplate;
-  data: Record<string, any>;
+  to: string | string[]
+  subject: string
+  template: T
+  data: TemplateData[T]
 }): Promise<EmailResult> {
   try {
-    const html = getEmailTemplate(template, data);
-    return await emailService.sendEmail({
-      from: 'no-reply@flamespizzeria.com',
+    const { html, text } = buildTemplate(template, data)
+
+    if (!isConfigured || !resendClient) {
+      logMockSend({ to, subject, html })
+      return {
+        success: true,
+        toastTitle: "Request Submitted",
+        toastMessage: "Email mocked (RESEND_API_KEY not set)",
+        data: { id: "mock-email-id" },
+      }
+    }
+
+    const { data: result, error } = await resendClient.emails.send({
+      from: fromAddress,
       to,
       subject,
-      html
-    });
+      html,
+      text,
+    })
+
+    if (error) {
+      console.error("[Email] Resend error", error)
+      return {
+        success: false,
+        toastTitle: "Email Failed",
+        toastMessage: error.message ?? "Unable to send email",
+        errorCode: error.name,
+      }
+    }
+
+    return {
+      success: true,
+      toastTitle: "Email Sent",
+      toastMessage: "Confirmation email delivered",
+      data: result,
+    }
   } catch (error) {
-    console.error('Email processing failed:', error);
+    console.error("[Email] sendEmail error", error)
     return {
       success: false,
-      toastTitle: 'System Error',
-      toastMessage: 'Failed to process your request. Please try again later.'
-    };
+      toastTitle: "System Error",
+      toastMessage: "Unable to process email request",
+    }
   }
 }
 
-function getEmailTemplate(template: EmailTemplate, data: Record<string, any>) {
+function buildTemplate(template: TemplateName, data: TemplateData[TemplateName]) {
   switch (template) {
-    case 'catering-confirmation':
-      return `
-        <div style="font-family: Arial, sans-serif; max-width: 600px;">
-          <h1 style="color: #e67e22;">Hi ${data.name},</h1>
-          <p>Your catering request (#${data.requestId}) has been received!</p>
-          <p>We'll contact you shortly to confirm details.</p>
+    case "catering-confirmation": {
+      const payload = data as TemplateData["catering-confirmation"]
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; color: #2f2f2f;">
+          <h1 style="color: #e67e22;">Hi ${payload.name},</h1>
+          <p>Thanks for choosing Flames Pizzeria for your event. We've logged request <strong>#${payload.requestId}</strong>.</p>
+          ${payload.eventDate ? `<p><strong>Event date:</strong> ${payload.eventDate}</p>` : ""}
+          ${payload.guestCount ? `<p><strong>Guest count:</strong> ${payload.guestCount}</p>` : ""}
+          <p>Our catering team will reach out within 24 hours to finalize the menu and logistics.</p>
+          <p style="margin-top: 24px;">Cheers,<br/>Flames Pizzeria Catering Team</p>
         </div>
-      `;
-    
-    case 'password-reset':
-      return `
-        <div style="font-family: Arial, sans-serif; max-width: 600px;">
-          <h1 style="color: #e67e22;">Password Reset</h1>
-          <p>Click the button below to reset your password:</p>
-          <a href="${data.resetLink}" 
-             style="display: inline-block; padding: 10px 20px; background-color: #e67e22; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0;">
-            Reset Password
-          </a>
-          <p>This link expires in 1 hour.</p>
+      `
+      const text = `Hi ${payload.name},\nYour catering request (#${payload.requestId}) is in!$${
+        payload.eventDate ? `\nEvent date: ${payload.eventDate}` : ""
+      }$${payload.guestCount ? `\nGuest count: ${payload.guestCount}` : ""}\n\nWe'll be in touch soon.\nFlames Pizzeria Catering Team`
+      return { html, text: text.replace(/\$/g, "") }
+    }
+    case "password-reset": {
+      const payload = data as TemplateData["password-reset"]
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; color: #2f2f2f;">
+          <h1 style="color: #e67e22;">Reset your password</h1>
+          <p>We received a request to reset your password for Flames Pizzeria.</p>
+          <p>If you made this request, click the button below. This link is valid for 60 minutes.</p>
+          <p style="text-align: center; margin: 32px 0;">
+            <a href="${payload.resetLink}"
+               style="display:inline-block; padding: 12px 24px; background: #e67e22; color: #fff; border-radius: 6px; text-decoration: none; font-weight: bold;">
+              Reset Password
+            </a>
+          </p>
+          <p>If you didn't request this, you can safely ignore this email.</p>
+          <p style="margin-top: 24px;">Flames Pizzeria Support</p>
         </div>
-      `;
-      
-    case 'order-confirmation':
-      return `
-        <div style="font-family: Arial, sans-serif; max-width: 600px;">
-          <h1 style="color: #e67e22;">Order Confirmation</h1>
-          <p>Thank you for your order (#${data.orderId})!</p>
+      `
+      const text = `We received a password-reset request for your Flames Pizzeria account. Use the link below within 60 minutes.\n\n${payload.resetLink}\n\nIf this wasn't you, ignore this email.`
+      return { html, text }
+    }
+    case "order-confirmation": {
+      const payload = data as TemplateData["order-confirmation"]
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; color: #2f2f2f;">
+          <h1 style="color: #e67e22;">Order confirmed!</h1>
+          <p>Thanks for ordering from Flames Pizzeria. Your order <strong>#${payload.orderId}</strong> is being prepared.</p>
+          <p>We'll notify you as soon as it's ready.</p>
         </div>
-      `;
-      
-    default:
-      return `
-        <div style="font-family: Arial, sans-serif; max-width: 600px;">
-          <p>${data.message || 'Thank you for your request'}</p>
+      `
+      const text = `Thanks for ordering from Flames Pizzeria. Your order #${payload.orderId} is confirmed and being prepared.`
+      return { html, text }
+    }
+    default: {
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; color: #2f2f2f;">
+          <p>${(data as { message?: string }).message ?? "Thank you for contacting Flames Pizzeria."}</p>
         </div>
-      `;
+      `
+      const text = ((data as { message?: string }).message ?? "Thank you for contacting Flames Pizzeria.")
+      return { html, text }
+    }
   }
 }
