@@ -26,8 +26,7 @@ type TemplateData = {
 }
 
 const apiKey = process.env.RESEND_API_KEY
-const fromAddress =
-  process.env.RESEND_FROM_EMAIL ?? "Flames Pizzeria <no-reply@flamespizzeria.com>"
+const fromAddress = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev"
 
 const isConfigured = Boolean(apiKey)
 const resendClient = apiKey ? new Resend(apiKey) : null
