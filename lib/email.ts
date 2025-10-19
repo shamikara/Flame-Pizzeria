@@ -86,10 +86,17 @@ export async function sendEmail<T extends TemplateName>({
     }
   } catch (error) {
     console.error("[Email] sendEmail error", error)
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : "Unable to process email request"
     return {
       success: false,
-      toastTitle: "System Error",
-      toastMessage: "Unable to process email request",
+      toastTitle: "Email Failed",
+      toastMessage: message,
+      errorCode: "SMTP_ERROR",
     }
   }
 }

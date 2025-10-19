@@ -33,7 +33,7 @@ export default function Header() {
   const [loggingOut, setLoggingOut] = useState(false)
   const { resolvedTheme, setTheme } = useTheme()
   const { itemCount } = useCart();
-  const { user } = useSession()
+  const { user, handleLogout: sessionLogout, refreshSession } = useSession()
   const router = useRouter();
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/dashboard');
@@ -42,12 +42,10 @@ export default function Header() {
     if (loggingOut) return
     setLoggingOut(true)
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.refresh()
-      router.push('/login')
-      window.location.reload()
+      await sessionLogout()
     } catch (error) {
       console.error('Failed to logout:', error)
+    } finally {
       setLoggingOut(false)
     }
   };

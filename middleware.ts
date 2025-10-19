@@ -63,11 +63,14 @@ export async function middleware(request: NextRequest) {
     }
     
     const rolePermissions: Record<UserPayload['role'], string[]> = {
-        ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
-        MANAGER: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
+        ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/catering', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
+        MANAGER: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/catering', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
         CHEF: ['/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/profile'],
         WAITER: ['/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
         STORE_KEEP: ['/dashboard/ingredients', '/dashboard/profile'],
+        DELIVERY_PERSON: ['/dashboard/profile'],
+        KITCHEN_HELPER: ['/dashboard/profile'],
+        STAFF: ['/dashboard/profile'],
         CUSTOMER: [],
     };
 

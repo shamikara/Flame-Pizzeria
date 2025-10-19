@@ -1,12 +1,20 @@
-
 'use client'; 
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, ShoppingCart, Package, Users2, LineChart, User, Factory, Salad
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  Users2,
+  LineChart,
+  User,
+  Factory,
+  Salad,
+  CalendarDays,
 } from "lucide-react";
+
 import { UserPayload } from "@/lib/session"; // Import the type
 
 const allDashboardLinks = [
@@ -14,6 +22,7 @@ const allDashboardLinks = [
   { href: "/dashboard/orders", label: "Orders", icon: ShoppingCart, roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'] },
   { href: "/dashboard/foods", label: "Foods", icon: Package, roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'] },
   { href: "/dashboard/customizations", label: "Add-on Extras", icon: Salad, roles: ['ADMIN', 'MANAGER', 'CHEF'] },
+  { href: "/dashboard/catering", label: "Catering Requests", icon: CalendarDays, roles: ['ADMIN', 'MANAGER'] },
   { href: "/dashboard/employees", label: "Employees", icon: Users2, roles: ['ADMIN', 'MANAGER'] },
   { href: "/dashboard/users", label: "Customers", icon: User, roles: ['ADMIN', 'MANAGER'] },
   { href: "/dashboard/ingredients", label: "Inventory", icon: Factory, roles: ['ADMIN', 'MANAGER', 'STORE_KEEP'] },

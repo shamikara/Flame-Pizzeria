@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { Spinner } from '@/components/ui/spinner'
 import Link from 'next/link'
+import { useSession } from '@/components/session-provider'
 
 interface LoginFormProps {
   searchParams?: { [key: string]: string | string[] | undefined }
@@ -27,6 +28,7 @@ const formSchema = z.object({
 export function LoginForm({ searchParams, onLoginSuccess }: LoginFormProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { refreshSession } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -73,6 +75,8 @@ export function LoginForm({ searchParams, onLoginSuccess }: LoginFormProps) {
 
       // Small delay to show success message
       await new Promise(resolve => setTimeout(resolve, 500))
+
+      await refreshSession()
 
       if (onLoginSuccess) {
         onLoginSuccess()

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { measurement_unit } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,21 @@ type Category = {
   id: number;
   name: string;
 };
+
+type IngredientOption = {
+  id: number;
+  name: string;
+  unit: measurement_unit;
+};
+
+type RecipeRow = {
+  id: string;
+  ingredientId: string;
+  quantity: string;
+  unit: measurement_unit;
+};
+
+const MEASUREMENT_UNITS: measurement_unit[] = ["KG", "G", "L", "ML", "PIECE"];
 
 export type FoodFormProps = {
   foodItem?: {
@@ -76,9 +92,12 @@ export function FoodForm({ foodItem, onFormSubmit, nextFoodId }: FoodFormProps) 
       defaults
     );
   });
-  
+
   const [isActive, setIsActive] = useState(foodItem?.isActive ?? true);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [ingredientOptions, setIngredientOptions] = useState<IngredientOption[]>([]);
+  const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
+  const [recipeRows, setRecipeRows] = useState<RecipeRow[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const { toast } = useToast();
@@ -100,6 +119,101 @@ export function FoodForm({ foodItem, onFormSubmit, nextFoodId }: FoodFormProps) 
 
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    const fetchIngredients = async () => {
+      try {
+        setIsLoadingIngredients(true);
+        const res = await fetch("/api/ingredients/list");
+        if (res.ok) {
+          const data = await res.json();
+          const options: IngredientOption[] = data.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            unit: item.unit as measurement_unit,
+          }));
+          setIngredientOptions(options);
+        }
+      } catch (error) {
+        console.error("Failed to fetch ingredients:", error);
+      } finally {
+        setIsLoadingIngredients(false);
+      }
+    };
+
+    fetchIngredients();
+  }, []);
+
+  useEffect(() => {
+    if (!foodItem?.id) {
+      return;
+    }
+
+    const fetchRecipe = async () => {
+      try {
+        const res = await fetch(`/api/fooditems/recipe?foodItemId=${foodItem.id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.ingredients?.length) {
+          setRecipeRows(
+            data.ingredients.map((entry: any) => ({
+              id: crypto.randomUUID(),
+              ingredientId: entry.ingredientId.toString(),
+              quantity: entry.quantity.toString(),
+              unit: entry.unit as measurement_unit,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch recipe for food item:", error);
+      }
+    };
+
+    fetchRecipe();
+  }, [foodItem?.id]);
+
+  useEffect(() => {
+    if (foodItem || recipeRows.length > 0 || ingredientOptions.length === 0) {
+      return;
+    }
+    setRecipeRows([
+      {
+        id: crypto.randomUUID(),
+        ingredientId: "",
+        quantity: "",
+        unit: ingredientOptions[0].unit,
+      },
+    ]);
+  }, [foodItem, recipeRows.length, ingredientOptions]);
+
+  const addRecipeRow = () => {
+    setRecipeRows((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        ingredientId: "",
+        quantity: "",
+        unit: ingredientOptions[0]?.unit ?? "KG",
+      },
+    ]);
+  };
+
+  const updateRecipeRow = (rowId: string, update: Partial<Omit<RecipeRow, "id">>) => {
+    setRecipeRows((prev) =>
+      prev.map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              ...update,
+            }
+          : row
+      )
+    );
+  };
+
+  const removeRecipeRow = (rowId: string) => {
+    setRecipeRows((prev) => prev.filter((row) => row.id !== rowId));
+  };
 
   const nutritionFields = useMemo(
     () => [
@@ -183,6 +297,36 @@ export function FoodForm({ foodItem, onFormSubmit, nextFoodId }: FoodFormProps) 
         throw new Error("Please select a category");
       }
 
+      if (recipeRows.length === 0) {
+        throw new Error("Please add at least one ingredient to the recipe");
+      }
+
+      const recipePayload = recipeRows.map((row) => {
+        if (!row.ingredientId) {
+          throw new Error("Please select an ingredient for every recipe row");
+        }
+
+        if (!row.quantity.trim()) {
+          throw new Error("Please provide a quantity for every ingredient");
+        }
+
+        const quantity = parseFloat(row.quantity);
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+          throw new Error("Ingredient quantities must be positive numbers");
+        }
+
+        return {
+          ingredientId: Number(row.ingredientId),
+          quantity,
+          unit: row.unit,
+        };
+      });
+
+      const uniqueIngredientIds = new Set(recipePayload.map((entry) => entry.ingredientId));
+      if (uniqueIngredientIds.size !== recipePayload.length) {
+        throw new Error("Duplicate ingredients found in the recipe. Please remove duplicates.");
+      }
+
       const url = foodItem ? `/api/fooditems?id=${foodItem.id}` : "/api/fooditems";
       const method = foodItem ? "PUT" : "POST";
 
@@ -194,6 +338,7 @@ export function FoodForm({ foodItem, onFormSubmit, nextFoodId }: FoodFormProps) 
       formData.append("isActive", JSON.stringify(isActive));
       formData.append("foodType", JSON.stringify(foodType));
       formData.append("nutrition", JSON.stringify(nutritionPayload));
+      formData.append("recipeIngredients", JSON.stringify(recipePayload));
       if (imageFile) {
         formData.append("image", imageFile);
       }
@@ -340,6 +485,81 @@ export function FoodForm({ foodItem, onFormSubmit, nextFoodId }: FoodFormProps) 
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="space-y-3">
+        <Label>Recipe Ingredients *</Label>
+        <p className="text-xs text-gray-400">
+          Define the ingredient breakdown used when preparing this food item. Stock will be deducted using these
+          quantities whenever an order is confirmed.
+        </p>
+        {isLoadingIngredients ? (
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading ingredients...
+          </div>
+        ) : ingredientOptions.length === 0 ? (
+          <p className="text-sm text-red-400">Add ingredients in inventory first before creating a recipe.</p>
+        ) : (
+          <div className="space-y-3">
+            {recipeRows.map((row) => {
+              const selectedIngredient = ingredientOptions.find((option) => option.id.toString() === row.ingredientId);
+              return (
+                <div
+                  key={row.id}
+                  className="grid gap-3 rounded-md border border-gray-700 p-3 md:grid-cols-[2fr,1fr,auto]"
+                >
+                  <Select
+                    value={row.ingredientId}
+                    onValueChange={(value) => {
+                      const ingredient = ingredientOptions.find((option) => option.id.toString() === value);
+                      updateRecipeRow(row.id, {
+                        ingredientId: value,
+                        unit: ingredient?.unit ?? row.unit,
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select ingredient" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ingredientOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id.toString()}>
+                          {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <div className="grid gap-2">
+                    <Input
+                      inputMode="decimal"
+                      placeholder="Quantity"
+                      value={row.quantity}
+                      onChange={(event) => updateRecipeRow(row.id, { quantity: event.target.value })}
+                    />
+                    <p className="text-xs text-gray-400">
+                      Unit: {selectedIngredient ? selectedIngredient.unit : row.unit}
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="justify-self-start text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    onClick={() => removeRecipeRow(row.id)}
+                    disabled={recipeRows.length === 1}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              );
+            })}
+            <Button type="button" variant="outline" onClick={addRecipeRow} className="border-dashed">
+              Add Ingredient
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">

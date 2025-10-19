@@ -1,6 +1,7 @@
 'use client';
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Spinner } from '@/components/ui/spinner';
 
 type UserPayload = {
   phone: string;
@@ -40,7 +41,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const refreshSession = async () => {
     try {
-      const res = await fetch('/api/auth/session');
+      setIsLoading(true);
+      const res = await fetch('/api/auth/session', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
@@ -57,12 +59,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     try {
+      setIsLoading(true);
       await fetch('/api/auth/logout', { method: 'POST' });
       setUser(null);
+      await refreshSession();
       router.refresh();
       router.push('/login');
     } catch (error) {
       console.error('Logout failed:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -71,13 +77,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <SessionContext.Provider value={{ 
-      user, 
-      isLoading,
-      handleLogout,
-      refreshSession
-    }}>
+    <SessionContext.Provider value={{ user, isLoading, handleLogout, refreshSession }}>
       {children}
+      {isLoading && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Spinner />
+            <p className="text-sm font-medium text-foreground">Updating your session...</p>
+          </div>
+        </div>
+      )}
     </SessionContext.Provider>
   );
 }

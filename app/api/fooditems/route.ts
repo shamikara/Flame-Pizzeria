@@ -3,6 +3,8 @@ import prisma from '@/lib/db'
 import { z } from 'zod'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { measurement_unit } from '@prisma/client'
+import { getServerSession } from '@/lib/session'
 
 const MAX_IMAGE_SIZE = 500 * 1024 // 500KB
 const IMAGE_DIR = path.join(process.cwd(), 'public', 'img', 'fooditems')
@@ -54,6 +56,7 @@ const formDataSchema = z.object({
   isActive: z.string().min(1),
   foodType: z.string().min(1),
   nutrition: z.string().nullable().optional(),
+  recipeIngredients: z.string().optional(),
 })
 
 const parseNutrition = (raw: string | null | undefined) => {
@@ -89,6 +92,57 @@ const fooditemSchema = z.object({
   foodType: z.number().int().min(0).max(31), // allow multi-flag bitmask
   nutrition: z.record(z.number()).nullable().optional(),
 })
+
+const recipeIngredientsSchema = z.array(
+  z.object({
+    ingredientId: z.number().int().positive(),
+    quantity: z.number().positive(),
+    unit: z.nativeEnum(measurement_unit),
+  })
+)
+
+const ensureRecipeIngredients = async (raw: unknown) => {
+  if (typeof raw !== 'string' || !raw.trim()) {
+    throw new Error('Recipe ingredients are required')
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch (error) {
+    throw new Error('Invalid recipe ingredients payload')
+  }
+
+  const ingredients = recipeIngredientsSchema.parse(parsed)
+  if (!ingredients.length) {
+    throw new Error('Please add at least one ingredient to the recipe')
+  }
+
+  const uniqueIds = new Set(ingredients.map((entry) => entry.ingredientId))
+  if (uniqueIds.size !== ingredients.length) {
+    throw new Error('Duplicate ingredients detected in recipe definition')
+  }
+
+  const dbIngredients = await prisma.ingredient.findMany({
+    where: { id: { in: Array.from(uniqueIds) } },
+    select: { id: true, unit: true, name: true },
+  })
+
+  if (dbIngredients.length !== uniqueIds.size) {
+    throw new Error('One or more selected ingredients no longer exist')
+  }
+
+  const ingredientMap = new Map(dbIngredients.map((item) => [item.id, item]))
+  for (const entry of ingredients) {
+    const ingredient = ingredientMap.get(entry.ingredientId)
+    if (!ingredient) continue
+    if (ingredient.unit !== entry.unit) {
+      throw new Error(`Ingredient ${ingredient.name} uses unit ${ingredient.unit}. Please align the recipe unit.`)
+    }
+  }
+
+  return ingredients
+}
 
 export async function GET() {
   try {
@@ -170,6 +224,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const formData = await request.formData()
     const imageFile = formData.get('image') as File | null
 
@@ -181,6 +240,7 @@ export async function POST(request: Request) {
       isActive: formData.get('isActive'),
       foodType: formData.get('foodType'),
       nutrition: formData.get('nutrition'),
+      recipeIngredients: formData.get('recipeIngredients'),
     })
 
     if (!parsed.success) {
@@ -208,18 +268,43 @@ export async function POST(request: Request) {
     const nutritionJson = nutrition ? JSON.parse(JSON.stringify(nutrition)) : null
     const imageUrl = await saveImageFile(parsed.data.name, imageFile)
 
-    const newFoodItem = await prisma.fooditem.create({
-      data: {
-        name: parsed.data.name,
-        description: parsed.data.description?.trim() || null,
-        price,
-        categoryId,
-        isActive,
-        foodType,
-        nutrition: nutritionJson,
-        imageUrl,
-      },
-      include: { category: true },
+    const recipeIngredients = await ensureRecipeIngredients(parsed.data.recipeIngredients)
+
+    const newFoodItem = await prisma.$transaction(async (tx) => {
+      const createdFoodItem = await tx.fooditem.create({
+        data: {
+          name: parsed.data.name,
+          description: parsed.data.description?.trim() || null,
+          price,
+          categoryId,
+          isActive,
+          foodType,
+          nutrition: nutritionJson,
+          imageUrl,
+        },
+        include: { category: true },
+      })
+
+      await tx.recipe.create({
+        data: {
+          name: `${parsed.data.name} Recipe`,
+          description:
+            parsed.data.description?.trim() || `Recipe definition for ${parsed.data.name}`,
+          steps: 'Auto-generated recipe steps',
+          isActive: true,
+          foodItemId: createdFoodItem.id,
+          authorId: session.userId,
+          ingredients: {
+            create: recipeIngredients.map((entry) => ({
+              ingredientId: entry.ingredientId,
+              quantity: entry.quantity,
+              unit: entry.unit,
+            })),
+          },
+        },
+      })
+
+      return createdFoodItem
     })
 
     return NextResponse.json(newFoodItem, { status: 201 })
@@ -232,6 +317,11 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const session = await getServerSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -255,6 +345,7 @@ export async function PUT(request: Request) {
       isActive: formData.get('isActive'),
       foodType: formData.get('foodType'),
       nutrition: formData.get('nutrition'),
+      recipeIngredients: formData.get('recipeIngredients'),
     })
 
     if (!parsed.success) {
@@ -281,24 +372,67 @@ export async function PUT(request: Request) {
     const nutrition = parseNutrition(parsed.data.nutrition ?? null)
     const nutritionJson = nutrition ? JSON.parse(JSON.stringify(nutrition)) : null
 
+    const recipeIngredients = await ensureRecipeIngredients(parsed.data.recipeIngredients)
+
     let imageUrl = existing.imageUrl
     if (imageFile) {
       imageUrl = await saveImageFile(parsed.data.name, imageFile)
     }
 
-    const updated = await prisma.fooditem.update({
-      where: { id: Number(id) },
-      data: {
-        name: parsed.data.name,
-        description: parsed.data.description?.trim() || null,
-        price,
-        categoryId,
-        isActive,
-        foodType,
-        nutrition: nutritionJson,
-        imageUrl,
-      },
-      include: { category: true },
+    const updated = await prisma.$transaction(async (tx) => {
+      const updatedFoodItem = await tx.fooditem.update({
+        where: { id: Number(id) },
+        data: {
+          name: parsed.data.name,
+          description: parsed.data.description?.trim() || null,
+          price,
+          categoryId,
+          isActive,
+          foodType,
+          nutrition: nutritionJson,
+          imageUrl,
+        },
+        include: { category: true },
+      })
+
+      const existingRecipe = await tx.recipe.findUnique({
+        where: { foodItemId: updatedFoodItem.id },
+      })
+
+      const recipe = existingRecipe
+        ? await tx.recipe.update({
+            where: { id: existingRecipe.id },
+            data: {
+              name: `${parsed.data.name} Recipe`,
+              description:
+                parsed.data.description?.trim() || existingRecipe.description || `Recipe for ${parsed.data.name}`,
+              steps: existingRecipe.steps || 'Auto-generated recipe steps',
+              isActive: true,
+            },
+          })
+        : await tx.recipe.create({
+            data: {
+              name: `${parsed.data.name} Recipe`,
+              description:
+                parsed.data.description?.trim() || `Recipe definition for ${parsed.data.name}`,
+              steps: 'Auto-generated recipe steps',
+              isActive: true,
+              foodItemId: updatedFoodItem.id,
+              authorId: session.userId,
+            },
+          })
+
+      await tx.recipeingredient.deleteMany({ where: { recipeId: recipe.id } })
+      await tx.recipeingredient.createMany({
+        data: recipeIngredients.map((entry) => ({
+          recipeId: recipe.id,
+          ingredientId: entry.ingredientId,
+          quantity: entry.quantity,
+          unit: entry.unit,
+        })),
+      })
+
+      return updatedFoodItem
     })
 
     return NextResponse.json(updated)
