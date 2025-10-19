@@ -1,4 +1,4 @@
-import { Resend } from "resend"
+import nodemailer from "nodemailer"
 
 type EmailResult = {
   success: boolean
@@ -25,15 +25,24 @@ type TemplateData = {
   }
 }
 
-const apiKey = process.env.RESEND_API_KEY
-const fromAddress = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev"
+const smtpUser = process.env.GMAIL_USER
+const smtpPass = process.env.GMAIL_APP_PASSWORD
+const defaultFrom = process.env.MAIL_FROM ?? smtpUser
 
-const isConfigured = Boolean(apiKey)
-const resendClient = apiKey ? new Resend(apiKey) : null
+const isConfigured = Boolean(smtpUser && smtpPass)
 
 const logMockSend = ({ to, subject, html }: { to: string | string[]; subject: string; html: string }) => {
   console.info("[Email Mock]", { to, subject, preview: html.slice(0, 120) })
 }
+
+const createTransport = () =>
+  nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  })
 
 export async function sendEmail<T extends TemplateName>({
   to,
@@ -49,7 +58,7 @@ export async function sendEmail<T extends TemplateName>({
   try {
     const { html, text } = buildTemplate(template, data)
 
-    if (!isConfigured || !resendClient) {
+    if (!isConfigured) {
       logMockSend({ to, subject, html })
       return {
         success: true,
@@ -59,29 +68,21 @@ export async function sendEmail<T extends TemplateName>({
       }
     }
 
-    const { data: result, error } = await resendClient.emails.send({
-      from: fromAddress,
+    const transporter = createTransport()
+
+    const info = await transporter.sendMail({
+      from: defaultFrom,
       to,
       subject,
       html,
       text,
     })
 
-    if (error) {
-      console.error("[Email] Resend error", error)
-      return {
-        success: false,
-        toastTitle: "Email Failed",
-        toastMessage: error.message ?? "Unable to send email",
-        errorCode: error.name,
-      }
-    }
-
     return {
       success: true,
       toastTitle: "Email Sent",
       toastMessage: "Confirmation email delivered",
-      data: result,
+      data: { id: info.messageId },
     }
   } catch (error) {
     console.error("[Email] sendEmail error", error)
