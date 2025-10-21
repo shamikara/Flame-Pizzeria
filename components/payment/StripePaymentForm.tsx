@@ -15,6 +15,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { useSession } from "@/components/session-provider";
 import { useTheme } from "next-themes";
 
 const stripePromise = loadStripe(
@@ -182,7 +184,9 @@ function InnerPaymentForm({ orderId }: { orderId: string }) {
   const router = useRouter();
   const { clearCart } = useCart();
   const { toast } = useToast();
+  const { refreshSession } = useSession();
   const [submitting, setSubmitting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -226,6 +230,8 @@ function InnerPaymentForm({ orderId }: { orderId: string }) {
           }),
         });
 
+        setRedirecting(true);
+        await refreshSession();
         clearCart();
         // Store the confirmed order ID for the confirmation page
         localStorage.setItem('last-confirmed-order-id', orderId);
@@ -237,9 +243,7 @@ function InnerPaymentForm({ orderId }: { orderId: string }) {
           duration: 5000,
         });
 
-        setTimeout(() => {
-          router.push(`/order-confirmation?orderId=${orderId}`);
-        }, 1500);
+        router.push(`/order-confirmation?orderId=${orderId}`);
       } catch (e) {
         console.error("Failed to confirm payment:", e);
         toast({
@@ -247,6 +251,7 @@ function InnerPaymentForm({ orderId }: { orderId: string }) {
           description: "But failed to update order. Please contact support.",
           variant: "destructive",
         });
+        setRedirecting(false);
       }
     }
 
@@ -255,6 +260,14 @@ function InnerPaymentForm({ orderId }: { orderId: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 ">
+      {redirecting && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Spinner />
+            <p className="text-sm font-medium text-foreground">Finalizing your order...</p>
+          </div>
+        </div>
+      )}
       <PaymentElement id="payment-element" />
       <Button 
         type="submit" 

@@ -65,9 +65,9 @@ export async function middleware(request: NextRequest) {
     const rolePermissions: Record<UserPayload['role'], string[]> = {
         ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/catering', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
         MANAGER: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/catering', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
-        CHEF: ['/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/profile'],
-        WAITER: ['/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
-        STORE_KEEP: ['/dashboard/ingredients', '/dashboard/profile'],
+        CHEF: ['/dashboard/chef/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/profile'],
+        WAITER: ['/dashboard/waiter/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
+        STORE_KEEP: ['/dashboard/store-keep/overview', '/dashboard/store-keep/reports', '/dashboard/ingredients', '/dashboard/profile'],
         DELIVERY_PERSON: ['/dashboard/profile'],
         KITCHEN_HELPER: ['/dashboard/profile'],
         STAFF: ['/dashboard/profile'],
@@ -80,8 +80,9 @@ export async function middleware(request: NextRequest) {
     if (!hasAccess) {
       console.log(`Middleware: Access DENIED for role ${userRole} to path ${pathname}.`);
       let defaultUrl = '/dashboard/overview';
-      if (userRole === 'CHEF' || userRole === 'WAITER') defaultUrl = '/dashboard/orders';
-      if (userRole === 'STORE_KEEP') defaultUrl = '/dashboard/ingredients';
+      if (userRole === 'CHEF') defaultUrl = '/dashboard/chef/overview';
+      if (userRole === 'WAITER') defaultUrl = '/dashboard/waiter/overview';
+      if (userRole === 'STORE_KEEP') defaultUrl = '/dashboard/store-keep/overview';
       return NextResponse.redirect(new URL(defaultUrl, request.url));
     }
 

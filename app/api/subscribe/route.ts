@@ -11,7 +11,8 @@ export async function POST(request: NextRequest) {
     const { email } = body;
 
     // 1. Validate the email
-    const validationResult = emailSchema.safeParse(email);
+    const validationResult = emailSchema.safeParse(email?.trim().toLowerCase());
+
     if (!validationResult.success) {
       return NextResponse.json({ error: "Invalid email address provided." }, { status: 400 });
     }
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const validatedEmail = validationResult.data;
 
     // 2. Check if the email is already subscribed
-    const existingSubscription = await prisma.newsletterSubscription.findUnique({
+    const existingSubscription = await prisma.newslettersubscription.findUnique({
       where: { email: validatedEmail },
     });
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Create the new subscription
-    await prisma.newsletterSubscription.create({
+    await prisma.newslettersubscription.create({
       data: {
         email: validatedEmail,
       },

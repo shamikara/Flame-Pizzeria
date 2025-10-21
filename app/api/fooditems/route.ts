@@ -3,7 +3,7 @@ import prisma from '@/lib/db'
 import { z } from 'zod'
 import { promises as fs } from 'fs'
 import path from 'path'
-import { measurement_unit } from '@prisma/client'
+import { measurement_unit, Prisma } from '@prisma/client'
 import { getServerSession } from '@/lib/session'
 
 const MAX_IMAGE_SIZE = 500 * 1024 // 500KB
@@ -324,9 +324,9 @@ export async function PUT(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-
-    if (!id) {
-      return NextResponse.json({ error: 'Food item ID is required' }, { status: 400 })
+    const foodItemId = Number(id)
+    if (!Number.isInteger(foodItemId) || foodItemId <= 0) {
+      return NextResponse.json({ error: 'Food item ID must be a positive integer' }, { status: 400 })
     }
 
     const existing = await prisma.fooditem.findUnique({ where: { id: Number(id) } })
@@ -445,6 +445,11 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const session = await getServerSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -452,12 +457,67 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Food item ID is required' }, { status: 400 })
     }
 
-    await prisma.fooditem.delete({
-      where: { id: parseInt(id) },
+    const foodItemId = Number(id)
+    if (!Number.isInteger(foodItemId) || foodItemId <= 0) {
+      return NextResponse.json({ error: 'Food item ID must be a positive integer' }, { status: 400 })
+    }
+
+    const [foodItem, orderItemCount] = await Promise.all([
+      prisma.fooditem.findUnique({
+        where: { id: foodItemId },
+        select: { id: true },
+      }),
+      prisma.orderitem.count({ where: { foodItemId } }),
+    ])
+
+    if (!foodItem) {
+      return NextResponse.json({ error: 'Food item not found' }, { status: 404 })
+    }
+
+    if (orderItemCount > 0) {
+      return NextResponse.json(
+        {
+          error: 'Cannot delete food item with existing order history. Consider marking it inactive instead.',
+          code: 'FOODITEM_HAS_ORDERS',
+        },
+        { status: 409 }
+      )
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.recipeingredient.deleteMany({
+        where: {
+          recipe: {
+            foodItemId,
+          },
+        },
+      })
+
+      await tx.recipe.deleteMany({ where: { foodItemId } })
+
+      await tx.customizationingredient.deleteMany({
+        where: {
+          customization: {
+            foodItemId,
+          },
+        },
+      })
+
+      await tx.customization.deleteMany({ where: { foodItemId } })
+      await tx.rating.deleteMany({ where: { foodItemId } })
+
+      await tx.fooditem.delete({ where: { id: foodItemId } })
     })
 
     return NextResponse.json({ message: 'Food item deleted successfully' })
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return NextResponse.json(
+        { error: 'Cannot delete food item due to related records. Mark it inactive or remove dependencies first.' },
+        { status: 409 }
+      )
+    }
+
     console.error('Failed to delete food item:', error)
     return NextResponse.json({ error: 'Failed to delete food item' }, { status: 500 })
   }

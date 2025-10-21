@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 
 const FOOD_TYPE_FLAGS = [
   { bit: 1, label: "Veg" },
@@ -504,32 +505,29 @@ export function FoodForm({ foodItem, onFormSubmit, nextFoodId }: FoodFormProps) 
           <div className="space-y-3">
             {recipeRows.map((row) => {
               const selectedIngredient = ingredientOptions.find((option) => option.id.toString() === row.ingredientId);
+              const comboboxOptions: ComboboxOption[] = ingredientOptions.map((option) => ({
+                value: option.id.toString(),
+                label: option.name,
+                hint: option.unit.toLowerCase(),
+              }));
               return (
                 <div
                   key={row.id}
                   className="grid gap-3 rounded-md border border-gray-700 p-3 md:grid-cols-[2fr,1fr,auto]"
                 >
-                  <Select
+                  <Combobox
                     value={row.ingredientId}
-                    onValueChange={(value) => {
+                    onChange={(value) => {
                       const ingredient = ingredientOptions.find((option) => option.id.toString() === value);
                       updateRecipeRow(row.id, {
                         ingredientId: value,
                         unit: ingredient?.unit ?? row.unit,
                       });
                     }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select ingredient" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ingredientOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id.toString()}>
-                          {option.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={comboboxOptions}
+                    placeholder="Select ingredient"
+                    searchPlaceholder="Search ingredients"
+                  />
 
                   <div className="grid gap-2">
                     <Input

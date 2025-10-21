@@ -97,7 +97,7 @@ export async function generateInventoryReport() {
       orderBy: { name: 'asc' },
     });
 
-    const flattenedData = ingredients.map((ing: { name: any; supplier: { name: any; }; stock: number; unit: any; restockThreshold: number; expiryDate: { toISOString: () => string; }; }) => ({
+    const flattenedData = ingredients.map((ing) => ({
       ingredient_name: ing.name,
       supplier_name: ing.supplier?.name || 'N/A',
       current_stock: `${ing.stock} ${ing.unit}`,
@@ -129,66 +129,104 @@ export async function generateInventoryReport() {
 // ============================================
 export async function generateSalaryReport(month: string, year: string) {
   try {
-    const monthNum = new Date(`${month} 1, ${year}`).getMonth();
-    const startDate = new Date(parseInt(year), monthNum, 1);
-    const endDate = new Date(parseInt(year), monthNum + 1, 0, 23, 59, 59);
+    const parsedYear = parseInt(year, 10)
+    if (Number.isNaN(parsedYear)) {
+      throw new Error("Year is invalid")
+    }
+
+    const monthIndex = (() => {
+      const numeric = parseInt(month, 10)
+      if (!Number.isNaN(numeric) && numeric >= 1 && numeric <= 12) {
+        return numeric - 1
+      }
+      const monthDate = new Date(`${month} 1, ${year}`)
+      if (Number.isNaN(monthDate.getTime())) {
+        throw new Error("Month is invalid")
+      }
+      return monthDate.getMonth()
+    })()
+
+    const startDate = new Date(parsedYear, monthIndex, 1)
+    const endDate = new Date(parsedYear, monthIndex + 1, 0, 23, 59, 59)
 
     const shifts = await prisma.shift.findMany({
       where: {
-        start: { gte: startDate, lte: endDate },
+        date: { gte: startDate, lte: endDate }
       },
       include: {
         employee: {
           include: {
             user: true,
+            leadership: true
           }
         }
       }
-    });
+    })
 
-    const employeeSalaries: { [key: number]: any } = {};
+    const results = new Map<number, {
+      employee_name: string
+      email: string
+      position: string | null
+      base_salary: number
+      hours_worked: number
+      hourly_rate: number
+    }>()
 
-    shifts.forEach((shift: { employee: { id: any; user: { firstName: any; lastName: any; email: any; }; position: any; hourlyRate: number; }; end: { getTime: () => number; }; start: { getTime: () => number; }; }) => {
-      const empId = shift.employee.id;
-      const hours = (shift.end.getTime() - shift.start.getTime()) / (1000 * 60 * 60);
-      
-      if (!employeeSalaries[empId]) {
-        employeeSalaries[empId] = {
+    for (const shift of shifts) {
+      if (!shift.employee) continue
+
+      const shiftStart = new Date(`${shift.date.toISOString().split('T')[0]}T${shift.startTime}`)
+      const shiftEnd = new Date(`${shift.date.toISOString().split('T')[0]}T${shift.endTime}`)
+      let hours = (shiftEnd.getTime() - shiftStart.getTime()) / (1000 * 60 * 60)
+      if (hours < 0) {
+        const nextDayEnd = new Date(shiftEnd)
+        nextDayEnd.setDate(nextDayEnd.getDate() + 1)
+        hours = (nextDayEnd.getTime() - shiftStart.getTime()) / (1000 * 60 * 60)
+      }
+
+      const existing = results.get(shift.employeeId)
+      if (!existing) {
+        results.set(shift.employeeId, {
           employee_name: `${shift.employee.user.firstName} ${shift.employee.user.lastName}`,
           email: shift.employee.user.email,
-          position: shift.employee.position,
-          hourly_rate: shift.employee.hourlyRate.toFixed(2),
-          hours_worked: 0,
-          total_salary: 0,
-        };
+          position: shift.employee.leadership?.position ?? shift.employee.user.role,
+          base_salary: shift.employee.salary,
+          hours_worked: hours,
+          hourly_rate: shift.employee.salary / (30 * 8)
+        })
+      } else {
+        existing.hours_worked += hours
       }
-      
-      employeeSalaries[empId].hours_worked += hours;
-      employeeSalaries[empId].total_salary += hours * shift.employee.hourlyRate;
-    });
+    }
 
-    const salaryData = Object.values(employeeSalaries).map(emp => ({
-      ...emp,
-      hours_worked: emp.hours_worked.toFixed(2),
-      total_salary: emp.total_salary.toFixed(2),
-    }));
+    const salaryData = Array.from(results.values()).map((entry) => {
+      const calculatedSalary = Math.max(entry.base_salary, entry.hours_worked * entry.hourly_rate)
+      return {
+        employee_name: entry.employee_name,
+        email: entry.email,
+        position: entry.position ?? "",
+        hours_worked: entry.hours_worked.toFixed(2),
+        hourly_rate: entry.hourly_rate.toFixed(2),
+        total_salary: calculatedSalary.toFixed(2)
+      }
+    })
 
-    const totalPayroll = salaryData.reduce((sum, emp) => sum + parseFloat(emp.total_salary), 0);
+    const totalPayroll = salaryData.reduce((sum, emp) => sum + parseFloat(emp.total_salary), 0)
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: salaryData,
       summary: {
         totalEmployees: salaryData.length,
         totalPayroll,
         month,
-        year,
+        year
       },
       fileName: `salary-report-${month}-${year}.pdf`
-    };
+    }
   } catch (error) {
-    console.error("Failed to generate salary report:", error);
-    return { success: false, error: "Could not generate salary report." };
+    console.error("Failed to generate salary report:", error)
+    return { success: false, error: "Could not generate salary report." }
   }
 }
 

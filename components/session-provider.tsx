@@ -58,17 +58,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   };
 
   const handleLogout = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST', cache: 'no-store' });
       setUser(null);
-      await refreshSession();
+      router.replace('/login');
       router.refresh();
-      router.push('/login');
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
-      setIsLoading(false);
+      setTimeout(() => setIsLoading(false), 300);
     }
   };
 

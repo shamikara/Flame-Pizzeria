@@ -14,9 +14,9 @@ type CustomerWithCommunityRecipes = {
   firstName: string | null;
   lastName: string | null;
   email: string;
-  communityrecipes: CommunityRecipeSummary[];
+  communityRecipes: CommunityRecipeSummary[];
   _count: {
-    communityrecipes: number;
+    communityRecipes: number;
   };
 };
 
@@ -31,7 +31,7 @@ export async function GET() {
         firstName: true,
         lastName: true,
         email: true,
-        communityrecipes: {
+        communityRecipes: {
           select: {
             id: true,
             name: true,
@@ -44,7 +44,7 @@ export async function GET() {
         },
         _count: {
           select: {
-            communityrecipes: true,
+            communityRecipes: true,
           },
         },
       },
@@ -55,12 +55,12 @@ export async function GET() {
     
     // Transform to match expected format
     const transformedCustomers = customers.map((customer) => {
-      const { communityrecipes, _count, ...rest } = customer;
-      const recipeCount = _count?.communityrecipes ?? 0;
+      const { communityRecipes, _count, ...rest } = customer;
+      const recipeCount = _count?.communityRecipes ?? 0;
 
       return {
         ...rest,
-        recipes: communityrecipes.map((recipe) => ({
+        recipes: communityRecipes.map((recipe) => ({
           ...recipe,
           id: Number(recipe.id),
         })),

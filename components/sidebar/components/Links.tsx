@@ -13,12 +13,18 @@ import {
   Factory,
   Salad,
   CalendarDays,
+  ChefHat,
+  ClipboardList,
 } from "lucide-react";
 
 import { UserPayload } from "@/lib/session"; // Import the type
 
 const allDashboardLinks = [
   { href: "/dashboard/overview", label: "Overview", icon: LayoutDashboard, roles: ['ADMIN', 'MANAGER'] },
+  { href: "/dashboard/chef/overview", label: "Kitchen Overview", icon: ChefHat, roles: ['CHEF'] },
+  { href: "/dashboard/waiter/overview", label: "Service Overview", icon: ClipboardList, roles: ['WAITER'] },
+  { href: "/dashboard/store-keep/overview", label: "Inventory Overview", icon: Factory, roles: ['STORE_KEEP'] },
+  { href: "/dashboard/store-keep/reports", label: "Inventory Reports", icon: LineChart, roles: ['STORE_KEEP'] },
   { href: "/dashboard/orders", label: "Orders", icon: ShoppingCart, roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'] },
   { href: "/dashboard/foods", label: "Foods", icon: Package, roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'] },
   { href: "/dashboard/customizations", label: "Add-on Extras", icon: Salad, roles: ['ADMIN', 'MANAGER', 'CHEF'] },

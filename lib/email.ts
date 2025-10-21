@@ -111,7 +111,7 @@ function buildTemplate(template: TemplateName, data: TemplateData[TemplateName])
           <p>Thanks for choosing Flames Pizzeria for your event. We've logged request <strong>#${payload.requestId}</strong>.</p>
           ${payload.eventDate ? `<p><strong>Event date:</strong> ${payload.eventDate}</p>` : ""}
           ${payload.guestCount ? `<p><strong>Guest count:</strong> ${payload.guestCount}</p>` : ""}
-          <p>Our catering team will reach out within 24 hours to finalize the menu and logistics.</p>
+          <p>Ubanm maha moda moosaliyek</p>
           <p style="margin-top: 24px;">Cheers,<br/>Flames Pizzeria Catering Team</p>
         </div>
       `
