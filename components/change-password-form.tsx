@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,18 +23,39 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const formSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const createSchema = (requireCurrent: boolean) =>
+  z
+    .object({
+      currentPassword: requireCurrent
+        ? z.string().min(1, "Current password is required")
+        : z.string().optional(),
+      newPassword: z.string().min(6, "Password must be at least 6 characters"),
+      confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
+    })
+    .superRefine((data, ctx) => {
+      if (data.newPassword !== data.confirmPassword) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Passwords don't match",
+          path: ["confirmPassword"],
+        });
+      }
+    });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = {
+  currentPassword?: string;
+  newPassword: string;
+  confirmPassword: string;
+};
 
-export function ChangePasswordForm() {
+interface ChangePasswordFormProps {
+  forceCurrentPassword?: boolean;
+  onSuccess?: () => void;
+}
+
+export function ChangePasswordForm({ forceCurrentPassword = true, onSuccess }: ChangePasswordFormProps) {
+  const formSchema = useMemo(() => createSchema(forceCurrentPassword), [forceCurrentPassword]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -72,6 +93,7 @@ export function ChangePasswordForm() {
       });
 
       form.reset();
+      onSuccess?.();
     } catch (error: any) {
       toast({
         title: "Error",

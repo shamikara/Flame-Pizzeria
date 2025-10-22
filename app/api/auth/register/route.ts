@@ -27,8 +27,9 @@ export async function POST(request: NextRequest) {
         firstName,
         lastName,
         role: 'CUSTOMER', // Assign a default role
+        mustChangePassword: true,
       },
-    });
+    } as any);
 
     // --- AUTO-LOGIN LOGIC ---
     // 1. Create the session token (JWT)
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      mustChangePassword: (user as any).mustChangePassword ?? true,
     };
     
     const secret = new TextEncoder().encode(process.env.JWT_SECRET as string);

@@ -2,6 +2,8 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
+import { ChangePasswordForm } from '@/components/change-password-form';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type UserPayload = {
   phone: string;
@@ -20,6 +22,7 @@ type UserPayload = {
     | 'KITCHEN_HELPER'
     | 'STAFF'
     | 'CUSTOMER';
+  mustChangePassword?: boolean;
 };
 
 export type SessionUser = UserPayload;
@@ -37,6 +40,7 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const router = useRouter();
 
   const refreshSession = async () => {
@@ -46,12 +50,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
+        if (data.user?.mustChangePassword) {
+          setShowPasswordModal(true);
+        }
       } else {
         setUser(null);
+        setShowPasswordModal(false);
       }
     } catch (error) {
       console.error('Session refresh failed:', error);
       setUser(null);
+      setShowPasswordModal(false);
     } finally {
       setIsLoading(false);
     }
@@ -67,6 +76,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         credentials: 'include',
       });
       setUser(null);
+      setShowPasswordModal(false);
       router.replace('/login');
       router.refresh();
     } catch (error) {
@@ -91,6 +101,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
+      <Dialog open={showPasswordModal} onOpenChange={(open) => setShowPasswordModal(open)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Your Password</DialogTitle>
+          </DialogHeader>
+          <ChangePasswordForm
+            onSuccess={async () => {
+              setShowPasswordModal(false);
+              await refreshSession();
+            }}
+            forceCurrentPassword={Boolean(user?.mustChangePassword)}
+          />
+        </DialogContent>
+      </Dialog>
     </SessionContext.Provider>
   );
 }

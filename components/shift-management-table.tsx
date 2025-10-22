@@ -6,15 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { DialogTrigger } from "@radix-ui/react-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { CloudSun, Sun, MoonStar, ShieldCheck, AlertCircle } from "lucide-react"
+import { CloudSun, Sun, MoonStar, ShieldCheck, AlertCircle, Trash2 } from "lucide-react"
 
 import {
     Calendar as CalendarIcon,
-    Plus,
     ChevronLeft,
     ChevronRight,
     Users,
@@ -23,8 +21,17 @@ import {
     Loader2
 } from "lucide-react"
 import { toast } from "sonner"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent as ConfirmDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader as ConfirmDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 type ShiftName = "Morning" | "Evening" | "Night"
 type ShiftStatus = "SCHEDULED" | "ON_DUTY" | "COMPLETED" | "ABSENT"
@@ -145,6 +152,8 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
         date: format(currentDate, "yyyy-MM-dd"),
         notes: ""
     })
+    const [assignmentToDelete, setAssignmentToDelete] = useState<number | null>(null)
+    const [deleting, setDeleting] = useState(false)
 
     const selectedShiftSummary = useMemo(() => {
         if (!selectedDay) return null
@@ -266,6 +275,16 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
         setNewShift((prev) => ({ ...prev, date: dateKey }))
     }
 
+    const refreshMonthlyData = async () => {
+        const year = visibleMonth.getFullYear()
+        const month = visibleMonth.getMonth() + 1
+        const refreshed = await fetch(`/api/shifts/by-month?year=${year}&month=${month}`)
+        if (refreshed.ok) {
+            const data: MonthlyShiftResponse = await refreshed.json()
+            setMonthlyData(data.days)
+        }
+    }
+
     const handleCreateShift = async () => {
         if (!newShift.employeeId) {
             toast.error("Please select an employee")
@@ -319,18 +338,38 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                 date: format(visibleMonth, "yyyy-MM-dd"),
                 notes: ""
             })
-            const year = visibleMonth.getFullYear()
-            const month = visibleMonth.getMonth() + 1
-            const refreshed = await fetch(`/api/shifts/by-month?year=${year}&month=${month}`)
-            if (refreshed.ok) {
-                const data: MonthlyShiftResponse = await refreshed.json()
-                setMonthlyData(data.days)
-            }
+            await refreshMonthlyData()
         } catch (err) {
             console.error("Failed to create shift", err)
             toast.error("Unexpected error while creating shift")
         } finally {
             setSubmitting(false)
+        }
+    }
+
+    const handleDeleteAssignment = async () => {
+        if (assignmentToDelete === null) return
+
+        setDeleting(true)
+        try {
+            const response = await fetch(`/api/shifts/${assignmentToDelete}`, {
+                method: "DELETE"
+            })
+
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}))
+                toast.error(body?.error ?? "Failed to delete shift")
+                return
+            }
+
+            toast.success("Shift removed")
+            setAssignmentToDelete(null)
+            await refreshMonthlyData()
+        } catch (err) {
+            console.error("Failed to delete shift", err)
+            toast.error("Unexpected error while deleting shift")
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -373,10 +412,6 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                         const Icon = SHIFT_ICONS[shiftName]
                         const StatusIcon = leaderStatus ? SHIFT_STATUS_ICONS[leaderStatus] : null
 
-                        function getRoleTheme(role: string) {
-                            throw new Error("Function not implemented.")
-                        }
-
                         return (
                             <Tooltip key={`${dateKey}-${shiftName}`}>
                                 <TooltipTrigger asChild>
@@ -406,29 +441,13 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                                     {slot && slot.assignments.length > 0 ? (
 
                                         slot.assignments.map((assignment) => {
-                                            const ROLE_THEME: Record<
-                                                string,
-                                                { bg: string; border: string; text: string }
-                                            > = {
-                                                MANAGER: { bg: "bg-emerald-900/50", border: "border-emerald-500/40", text: "text-emerald-200" },
-                                                CHEF: { bg: "bg-orange-900/40", border: "border-orange-500/40", text: "text-orange-200" },
-                                                STORE_KEEP: { bg: "bg-sky-900/40", border: "border-sky-500/40", text: "text-sky-200" },
-                                                KITCHEN_HELPER: { bg: "bg-purple-900/40", border: "border-purple-500/40", text: "text-purple-200" },
-                                                CASHIER: { bg: "bg-yellow-900/40", border: "border-yellow-500/40", text: "text-yellow-200" },
-                                                DELIVERY: { bg: "bg-indigo-900/40", border: "border-indigo-500/40", text: "text-indigo-200" },
-                                                DEFAULT: { bg: "bg-gray-900/70", border: "border-gray-700", text: "text-gray-200" },
-                                            }
-
-                                            const getRoleTheme = (role?: string | null) =>
-                                                ROLE_THEME[role?.toUpperCase() ?? ""] ?? ROLE_THEME.DEFAULT
-
-                                            const theme = getRoleTheme(assignment.employee.role)
+                                            const theme = resolveRoleTheme(assignment.employee.role)
                                             return (
                                                 <div
                                                     key={assignment.id}
                                                     className={`flex items-center justify-between rounded border px-2 py-1 text-sm ${theme.bg} ${theme.border} ${theme.text}`}
                                                 >
-                                                    <div key={assignment.id} className="flex items-center justify-between gap-3">
+                                                    <div className="flex items-center justify-between gap-3">
                                                         <span className="text-sm text-white">
                                                             {assignment.employee.firstName} {assignment.employee.lastName}
                                                         </span>
@@ -461,6 +480,7 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
             </button>
         )
     }
+
     return (
         <TooltipProvider delayDuration={150} skipDelayDuration={0}>
             <div className="space-y-4">
@@ -632,7 +652,10 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                                 <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={submitting}>
                                     Cancel
                                 </Button>
-                                <Button onClick={handleCreateShift} disabled={submitting}>
+                                <Button
+                                    onClick={handleCreateShift}
+                                    disabled={submitting}
+                                >
                                     {submitting ? "Saving..." : "Create Shift"}
                                 </Button>
                             </div>
@@ -665,23 +688,7 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                                                         <p className="text-xs text-gray-500">No one assigned.</p>
                                                     ) : (
                                                         slot.assignments.map((assignment) => {
-                                                            const ROLE_THEME: Record<
-                                                                string,
-                                                                { bg: string; border: string; text: string }
-                                                            > = {
-                                                                MANAGER: { bg: "bg-emerald-900/50", border: "border-emerald-500/40", text: "text-emerald-200" },
-                                                                CHEF: { bg: "bg-orange-900/40", border: "border-orange-500/40", text: "text-orange-200" },
-                                                                STORE_KEEP: { bg: "bg-sky-900/40", border: "border-sky-500/40", text: "text-sky-200" },
-                                                                KITCHEN_HELPER: { bg: "bg-purple-900/40", border: "border-purple-500/40", text: "text-purple-200" },
-                                                                CASHIER: { bg: "bg-yellow-900/40", border: "border-yellow-500/40", text: "text-yellow-200" },
-                                                                DELIVERY: { bg: "bg-indigo-900/40", border: "border-indigo-500/40", text: "text-indigo-200" },
-                                                                DEFAULT: { bg: "bg-gray-900/70", border: "border-gray-700", text: "text-gray-200" },
-                                                            }
-
-                                                            const getRoleTheme = (role?: string | null) =>
-                                                                ROLE_THEME[role?.toUpperCase() ?? ""] ?? ROLE_THEME.DEFAULT
-
-                                                            const theme = getRoleTheme(assignment.employee.role)
+                                                            const theme = resolveRoleTheme(assignment.employee.role)
                                                             return (
                                                                 <div
                                                                     key={assignment.id}
@@ -708,6 +715,14 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                                                                     >
                                                                         {assignment.status.replace("_", " ")}
                                                                     </Badge>
+                                                                    <Button
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-8 w-8 text-red-400 hover:text-red-200"
+                                                                        onClick={() => setAssignmentToDelete(assignment.id)}
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
                                                                 </div>
                                                             )
                                                         })
@@ -721,6 +736,23 @@ export default function ShiftManagementTable({ currentDate = new Date() }: Shift
                         )}
                     </DialogContent>
                 </Dialog>
+
+                <AlertDialog open={assignmentToDelete !== null} onOpenChange={(open) => !open && setAssignmentToDelete(null)}>
+                    <ConfirmDialogContent className="bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700">
+                        <ConfirmDialogHeader>
+                            <AlertDialogTitle className="text-white">Remove Assignment</AlertDialogTitle>
+                            <AlertDialogDescription className="text-gray-300">
+                                This will remove the employee from the selected shift. Are you sure you want to continue?
+                            </AlertDialogDescription>
+                        </ConfirmDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteAssignment} disabled={deleting} className="bg-red-600 hover:bg-red-500">
+                                {deleting ? "Removing..." : "Remove"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </ConfirmDialogContent>
+                </AlertDialog>
             </div>
         </TooltipProvider>
     )

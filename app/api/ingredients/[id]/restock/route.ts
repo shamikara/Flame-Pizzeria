@@ -15,18 +15,28 @@ export async function PATCH(
     }
 
     // Only admins, managers, and storekeepers can restock
-    const allowedRoles = [user_role.ADMIN, user_role.MANAGER, user_role.STORE_KEEP];
-    if (!allowedRoles.includes(session.role as user_role)) {
+    const allowedRoles = new Set<user_role>([
+      user_role.ADMIN,
+      user_role.MANAGER,
+      user_role.STORE_KEEP,
+    ]);
+    if (!allowedRoles.has(session.role as user_role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { quantity, expiryDate } = await request.json();
 
-    if (!quantity || quantity <= 0) {
+    const amount = Number(quantity);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json({ error: "Invalid quantity" }, { status: 400 });
     }
 
-    const ingredientId = parseInt(params.id);
+    const ingredientId = Number(params.id);
+
+    if (!Number.isInteger(ingredientId) || ingredientId <= 0) {
+      return NextResponse.json({ error: "Invalid ingredient id" }, { status: 400 });
+    }
 
     // Get current stock
     const ingredient = await prisma.ingredient.findUnique({
@@ -38,14 +48,24 @@ export async function PATCH(
     }
 
     // Update stock (add to existing)
-    const updateData: any = {
-      stock: ingredient.stock + parseFloat(quantity),
+    const updateData: {
+      stock: number;
+      updatedAt: Date;
+      expiryDate?: Date;
+    } = {
+      stock: ingredient.stock + amount,
       updatedAt: new Date(),
     };
 
     // Update expiry date if provided
     if (expiryDate) {
-      updateData.expiryDate = new Date(expiryDate);
+      const newExpiry = new Date(expiryDate);
+
+      if (Number.isNaN(newExpiry.getTime())) {
+        return NextResponse.json({ error: "Invalid expiry date" }, { status: 400 });
+      }
+
+      updateData.expiryDate = newExpiry;
     }
 
     const updatedIngredient = await prisma.ingredient.update({

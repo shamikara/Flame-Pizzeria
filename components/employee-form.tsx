@@ -116,7 +116,7 @@ export function EmployeeForm({ onFormSubmit }: EmployeeFormProps) {
                 </FormControl>
                 <SelectContent className="bg-gray-800 border-gray-700">
                   {employeeRoles.map(role => (
-                    <SelectItem key={user_role} value={user_role} className="text-white hover:bg-gray-700">{user_role}</SelectItem>
+                    <SelectItem key={role} value={role} className="text-white hover:bg-gray-700">{role}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

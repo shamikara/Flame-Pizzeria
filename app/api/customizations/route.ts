@@ -106,9 +106,20 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Customization ID is required' }, { status: 400 });
     }
 
-    await prisma.customization.delete({
-      where: { id: parseInt(id) },
-    });
+    const customizationId = Number(id);
+
+    if (!Number.isInteger(customizationId) || customizationId <= 0) {
+      return NextResponse.json({ error: 'Invalid customization ID' }, { status: 400 });
+    }
+
+    await prisma.$transaction([
+      prisma.customizationingredient.deleteMany({
+        where: { customizationId },
+      }),
+      prisma.customization.delete({
+        where: { id: customizationId },
+      }),
+    ]);
 
     return NextResponse.json({ message: 'Customization deleted successfully' });
   } catch (error) {
