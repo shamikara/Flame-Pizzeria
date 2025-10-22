@@ -8,7 +8,8 @@ const createSchema = z.object({
   stock: z.number(),
   unit: z.nativeEnum(measurement_unit),
   restockThreshold: z.number(),
-  supplierId: z.string().optional(), 
+  supplierId: z.string().optional(),
+  expiryDate: z.string().optional().nullable()
 });
 
 export async function POST(request: Request) {
@@ -21,7 +22,8 @@ export async function POST(request: Request) {
         stock: data.stock,
         unit: data.unit,
         restockThreshold: data.restockThreshold,
-        supplierId: data.supplierId ? Number(data.supplierId) : null, 
+        supplierId: data.supplierId ? Number(data.supplierId) : null,
+        expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
       },
       include: { supplier: true },
     });

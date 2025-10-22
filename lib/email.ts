@@ -8,7 +8,11 @@ type EmailResult = {
   errorCode?: string
 }
 
-type TemplateName = "catering-confirmation" | "password-reset" | "order-confirmation"
+type TemplateName =
+  | "catering-confirmation"
+  | "password-reset"
+  | "order-confirmation"
+  | "order-receipt"
 
 type TemplateData = {
   "catering-confirmation": {
@@ -22,6 +26,20 @@ type TemplateData = {
   }
   "order-confirmation": {
     orderId: number | string
+  }
+  "order-receipt": {
+    orderId: number | string
+    customerName: string
+    deliveredAt: string
+    total: number
+    items: Array<{
+      name: string
+      quantity: number
+      basePrice: number
+      lineTotal: number
+      customizations?: string[]
+    }>
+    deliveryAddress?: string
   }
 }
 
@@ -111,7 +129,9 @@ function buildTemplate(template: TemplateName, data: TemplateData[TemplateName])
           <p>Thanks for choosing Flames Pizzeria for your event. We've logged request <strong>#${payload.requestId}</strong>.</p>
           ${payload.eventDate ? `<p><strong>Event date:</strong> ${payload.eventDate}</p>` : ""}
           ${payload.guestCount ? `<p><strong>Guest count:</strong> ${payload.guestCount}</p>` : ""}
-          <p>Ubanm maha moda moosaliyek</p>
+          <p>Our catering team will reach out within 24 hours to finalize the menu and logistics.</p>
+          <p>Thank you for choosing Flames Pizzeria for your event!</p>
+          <br/><br/>
           <p style="margin-top: 24px;">Cheers,<br/>Flames Pizzeria Catering Team</p>
         </div>
       `
@@ -150,6 +170,66 @@ function buildTemplate(template: TemplateName, data: TemplateData[TemplateName])
         </div>
       `
       const text = `Thanks for ordering from Flames Pizzeria. Your order #${payload.orderId} is confirmed and being prepared.`
+      return { html, text }
+    }
+    case "order-receipt": {
+      const payload = data as TemplateData["order-receipt"]
+      const currency = (amount: number) => `Rs. ${amount.toFixed(2)}`
+      const itemsHtml = payload.items
+        .map((item) => {
+          const customizations = item.customizations?.length
+            ? `<div style="margin-top:4px; font-size:12px; color:#666;">Add-ons: ${item.customizations.join(", ")}</div>`
+            : ""
+          return `
+            <tr>
+              <td style="padding:8px 0;">
+                <div style="font-weight:600;">${item.quantity}× ${item.name}</div>
+                <div style="font-size:12px; color:#666;">Base price: ${currency(item.basePrice)}</div>
+                ${customizations}
+              </td>
+              <td style="padding:8px 0; text-align:right; font-weight:600;">${currency(item.lineTotal)}</td>
+            </tr>
+          `
+        })
+        .join("")
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 640px; color: #2f2f2f; margin:0 auto;">
+          <h1 style="color: #e67e22;">Thank you, ${payload.customerName}!</h1>
+          <p>Your order <strong>#${payload.orderId}</strong> has just been delivered. We hope you enjoy every bite.</p>
+          <p style="margin:16px 0 0 0; color:#444;">Delivered on <strong>${payload.deliveredAt}</strong>${
+            payload.deliveryAddress ? ` to <strong>${payload.deliveryAddress}</strong>` : ""
+          }.</p>
+          <table style="width:100%; border-collapse:collapse; margin-top:24px;">
+            <thead>
+              <tr>
+                <th style="text-align:left; padding-bottom:8px; border-bottom:1px solid #eee;">Items</th>
+                <th style="text-align:right; padding-bottom:8px; border-bottom:1px solid #eee;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td style="padding-top:12px; border-top:2px solid #e67e22; font-weight:bold;">Grand Total</td>
+                <td style="padding-top:12px; border-top:2px solid #e67e22; font-weight:bold; text-align:right;">${currency(payload.total)}</td>
+              </tr>
+            </tfoot>
+          </table>
+          <p style="margin-top:24px;">If everything was delicious, we'd love to hear from you. Reviews help us serve you better!</p>
+          <p style="margin-top:16px;">Thanks again for choosing Flames Pizzeria.<br/>— The Flames Team</p>
+        </div>
+      `
+      const textItems = payload.items
+        .map((item) => {
+          const extras = item.customizations?.length ? ` (Add-ons: ${item.customizations.join(", ")})` : ""
+          return `  - ${item.quantity}x ${item.name}${extras} = ${currency(item.lineTotal)}`
+        })
+        .join("\n")
+      const text = `Hi ${payload.customerName},\n\nYour order #${payload.orderId} was delivered on ${payload.deliveredAt}.${
+        payload.deliveryAddress ? `\nDelivered to: ${payload.deliveryAddress}` : ""
+      }\n\nItems:\n${textItems}\n\nGrand Total: ${currency(payload.total)}\n\nThank you for choosing Flames Pizzeria!`
       return { html, text }
     }
     default: {

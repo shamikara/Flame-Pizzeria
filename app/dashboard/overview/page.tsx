@@ -83,7 +83,9 @@ async function getEmployeeWorkHours() {
   const shifts = await db.shift.findMany({
     where: {
       date: { gte: last30Days },
-      status: "COMPLETED" // Only count completed shifts for accurate hours
+      status: {
+        in: ["COMPLETED", "ON_DUTY", "SCHEDULED"]
+      }
     },
     select: {
       startTime: true,
@@ -104,7 +106,9 @@ async function getEmployeeWorkHours() {
 
   const hoursByEmployee: { [key: string]: number } = {};
 
-  shifts.forEach((shift: { employee: { user: { firstName: any; lastName: any; }; }; startTime: string; endTime: string; }) => {
+  shifts.forEach((shift: { employee: { user: { firstName: any; lastName: any; }; }; startTime: string | null; endTime: string | null; }) => {
+    if (!shift.startTime || !shift.endTime) return;
+
     const name = `${shift.employee.user.firstName} ${shift.employee.user.lastName}`;
 
     // Parse time strings (assuming format like "09:00" or "14:30")

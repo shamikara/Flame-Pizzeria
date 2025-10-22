@@ -369,7 +369,7 @@ export default function OrdersPage() {
                         <DropdownMenuItem onClick={() => setSelectedOrder(order)} className="text-gray-200 hover:bg-gray-700">
                           <Eye className="mr-2 h-4 w-4" /> View Details
                         </DropdownMenuItem>
-                        {user?.role !== "ADMIN" && order.status === "DELIVERED" ? null : (
+                        {order.status !== "DELIVERED" && allowedStatuses.length > 0 && (
                           <>
                             <Separator className="bg-gray-700" />
                             <DropdownMenuLabel className="text-gray-400 text-xs">Update Status</DropdownMenuLabel>

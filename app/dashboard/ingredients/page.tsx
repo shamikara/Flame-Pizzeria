@@ -24,7 +24,8 @@ import { IngredientForm } from "@/components/ingredient-form";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { PackagePlus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PackagePlus, Search } from "lucide-react";
 import { RestockForm } from "@/components/restock-form";
 
 type IngredientWithSupplier = ingredient & { supplier: supplier | null };
@@ -34,6 +35,7 @@ export default function IngredientsPage() {
   const [suppliers, setSuppliers] = useState<supplier[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchData = async () => {
     try {
@@ -67,6 +69,14 @@ export default function IngredientsPage() {
     return new Date(i.expiryDate) < new Date();
   });
 
+  const filteredIngredients = ingredients.filter((ingredient) => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return true;
+    const matchesName = ingredient.name.toLowerCase().includes(query);
+    const matchesSupplier = ingredient.supplier?.name?.toLowerCase().includes(query) ?? false;
+    return matchesName || matchesSupplier;
+  });
+
   const getExpiryStatus = (expiryDate: Date | null) => {
     if (!expiryDate) return null;
     const daysUntilExpiry = Math.ceil((new Date(expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
@@ -77,31 +87,42 @@ export default function IngredientsPage() {
 
   return (
     <div className="p-6 md:p-10">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col gap-4 mb-8 lg:flex-row lg:items-center lg:justify-between">
         <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
           Inventory Management
         </h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="shadow-md hover:shadow-lg transition-all">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Ingredient
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-semibold text-white">
-                Add New Ingredient
-              </DialogTitle>
-            </DialogHeader>
-            <IngredientForm
-              suppliers={suppliers}
-              onFormSubmit={() => {
-                setIsDialogOpen(false);
-                fetchData();
-              }}
+        <div className="flex flex-col gap-3 w-full max-w-xl lg:flex-row lg:items-center lg:justify-end">
+          <div className="relative w-full lg:max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by ingredient or supplier"
+              className="pl-9 bg-gray-900 border-gray-700 text-white"
             />
-          </DialogContent>
-        </Dialog>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="shadow-md hover:shadow-lg transition-all">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Ingredient
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-semibold text-white">
+                  Add New Ingredient
+                </DialogTitle>
+              </DialogHeader>
+              <IngredientForm
+                suppliers={suppliers}
+                onFormSubmit={() => {
+                  setIsDialogOpen(false);
+                  fetchData();
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Alerts Section */}
@@ -150,6 +171,11 @@ export default function IngredientsPage() {
             <PackageOpen className="w-10 h-10 mx-auto mb-3 opacity-60" />
             No ingredients found.
           </div>
+        ) : filteredIngredients.length === 0 ? (
+          <div className="p-8 text-center text-gray-400">
+            <PackageOpen className="w-10 h-10 mx-auto mb-3 opacity-60" />
+            No ingredients match your search.
+          </div>
         ) : (
           <Table>
             <TableHeader>
@@ -159,10 +185,10 @@ export default function IngredientsPage() {
                 <TableHead className="text-gray-300">Stock Level</TableHead>
                 <TableHead className="text-gray-300">Expiry</TableHead>
                 <TableHead className="text-right text-gray-300">Stock / Actions</TableHead>              
-                </TableRow>
+              </TableRow>
             </TableHeader>
             <TableBody>
-              {ingredients.map((ingredient) => {
+              {filteredIngredients.map((ingredient) => {
                 const stockPercentage = Math.min(
                   (ingredient.stock / (ingredient.restockThreshold * 2)) * 100,
                   100

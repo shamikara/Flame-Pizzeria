@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 
 type FoodItem = {
   id: number;
@@ -31,6 +31,11 @@ export function CustomizationForm({ customization, onFormSubmit }: Customization
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingFoodItems, setIsLoadingFoodItems] = useState(true);
   const { toast } = useToast();
+
+  const foodOptions: ComboboxOption[] = foodItems.map((item) => ({
+    value: item.id.toString(),
+    label: item.name,
+  }));
 
   useEffect(() => {
     const fetchFoodItems = async () => {
@@ -127,24 +132,27 @@ export function CustomizationForm({ customization, onFormSubmit }: Customization
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading food items...
           </div>
+        ) : foodOptions.length === 0 ? (
+          <div className="text-sm text-muted-foreground">
+            No food items available. Add a food first to enable customizations.
+          </div>
         ) : (
-          <Select value={foodItemId} onValueChange={setFoodItemId} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a food item" />
-            </SelectTrigger>
-            <SelectContent>
-              {foodItems.map((item) => (
-                <SelectItem key={item.id} value={item.id.toString()}>
-                  {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Combobox
+            value={foodItemId}
+            onChange={(value) => {
+              if (!value) return;
+              setFoodItemId(value);
+            }}
+            options={foodOptions}
+            placeholder="Select a food item"
+            searchPlaceholder="Search foods"
+            emptyMessage="No foods found"
+          />
         )}
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="submit" disabled={isSubmitting || isLoadingFoodItems}>
+        <Button type="submit" disabled={isSubmitting || isLoadingFoodItems || foodOptions.length === 0 || !foodItemId}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

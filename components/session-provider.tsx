@@ -61,7 +61,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (isLoading) return;
     setIsLoading(true);
     try {
-      await fetch('/api/auth/logout', { method: 'POST', cache: 'no-store' });
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        cache: 'no-store',
+        credentials: 'include',
+      });
       setUser(null);
       router.replace('/login');
       router.refresh();

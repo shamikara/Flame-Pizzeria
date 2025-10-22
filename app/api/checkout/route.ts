@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getServerSession } from "@/lib/session";
 import { hashPassword } from "@/lib/auth";
-import { order_type, order_status } from "@prisma/client";
+import { order_type, order_status, Prisma } from "@prisma/client";
 import { sign } from 'jsonwebtoken';
 import { serialize } from 'cookie';
 
@@ -12,6 +12,13 @@ interface CartItem {
   quantity: number;
   customizations?: { name: string; price: number }[];
 }
+
+type ParsedItem = {
+  foodItemId: number;
+  quantity: number;
+  price: number;
+  customizations: { name: string; price: number }[];
+};
 
 function calculateTotal(items: CartItem[]): number {
   return items.reduce((total, item) => {
@@ -28,17 +35,40 @@ export async function POST(request: NextRequest) {
     // ✅ CLEANUP: Delete pending orders older than 30 minutes
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
     try {
-      const deletedOrders = await prisma.order.deleteMany({
-        where: {
-          status: order_status.PENDING,
-          createdAt: {
-            lt: thirtyMinutesAgo,
+      const cleanupResult = await prisma.$transaction(async (tx) => {
+        const staleOrders = await tx.order.findMany({
+          where: {
+            status: order_status.PENDING,
+            createdAt: {
+              lt: thirtyMinutesAgo,
+            },
           },
-        },
+          select: { id: true },
+        });
+
+        if (staleOrders.length === 0) {
+          return 0;
+        }
+
+        const staleOrderIds = staleOrders.map((order) => order.id);
+
+        await tx.orderitem.deleteMany({
+          where: { orderId: { in: staleOrderIds } },
+        });
+
+        await tx.payment.deleteMany({
+          where: { orderId: { in: staleOrderIds } },
+        });
+
+        const deletedOrders = await tx.order.deleteMany({
+          where: { id: { in: staleOrderIds } },
+        });
+
+        return deletedOrders.count;
       });
-      
-      if (deletedOrders.count > 0) {
-        console.log(`[CHECKOUT] Cleaned up ${deletedOrders.count} pending orders older than 30 minutes`);
+
+      if (cleanupResult > 0) {
+        console.log(`[CHECKOUT] Cleaned up ${cleanupResult} pending orders older than 30 minutes`);
       }
     } catch (cleanupError) {
       // Don't fail the checkout if cleanup fails
@@ -47,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     let finalUserId: number;
     let isNewUser = false;
-    let newUserData = null;
+    let newUserData: (typeof prisma.user extends { create: (args: infer A) => Promise<infer U> } ? Awaited<U> : null) | null = null;
 
     // ✅ Authenticated user
     if (session) {
@@ -87,25 +117,75 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Cannot create empty order." }, { status: 400 });
     }
 
-    // ✅ Create order as PENDING
-    const order = await prisma.order.create({
-      data: {
-        userId: finalUserId,
-        status: order_status.PENDING,
-        type: order_type.DELIVERY,
-        total: calculateTotal(cartItems),
-        address,
-        phone,
-        notes,
-        items: {
-          create: cartItems.map((item: CartItem) => ({
-            foodItemId: parseInt(item.productId),
-            quantity: item.quantity,
-            price: item.price,
-            customizations: item.customizations ?? [],
-          })),
+    if (!isNewUser) {
+      const customer = await prisma.user.findFirst({
+        where: {
+          id: finalUserId,
+          isActive: true,
         },
-      },
+        select: { id: true },
+      });
+
+      if (!customer) {
+        return NextResponse.json({
+          error: "Your session is out of date. Please log in again before placing an order.",
+        }, { status: 401 });
+      }
+    }
+
+    const parsedItems: ParsedItem[] = cartItems.map((item: CartItem) => ({
+      foodItemId: Number(item.productId),
+      quantity: item.quantity,
+      price: item.price,
+      customizations: item.customizations ?? [],
+    }));
+
+    if (parsedItems.some((item: ParsedItem) => !Number.isInteger(item.foodItemId) || item.quantity <= 0)) {
+      return NextResponse.json({ error: "Invalid cart items provided." }, { status: 400 });
+    }
+
+    const foodItemIds = Array.from(new Set(parsedItems.map((item: ParsedItem) => item.foodItemId)));
+    const existingFoodItems = await prisma.fooditem.findMany({
+      where: { id: { in: foodItemIds }, isActive: true },
+      select: { id: true },
+    });
+
+    if (existingFoodItems.length !== foodItemIds.length) {
+      return NextResponse.json({
+        error: "One or more items in your cart are no longer available.",
+      }, { status: 400 });
+    }
+
+    // ✅ Create order as PENDING
+    console.info("[CHECKOUT_DEBUG] Prepared order payload", {
+      finalUserId,
+      parsedItems,
+    });
+
+    const order = await prisma.$transaction(async (tx) => {
+      const createdOrder = await tx.order.create({
+        data: {
+          userId: finalUserId,
+          status: order_status.PENDING,
+          type: order_type.DELIVERY,
+          total: calculateTotal(cartItems),
+          address,
+          phone,
+          notes,
+        },
+      });
+
+      await tx.orderitem.createMany({
+        data: parsedItems.map((item: ParsedItem) => ({
+          orderId: createdOrder.id,
+          foodItemId: item.foodItemId,
+          quantity: item.quantity,
+          price: item.price,
+          customizations: item.customizations,
+        })),
+      });
+
+      return createdOrder;
     });
 
     const response = NextResponse.json({ 
@@ -143,7 +223,15 @@ export async function POST(request: NextRequest) {
     return response;
     
   } catch (error) {
-    console.error("[CHECKOUT_POST_ERROR]", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      console.error("[CHECKOUT_POST_ERROR] Prisma error", {
+        code: error.code,
+        meta: error.meta,
+        message: error.message,
+      });
+    } else {
+      console.error("[CHECKOUT_POST_ERROR]", error);
+    }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

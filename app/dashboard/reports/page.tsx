@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
 import { 
   Download, 
   FileText, 
@@ -37,11 +38,13 @@ import {
 } from '@/lib/pdf-generator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [salesDateRange, setSalesDateRange] = useState({ start: '', end: '' });
-  const [salaryMonth, setSalaryMonth] = useState('');
+  const currentMonthLabel = new Date().toLocaleString('en-US', { month: 'long' });
+  const [salaryMonth, setSalaryMonth] = useState(currentMonthLabel);
   const [salaryYear, setSalaryYear] = useState(new Date().getFullYear().toString());
   const [summaryDateRange, setSummaryDateRange] = useState({ start: '', end: '' });
   const { toast } = useToast();
@@ -377,14 +380,31 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="salary-month" className="text-gray-300">Month</Label>
-                    <Input
-                      id="salary-month"
-                      type="text"
-                      placeholder="January"
-                      value={salaryMonth}
-                      onChange={(e) => setSalaryMonth(e.target.value)}
-                      className="bg-gray-800 border-gray-700 text-white"
-                    />
+                    <Select value={salaryMonth} onValueChange={setSalaryMonth}>
+                      <SelectTrigger id="salary-month" className="bg-gray-800 border-gray-700 text-white">
+                        <SelectValue placeholder="Select month" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-900 border border-gray-700 text-white">
+                        {[
+                          'January',
+                          'February',
+                          'March',
+                          'April',
+                          'May',
+                          'June',
+                          'July',
+                          'August',
+                          'September',
+                          'October',
+                          'November',
+                          'December',
+                        ].map((month) => (
+                          <SelectItem key={month} value={month}>
+                            {month}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="salary-year" className="text-gray-300">Year</Label>

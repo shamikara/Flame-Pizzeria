@@ -5,17 +5,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { MeasurementUnit, Supplier } from "@prisma/client";
+import { measurement_unit, supplier } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name is too short."),
   stock: z.coerce.number().min(0, "Stock cannot be negative"),
-  unit: z.nativeEnum(MeasurementUnit),
+  unit: z.nativeEnum(measurement_unit),
   restockThreshold: z.coerce.number().min(0, "Threshold cannot be negative"),
   supplierId: z.string().optional(),
   expiryDate: z.string().optional(),
@@ -36,8 +37,10 @@ async function createIngredient(data: FormValues) {
   return response.json();
 }
 
+const measurementUnits = Object.values(measurement_unit) as measurement_unit[];
+
 interface IngredientFormProps {
-  suppliers: Supplier[];
+  suppliers: supplier[];
   onFormSubmit: () => void;
 }
 
@@ -45,12 +48,17 @@ export function IngredientForm({ suppliers, onFormSubmit }: IngredientFormProps)
   const router = useRouter();
   const { toast } = useToast();
 
+  const supplierOptions: ComboboxOption[] = suppliers.map((entry) => ({
+    value: entry.id.toString(),
+    label: entry.name,
+  }));
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       stock: 0,
-      unit: MeasurementUnit.KG,
+      unit: measurement_unit.KG,
       restockThreshold: 5,
       supplierId: undefined,
       expiryDate: "",
@@ -112,8 +120,10 @@ export function IngredientForm({ suppliers, onFormSubmit }: IngredientFormProps)
                       <SelectValue placeholder="Select unit" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-700">
-                      {Object.values(MeasurementUnit).map(unit => (
-                        <SelectItem key={unit} value={unit} className="text-white hover:bg-gray-700">{unit}</SelectItem>
+                      {measurementUnits.map((unit) => (
+                        <SelectItem key={unit} value={unit} className="text-white hover:bg-gray-700">
+                          {unit}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -161,16 +171,18 @@ export function IngredientForm({ suppliers, onFormSubmit }: IngredientFormProps)
             <FormItem>
               <FormLabel className="text-gray-200">Supplier (Optional)</FormLabel>
               <FormControl>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                    <SelectValue placeholder="Select a supplier" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    {suppliers.map(supplier => (
-                      <SelectItem key={supplier.id} value={supplier.id.toString()} className="text-white hover:bg-gray-700">{supplier.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {supplierOptions.length === 0 ? (
+                  <div className="text-sm text-gray-400">No suppliers available.</div>
+                ) : (
+                  <Combobox
+                    value={field.value ?? ""}
+                    onChange={(value) => field.onChange(value === "" ? undefined : value)}
+                    options={supplierOptions}
+                    placeholder="Select a supplier"
+                    searchPlaceholder="Search suppliers"
+                    emptyMessage="No suppliers found"
+                  />
+                )}
               </FormControl>
               <FormMessage />
             </FormItem>

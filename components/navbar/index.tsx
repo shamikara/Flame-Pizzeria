@@ -1,9 +1,10 @@
 'use client';
-import React from 'react';
+
+import React, { useState } from 'react';
 import Image from 'next/image';
 import avatar from '/public/img/avatars/avatar4.png';
 import { FiAlignJustify } from 'react-icons/fi';
-import { logout } from '@/lib/logout';
+import { useSession } from '@/components/session-provider';
 
 const Navbar = ({
   onOpenSidenav,
@@ -12,6 +13,20 @@ const Navbar = ({
   onOpenSidenav: () => void;
   brandText: string;
 }) => {
+  const { handleLogout } = useSession();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogoutClick = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await handleLogout();
+    } catch (error) {
+      console.error('Failed to logout:', error);
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <nav className="sticky top-4 z-40 flex items-center justify-between rounded-xl bg-white/10 p-3 backdrop-blur-xl dark:bg-[#0b14374d]">
       <div className="text-white text-xl font-semibold">
@@ -29,10 +44,11 @@ const Navbar = ({
 
         {/* Logout button */}
         <button
-          onClick={logout}
-          className="text-sm px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow"
+          onClick={handleLogoutClick}
+          disabled={isLoggingOut}
+          className="text-sm px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white rounded-lg shadow"
         >
-          Logout
+          {isLoggingOut ? 'Logging out...' : 'Logout'}
         </button>
 
         {/* Avatar */}
