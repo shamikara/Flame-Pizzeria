@@ -83,11 +83,17 @@ export function LoginForm({ searchParams, onLoginSuccess }: LoginFormProps) {
       } else {
         router.refresh()
         const userRole = result.user.role
-        if (userRole === 'ADMIN') router.push('/dashboard/overview')
-        else if (userRole === 'MANAGER') router.push('/dashboard/overview')
-        else if (userRole === 'CHEF' || userRole === 'WAITER') router.push('/dashboard/orders')
-        else if (userRole === 'STORE_KEEP') router.push('/dashboard/ingredients')
-        else router.push('/shop')
+        if (userRole === 'ADMIN' || userRole === 'MANAGER') {
+          router.push('/dashboard/overview')
+        } else if (userRole === 'CHEF') {
+          router.push('/dashboard/chef/overview')
+        } else if (userRole === 'WAITER') {
+          router.push('/dashboard/waiter/overview')
+        } else if (userRole === 'STORE_KEEP') {
+          router.push('/dashboard/store-keep/overview')
+        } else {
+          router.push('/shop')
+        }
       }
     } catch (error) {
       console.error('An unexpected error occurred:', error)

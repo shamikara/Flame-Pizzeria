@@ -112,63 +112,69 @@ export default async function WaiterOverviewPage() {
   ])
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-white">Service Overview</h1>
-        <p className="text-sm text-gray-400">
+    <div className="flex-1 space-y-6 p-6 md:p-10">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-sky-400 to-emerald-400 bg-clip-text text-transparent">
+          Service Overview
+        </h1>
+        <p className="text-sm text-gray-400 mt-2">
           Quick view of orders waiting for attention and active tables.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Ready pickups</CardTitle>
-            <CardDescription className="text-xs text-gray-500">
+        <Card className="border-gray-800 bg-gradient-to-br from-sky-500/10 to-sky-600/5 hover:shadow-lg hover:shadow-sky-500/20 transition-all">
+          <CardHeader className="space-y-1 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Ready pickups</CardTitle>
+            <CardDescription className="text-xs text-gray-400">
               Orders waiting to be handed over
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.ready}</p>
+            <div className="text-2xl font-bold text-white">{stats.ready}</div>
+            <p className="text-xs text-gray-400 mt-1">Queue at the counter</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Out for delivery</CardTitle>
-            <CardDescription className="text-xs text-gray-500">
+        <Card className="border-gray-800 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 hover:shadow-lg hover:shadow-cyan-500/20 transition-all">
+          <CardHeader className="space-y-1 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Out for delivery</CardTitle>
+            <CardDescription className="text-xs text-gray-400">
               Couriers currently on the road
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.outForDelivery}</p>
+            <div className="text-2xl font-bold text-white">{stats.outForDelivery}</div>
+            <p className="text-xs text-gray-400 mt-1">Track delivery flow</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Delivered today</CardTitle>
-            <CardDescription className="text-xs text-gray-500">
+        <Card className="border-gray-800 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 hover:shadow-lg hover:shadow-emerald-500/20 transition-all">
+          <CardHeader className="space-y-1 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Delivered today</CardTitle>
+            <CardDescription className="text-xs text-gray-400">
               Successful drop-offs today
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.deliveredToday}</p>
+            <div className="text-2xl font-bold text-white">{stats.deliveredToday}</div>
+            <p className="text-xs text-gray-400 mt-1">Daily performance</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Active tables</CardTitle>
-            <CardDescription className="text-xs text-gray-500">
+        <Card className="border-gray-800 bg-gradient-to-br from-violet-500/10 to-violet-600/5 hover:shadow-lg hover:shadow-violet-500/20 transition-all">
+          <CardHeader className="space-y-1 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Active tables</CardTitle>
+            <CardDescription className="text-xs text-gray-400">
               Dine-in tickets still open
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.dineInActive}</p>
+            <div className="text-2xl font-bold text-white">{stats.dineInActive}</div>
+            <p className="text-xs text-gray-400 mt-1">Attention needed on floor</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="bg-black/20 border-white/10">
+        <Card className="border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
           <CardHeader>
             <CardTitle className="text-gray-200">Pickup queue</CardTitle>
             <CardDescription className="text-gray-400">
@@ -204,7 +210,7 @@ export default async function WaiterOverviewPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-black/20 border-white/10">
+        <Card className="border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
           <CardHeader>
             <CardTitle className="text-gray-200">Delivery queue</CardTitle>
             <CardDescription className="text-gray-400">
@@ -231,7 +237,7 @@ export default async function WaiterOverviewPage() {
         </Card>
       </div>
 
-      <Card className="bg-black/20 border-white/10">
+      <Card className="border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
         <CardHeader>
           <CardTitle className="text-gray-200">Active tables</CardTitle>
           <CardDescription className="text-gray-400">

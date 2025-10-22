@@ -5,8 +5,11 @@ import prisma from '@/lib/db';
 type CommunityRecipeSummary = {
   id: number | string;
   name: string;
+  description: string;
+  imageUrl: string | null;
   status: string;
   createdAt: Date;
+  updatedAt: Date;
 };
 
 type CustomerWithCommunityRecipes = {
@@ -35,8 +38,11 @@ export async function GET() {
           select: {
             id: true,
             name: true,
+            description: true,
+            imageUrl: true,
             status: true,
             createdAt: true,
+            updatedAt: true,
           },
           orderBy: {
             createdAt: 'desc',

@@ -4,14 +4,31 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
-import { DollarSign, ShoppingCart, Users, UtensilsCrossed, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  DollarSign,
+  ShoppingCart,
+  Users,
+  UtensilsCrossed,
+  TrendingUp,
+  ChefHat,
+  ClipboardList,
+  Factory,
+  CalendarClock,
+  ArrowRight,
+} from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
+
 import db from "@/lib/db";
 import { order_status, user_role } from "@prisma/client";
 
 import { SalesChart } from "@/components/charts/sales-chart";
 import { PopularItemsChart } from "@/components/charts/popular-items-chart";
 import { EmployeeHoursChart } from "@/components/charts/employee-hours-chart";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 async function getDashboardStats() {
   const today = new Date();
@@ -33,6 +50,43 @@ async function getDashboardStats() {
     orders: totalOrders,
     customers: newCustomersToday,
     menuItems: totalMenuItems,
+  };
+}
+
+async function getEmployeeRoleStats() {
+  const trackedRoles: user_role[] = [
+    user_role.MANAGER,
+    user_role.CHEF,
+    user_role.WAITER,
+    user_role.STORE_KEEP,
+    user_role.DELIVERY_PERSON,
+  ];
+
+  const [grouped, totalActive] = await Promise.all([
+    db.user.groupBy({
+      by: ["role"],
+      _count: { role: true },
+      where: {
+        role: { in: trackedRoles },
+        employee: { is: { isActive: true } },
+      },
+    }),
+    db.employee.count({ where: { isActive: true } }),
+  ]);
+
+  const counts = trackedRoles.reduce((acc, role) => {
+    acc[role] = 0;
+    return acc;
+  }, {} as Record<user_role, number>);
+
+  for (const entry of grouped) {
+    const role = entry.role as user_role;
+    counts[role] = entry._count.role ?? 0;
+  }
+
+  return {
+    totalActive,
+    counts,
   };
 }
 
@@ -137,12 +191,21 @@ async function getEmployeeWorkHours() {
   }));
 }
 
+async function getRecentCateringRequests() {
+  return db.cateringrequest.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+}
+
 export default async function OverviewPage() {
-  const [stats, weeklySales, topItems, employeeHours] = await Promise.all([
+  const [stats, weeklySales, topItems, employeeHours, employeeRoles, recentCatering] = await Promise.all([
     getDashboardStats(),
     getWeeklySalesData(),
     getTopSellingItems(),
     getEmployeeWorkHours(),
+    getEmployeeRoleStats(),
+    getRecentCateringRequests(),
   ]);
 
   return (

@@ -126,56 +126,58 @@ export default async function ChefOverviewPage() {
   ])
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-white">Kitchen Overview</h1>
-        <p className="text-sm text-gray-400">
-          Snapshot of active orders and prep requirements.
-        </p>
+    <div className="flex-1 space-y-6 p-6 md:p-10">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
+          Kitchen Overview
+        </h1>
+        <p className="text-sm text-gray-400 mt-2">Snapshot of active orders and prep requirements.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Pending tickets</CardTitle>
+        <Card className="border-gray-800 bg-gradient-to-br from-orange-500/10 to-orange-600/5 hover:shadow-lg hover:shadow-orange-500/20 transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Pending Tickets</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.pending}</p>
+            <div className="text-2xl font-bold text-white">{stats.pending}</div>
+            <p className="text-xs text-gray-400 mt-1">Waiting to be confirmed</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Confirmed orders</CardTitle>
+        <Card className="border-gray-800 bg-gradient-to-br from-amber-500/10 to-amber-600/5 hover:shadow-lg hover:shadow-amber-500/20 transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Confirmed Orders</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.confirmed}</p>
+            <div className="text-2xl font-bold text-white">{stats.confirmed}</div>
+            <p className="text-xs text-gray-400 mt-1">Ready to start prep</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Being prepared</CardTitle>
+        <Card className="border-gray-800 bg-gradient-to-br from-red-500/10 to-red-600/5 hover:shadow-lg hover:shadow-red-500/20 transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Being Prepared</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.preparing}</p>
+            <div className="text-2xl font-bold text-white">{stats.preparing}</div>
+            <p className="text-xs text-gray-400 mt-1">Currently on the line</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Ready for pickup</CardTitle>
+        <Card className="border-gray-800 bg-gradient-to-br from-green-500/10 to-green-600/5 hover:shadow-lg hover:shadow-green-500/20 transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Ready for Pickup</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.ready}</p>
+            <div className="text-2xl font-bold text-white">{stats.ready}</div>
+            <p className="text-xs text-gray-400 mt-1">Awaiting handoff</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="bg-black/20 border-white/10 lg:col-span-3">
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Card className="col-span-3 border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
           <CardHeader>
-            <CardTitle className="text-gray-200">Active tickets</CardTitle>
-            <CardDescription className="text-gray-400">
-              Earliest orders waiting on the line.
-            </CardDescription>
+            <CardTitle className="text-gray-200">Active Tickets</CardTitle>
+            <CardDescription className="text-gray-400">Earliest orders waiting on the line.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -203,12 +205,10 @@ export default async function ChefOverviewPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-black/20 border-white/10 lg:col-span-2">
+        <Card className="col-span-2 border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
           <CardHeader>
-            <CardTitle className="text-gray-200">Ingredient load</CardTitle>
-            <CardDescription className="text-gray-400">
-              Top ingredients needed for active tickets.
-            </CardDescription>
+            <CardTitle className="text-gray-200">Ingredient Load</CardTitle>
+            <CardDescription className="text-gray-400">Top ingredients needed for active tickets.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

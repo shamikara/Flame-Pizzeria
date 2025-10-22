@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from 'react';
+import type { recipe_status } from '@prisma/client';
 import {
   Accordion,
   AccordionContent,
@@ -10,15 +11,51 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
-import { approveRecipe, rejectRecipe } from '@/app/actions/recipes';
-import { Check, X, Users as UsersIcon } from 'lucide-react';
+import {
+  approveRecipe,
+  rejectRecipe,
+  updateCommunityRecipe,
+  deleteCommunityRecipe,
+} from '@/app/actions/recipes';
+import {
+  Check,
+  X,
+  Users as UsersIcon,
+  Eye,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 import { Spinner } from "@/components/ui/spinner";
+import { format } from 'date-fns';
+
+const MODERATION_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const satisfies readonly recipe_status[];
 
 type RecipeData = {
   id: number;
   name: string;
-  status: string;
+  description: string;
+  imageUrl: string | null;
+  status: recipe_status;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type UserWithRecipes = {
@@ -43,6 +80,18 @@ export default function UsersPage() {
   const [isPending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const [viewRecipe, setViewRecipe] = useState<RecipeData | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [editRecipe, setEditRecipe] = useState<RecipeData | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [deleteRecipeTarget, setDeleteRecipeTarget] = useState<RecipeData | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    imageUrl: '',
+    status: 'PENDING' as recipe_status,
+  });
 
   const fetchData = async () => {
     try {
@@ -79,6 +128,73 @@ export default function UsersPage() {
 
        if (result.success) {
         toast({ title: "Success", description: "Recipe has been rejected." });
+        fetchData();
+      } else {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+      }
+    });
+  };
+
+  const openViewDialog = (recipe: RecipeData) => {
+    setViewRecipe(recipe);
+    setIsViewOpen(true);
+  };
+
+  const openEditDialog = (recipe: RecipeData) => {
+    setEditRecipe(recipe);
+    setEditForm({
+      name: recipe.name,
+      description: recipe.description ?? '',
+      imageUrl: recipe.imageUrl ?? '',
+      status: recipe.status,
+    });
+    setIsEditOpen(true);
+  };
+
+  const openDeleteDialog = (recipe: RecipeData) => {
+    setDeleteRecipeTarget(recipe);
+    setIsDeleteOpen(true);
+  };
+
+  const handleEditFormChange = (field: 'name' | 'description' | 'imageUrl', value: string) => {
+    setEditForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleUpdateRecipe = () => {
+    if (!editRecipe) return;
+
+    startTransition(async () => {
+      const result = await updateCommunityRecipe(editRecipe.id, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim(),
+        imageUrl: editForm.imageUrl.trim() || null,
+        status: editForm.status,
+      });
+
+      if (result.success) {
+        toast({ title: "Recipe updated", description: "Changes saved successfully." });
+        setIsEditOpen(false);
+        setEditRecipe(null);
+        fetchData();
+      } else {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+      }
+    });
+  };
+
+  const handleDeleteRecipe = () => {
+    if (!deleteRecipeTarget) return;
+
+    startTransition(async () => {
+      const result = await deleteCommunityRecipe(deleteRecipeTarget.id);
+
+      if (result.success) {
+        toast({ title: "Recipe removed", description: "The recipe has been deleted." });
+        setIsDeleteOpen(false);
+        setDeleteRecipeTarget(null);
         fetchData();
       } else {
         toast({ title: "Error", description: result.message, variant: "destructive" });
@@ -133,35 +249,57 @@ export default function UsersPage() {
                   {customer.recipes.length > 0 ? (
                     <div className="space-y-4 p-4 bg-gray-800/30 rounded-md">
                       {customer.recipes.map((recipe) => (
-                        <div key={recipe.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800/70 transition-all">
-                          <div>
-                            <p className="font-medium text-gray-200">{recipe.name}</p>
-                            <Badge 
-                               variant={
-                                recipe.status === 'APPROVED' ? 'default' :
-                                recipe.status === 'REJECTED' ? 'destructive' : 'secondary'
-                              }
-                              className={
-                                recipe.status === 'APPROVED' ? 'bg-green-500/20 text-green-400 border-green-500/50' :
-                                recipe.status === 'REJECTED' ? 'bg-red-500/20 text-red-400 border-red-500/50' :
-                                'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
-                              }
-                            >
-                              {recipe.status}
-                            </Badge>
-                          </div>
-                          {recipe.status === 'PENDING' && (
-                            <div className="flex gap-2">
-                               <Button size="icon" variant="outline" onClick={() => handleApprove(recipe.id)} disabled={isPending}
-                                       className="border-green-500/50 hover:bg-green-500/20">
-                                <Check className="h-4 w-4 text-green-400" />
-                               </Button>
-                               <Button size="icon" variant="outline" onClick={() => handleReject(recipe.id)} disabled={isPending}
-                                       className="border-red-500/50 hover:bg-red-500/20">
-                                 <X className="h-4 w-4 text-red-400" />
-                               </Button>
+                        <div key={recipe.id} className="flex items-start justify-between gap-4 p-4 rounded-lg bg-gray-800/50 hover:bg-gray-800/70 transition-all">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-gray-200 text-lg">{recipe.name}</p>
+                              {recipe.status === 'PENDING' && (
+                                <span className="text-xs uppercase tracking-wide text-yellow-300">Awaiting review</span>
+                              )}
                             </div>
-                          )}
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400">
+                              <Badge
+                                variant={
+                                  recipe.status === 'APPROVED' ? 'default' :
+                                  recipe.status === 'REJECTED' ? 'destructive' : 'secondary'
+                                }
+                                className={
+                                  recipe.status === 'APPROVED' ? 'bg-green-500/20 text-green-400 border-green-500/50' :
+                                  recipe.status === 'REJECTED' ? 'bg-red-500/20 text-red-400 border-red-500/50' :
+                                  'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+                                }
+                              >
+                                {recipe.status}
+                              </Badge>
+                              <span>Submitted {format(new Date(recipe.createdAt), 'PP')}</span>
+                              <span>Updated {format(new Date(recipe.updatedAt), 'PP')}</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="flex gap-2">
+                              <Button size="icon" variant="ghost" onClick={() => openViewDialog(recipe)}>
+                                <Eye className="h-4 w-4 text-sky-300" />
+                              </Button>
+                              <Button size="icon" variant="ghost" onClick={() => openEditDialog(recipe)}>
+                                <Pencil className="h-4 w-4 text-amber-300" />
+                              </Button>
+                              <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(recipe)}>
+                                <Trash2 className="h-4 w-4 text-red-300" />
+                              </Button>
+                            </div>
+                            {recipe.status === 'PENDING' && (
+                              <div className="flex gap-2">
+                                <Button size="icon" variant="outline" onClick={() => handleApprove(recipe.id)} disabled={isPending}
+                                        className="border-green-500/50 hover:bg-green-500/20">
+                                  <Check className="h-4 w-4 text-green-400" />
+                                </Button>
+                                <Button size="icon" variant="outline" onClick={() => handleReject(recipe.id)} disabled={isPending}
+                                        className="border-red-500/50 hover:bg-red-500/20">
+                                  <X className="h-4 w-4 text-red-400" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -174,6 +312,111 @@ export default function UsersPage() {
           </Accordion>
         )}
       </div>
+
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="max-w-2xl bg-gradient-to-b from-gray-950 to-gray-900 text-gray-100">
+          <DialogHeader>
+            <DialogTitle>{viewRecipe?.name}</DialogTitle>
+            <DialogDescription>
+              Submitted {viewRecipe ? format(new Date(viewRecipe.createdAt), 'PPpp') : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {viewRecipe?.imageUrl && (
+              <img
+                src={viewRecipe.imageUrl}
+                alt={viewRecipe.name}
+                className="max-h-64 w-full rounded-lg object-cover"
+              />
+            )}
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-300">
+              {viewRecipe?.description}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsViewOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-xl bg-gradient-to-b from-gray-950 to-gray-900 text-gray-100">
+          <DialogHeader>
+            <DialogTitle>Edit Recipe Submission</DialogTitle>
+            <DialogDescription>
+              Update the recipe content or status before publishing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-300">Title</label>
+              <Input
+                value={editForm.name}
+                onChange={(event) => handleEditFormChange('name', event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-300">Description</label>
+              <Textarea
+                rows={6}
+                value={editForm.description}
+                onChange={(event) => handleEditFormChange('description', event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-300">Image URL</label>
+              <Input
+                value={editForm.imageUrl}
+                onChange={(event) => handleEditFormChange('imageUrl', event.target.value)}
+                placeholder="https://"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-300">Status</label>
+              <Select
+                value={editForm.status}
+                onValueChange={(value: recipe_status) => setEditForm((prev) => ({ ...prev, status: value }))}
+              >
+                <SelectTrigger className="bg-gray-900/70 border-gray-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border-gray-700">
+                  {MODERATION_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateRecipe} disabled={isPending}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="max-w-md bg-gradient-to-b from-gray-950 to-gray-900 text-gray-100">
+          <DialogHeader>
+            <DialogTitle>Remove Recipe</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The recipe will be permanently removed from the community submissions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border border-red-500/30 bg-red-900/10 p-4 text-sm text-red-200">
+            <p className="font-semibold">{deleteRecipeTarget?.name}</p>
+            <p className="mt-1 text-red-300">Submitted {deleteRecipeTarget ? format(new Date(deleteRecipeTarget.createdAt), 'PPpp') : ''}</p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteRecipe} disabled={isPending}>
+              Delete Recipe
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

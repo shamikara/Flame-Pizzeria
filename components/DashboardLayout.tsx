@@ -28,6 +28,7 @@ import { LiveClock } from './live-clock';
 import flame from "@/public/img/logo.png";
 import { UserPayload } from "@/lib/session"; // <-- CHANGE 1: Import the user type
 import { Badge } from "@/components/ui/badge";
+import { useSession } from "@/components/session-provider";
 
 // Your Logo Component (for the mobile sidebar)
 const Logo = () => (
@@ -56,16 +57,15 @@ export default function DashboardLayout({
   user: UserPayload; // The user object is now required
 }) {
   const router = useRouter();
+  const { handleLogout } = useSession();
 
   // This is a placeholder for your future logout API route
-  const handleLogout = async () => {
+  const onLogout = async () => {
     try {
-      // You will create this API route next
-      await fetch('/api/auth/logout', { method: 'POST' }); 
-      // It's better to use router.push for client-side navigation
-      router.push('/login');
+      await handleLogout();
     } catch (error) {
       console.error("Logout failed:", error);
+      router.replace('/login');
     }
   };
 
@@ -183,7 +183,7 @@ export default function DashboardLayout({
                   </DropdownMenuItem>
                   <DropdownMenuItem>Support</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                  <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>

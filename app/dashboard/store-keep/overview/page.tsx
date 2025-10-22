@@ -146,54 +146,60 @@ export default async function StoreKeepOverviewPage() {
   ])
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-white">Inventory Overview</h1>
-        <p className="text-sm text-gray-400">
+    <div className="flex-1 space-y-6 p-6 md:p-10">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-amber-400 to-lime-400 bg-clip-text text-transparent">
+          Inventory Overview
+        </h1>
+        <p className="text-sm text-gray-400 mt-2">
           Quick glance at low-stock items and active alerts.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Low stock items</CardTitle>
+        <Card className="border-gray-800 bg-gradient-to-br from-amber-500/10 to-amber-600/5 hover:shadow-lg hover:shadow-amber-500/20 transition-all">
+          <CardHeader className="space-y-1 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Low stock items</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.lowStock}</p>
+            <div className="text-2xl font-bold text-white">{stats.lowStock}</div>
+            <p className="text-xs text-gray-400 mt-1">Below replenishment threshold</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Expiring soon</CardTitle>
-            <CardDescription className="text-xs text-gray-500">
+        <Card className="border-gray-800 bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 hover:shadow-lg hover:shadow-yellow-500/20 transition-all">
+          <CardHeader className="space-y-1 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Expiring soon</CardTitle>
+            <CardDescription className="text-xs text-gray-400">
               Within the next 7 days
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.expiring}</p>
+            <div className="text-2xl font-bold text-white">{stats.expiring}</div>
+            <p className="text-xs text-gray-400 mt-1">Plan usage or markdowns</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Critical alerts</CardTitle>
+        <Card className="border-gray-800 bg-gradient-to-br from-red-500/10 to-red-600/5 hover:shadow-lg hover:shadow-red-500/20 transition-all">
+          <CardHeader className="space-y-1 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Critical alerts</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.criticalAlerts}</p>
+            <div className="text-2xl font-bold text-white">{stats.criticalAlerts}</div>
+            <p className="text-xs text-gray-400 mt-1">Needs immediate attention</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/20 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-300">Out of stock alerts</CardTitle>
+        <Card className="border-gray-800 bg-gradient-to-br from-lime-500/10 to-lime-600/5 hover:shadow-lg hover:shadow-lime-500/20 transition-all">
+          <CardHeader className="space-y-1 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Out of stock alerts</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-white">{stats.restockNeeded}</p>
+            <div className="text-2xl font-bold text-white">{stats.restockNeeded}</div>
+            <p className="text-xs text-gray-400 mt-1">Urgent purchase orders</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="bg-black/20 border-white/10 lg:col-span-2">
+        <Card className="border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900 lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-gray-200">Low stock watchlist</CardTitle>
             <CardDescription className="text-gray-400">
@@ -222,7 +228,7 @@ export default async function StoreKeepOverviewPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-black/20 border-white/10">
+        <Card className="border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
           <CardHeader>
             <CardTitle className="text-gray-200">Active inventory alerts</CardTitle>
             <CardDescription className="text-gray-400">
@@ -250,7 +256,7 @@ export default async function StoreKeepOverviewPage() {
         </Card>
       </div>
 
-      <Card className="bg-black/20 border-white/10">
+      <Card className="border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
         <CardHeader>
           <CardTitle className="text-gray-200">Upcoming order impact</CardTitle>
           <CardDescription className="text-gray-400">
