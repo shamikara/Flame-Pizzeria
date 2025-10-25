@@ -12,6 +12,9 @@ type UserPayload = {
   email: string;
   firstName: string;
   lastName: string;
+  image?: string;
+  createdAt?: string;
+  updatedAt?: string;
   role:
     | 'ADMIN'
     | 'MANAGER'

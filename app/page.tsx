@@ -10,6 +10,8 @@ import { Testimonials } from "@/components/testimonials";
 import { CTASection } from "@/components/cta-section";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 type FoodItem = {
   id: number;
@@ -20,6 +22,18 @@ type FoodItem = {
   category: string;
 };
 
+type PromotionBanner = {
+  id: number;
+  title: string;
+  description: string;
+  buttonText: string | null;
+  buttonLink: string | null;
+  imageUrl: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+};
+
 export default function HomePage() {
   const [fadeOut, setFadeOut] = useState(false);
   const [showMain, setShowMain] = useState(false);
@@ -27,26 +41,56 @@ export default function HomePage() {
   const [email, setEmail] = useState("");
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [featuredItems, setFeaturedItems] = useState<FoodItem[]>([]);
-  const [isLoadingItems, setIsLoadingItems] = useState(true);
+  const [promotions, setPromotions] = useState<PromotionBanner[]>([]);
+  const [isLoading, setIsLoading] = useState({
+    items: true,
+    promotions: true
+  });
   const { toast } = useToast();
 
-  // Fetch popular items when component mounts
+  // Fetch popular items and promotions when component mounts
   useEffect(() => {
-    const fetchPopularItems = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch('/api/fooditems');
-        if (res.ok) {
-          const items = await res.json();
+        // Fetch popular items
+        const [itemsRes, promotionsRes] = await Promise.all([
+          fetch('/api/fooditems'),
+          fetch('/api/promotion-banners?active=true')
+        ]);
+
+        if (itemsRes.ok) {
+          const items = await itemsRes.json();
           setFeaturedItems(items);
         }
+
+        if (promotionsRes.ok) {
+          const data = await promotionsRes.json();
+          // Filter out any promotions that are outside their date range, just in case
+          const now = new Date();
+          const activePromotions = data.promotions.filter((p: PromotionBanner) => {
+            const startDate = new Date(p.startDate);
+            const endDate = new Date(p.endDate);
+            return p.isActive && startDate <= now && endDate >= now;
+          });
+          setPromotions(activePromotions);
+        }
       } catch (error) {
-        console.error('Failed to fetch popular items:', error);
+        console.error('Failed to fetch data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load promotions. Please try again later.",
+          variant: "destructive",
+        });
       } finally {
-        setIsLoadingItems(false);
+        setIsLoading(prev => ({
+          ...prev,
+          items: false,
+          promotions: false
+        }));
       }
     };
 
-    fetchPopularItems();
+    fetchData();
   }, []);
 
     // Check if user has visited before
@@ -99,78 +143,89 @@ export default function HomePage() {
     }
   };
 
-
   if (!showMain) {
+    // Format promotions for the HeroCarousel component
+    const formattedPromotions = promotions.map(promo => ({
+      id: promo.id,
+      title: promo.title,
+      description: promo.description,
+      image: promo.imageUrl.startsWith('http') ? promo.imageUrl : `${process.env.NEXT_PUBLIC_APP_URL || ''}${promo.imageUrl}`,
+      buttonText: promo.buttonText || "Order Now",
+      buttonLink: promo.buttonLink || "/shop"
+    }));
+
     return (
-      <div className={`landing-page ${fadeOut ? "fadeout" : ""}`}>
-        <div className="smoke-container">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={`r${i}`}
-              className="rising-smoke"
-              style={{ left: `${10 + i * 15}%`, animationDelay: `${i}s` }}
-            />
-          ))}
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={`d${i}`}
-              className="drifting-smoke"
-              style={{
-                left: `${20 + i * 10}%`,
-                top: `${10 + i * 8}%`,
-                animationDelay: `${i * 3}s`,
-              }}
-            />
-          ))}
-        </div>
-        <div className="content text-white text-center pt-[5vh] relative z-10">
-        <div className="backdrop-blur-md bg-white/5 border border-white/50 rounded-lg p-8 w-full max-w-3xl">
-        <Image src="img/logo.png" className="mx-auto mb-6" alt="Flames" width={200} height={200} />
-          <h1 className="text-5xl font-bold mb-6 font-unifrakturcook flame-text bg-gradient-to-r from-yellow-300 via-orange-500 to-red-600 bg-clip-text text-transparent">Flames of Tradition</h1>
-          <p className="text-xl max-w-xl mx-auto mb-8">
-          Feel the warmth. Smell the smoke. Taste the tradition in every bite of our wood-fired creations
-          </p>
-          <button
-            onClick={handleEnter}
-            className="bg-red-600 text-white px-6 py-3 rounded-full font-semibold text-lg hover:bg-red-700 transition"
+      <div className="min-h-screen bg-white">
+        {!showMain ? (
+          <div
+            className={`fixed inset-0 bg-black flex items-center justify-center z-50 transition-opacity duration-1000 ${
+              fadeOut ? "opacity-0" : "opacity-100"
+            }`}
           >
-            Reserve Your Table
-          </button>
-          <div className="mt-20 flex justify-center">
-  <div className="border border-white/5 p-8 w-full rounded-lg">
-    <h3 className="text-2xl font-semibold mb-4 text-gray-300 text-center">Subscribe to Our Newsletter</h3>
-    <p className="text-gray-400 mb-6 text-center">Get fresh bakery updates, offers & recipes straight to your inbox</p>
-    
-    <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="px-5 py-3 w-full sm:w-auto rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 transition bg-white/30 text-white placeholder-white/70"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isSubscribing}
-                  />
-                  <button
-                    type="submit"
-                    className="bg-orange-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-orange-800 transition disabled:bg-orange-900 disabled:cursor-not-allowed"
-                    disabled={isSubscribing}
-                  >
-                    {isSubscribing ? "Subscribing..." : "Subscribe"}
-                  </button>
-                </form>
-  </div>
-</div>
-</div>
-        </div>
+            <div className="text-center">
+              <div className="relative w-40 h-40 mx-auto mb-6">
+                <Image
+                  src="/img/logo.png"
+                  alt="Flames Pizzeria"
+                  layout="fill"
+                  objectFit="contain"
+                  className="animate-pulse"
+                />
+              </div>
+              <h1 className="text-4xl font-bold text-white mb-8 font-unifrakturcook">
+                Flames Pizzeria
+              </h1>
+              <button
+                onClick={handleEnter}
+                className="px-8 py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors"
+              >
+                Enter Site
+              </button>
+            </div>
+          </div>
+        ) : (
+          <main className="min-h-screen">
+            {isLoading.promotions ? (
+              <div className="h-[500px] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+              </div>
+            ) : promotions.length > 0 ? (
+              <HeroCarousel promotions={formattedPromotions} />
+            ) : (
+              <div className="relative h-[500px] w-full bg-gradient-to-r from-orange-400 to-orange-600 flex items-center justify-center">
+                <div className="text-center text-white px-4">
+                  <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                    Welcome to Flames Pizzeria
+                  </h1>
+                  <p className="text-xl mb-8">
+                    Delicious food made with love
+                  </p>
+                  <Button asChild size="lg" className="bg-white text-orange-600 hover:bg-gray-100">
+                    <Link href="/shop">Order Now</Link>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </main>
+        )}
       </div>
     );
   }
 
+  // Format promotions for the HeroCarousel component
+  const formattedPromotions = promotions.map(promo => ({
+    id: promo.id,
+    title: promo.title,
+    description: promo.description,
+    image: promo.imageUrl.startsWith('http') ? promo.imageUrl : `${process.env.NEXT_PUBLIC_APP_URL || ''}${promo.imageUrl}`,
+    buttonText: promo.buttonText || "Order Now",
+    buttonLink: promo.buttonLink || "/shop"
+  }));
+
   return (
     <div className="container mx-auto px-4">
-      <HeroCarousel promotions={promotions} />
-      {isLoadingItems ? (
+      <HeroCarousel promotions={formattedPromotions} />
+      {isLoading.items ? (
         <div className="py-12 text-center">
           <p className="text-lg text-muted-foreground">Loading popular items...</p>
         </div>
@@ -184,38 +239,22 @@ export default function HomePage() {
   );
 }
 
-const promotions = [
+// Fallback promotions in case the API fails
+const fallbackPromotions = [
   {
     id: 1,
-    title: "Summer Special",
-    description: "Get 20% off on all pizzas this summer!",
-    image: "img/hero/B3.jpg?height=600&width=1200",
+    title: "Welcome to Flames Pizzeria",
+    description: "Experience the taste of authentic Italian cuisine made with love and fresh ingredients.",
+    image: "/img/hero/fallback-1.jpg",
     buttonText: "Order Now",
     buttonLink: "/shop",
   },
   {
     id: 2,
-    title: "New Submarine Combo",
-    description:
-      "Try our new submarine combo with fries and drink for just Rs. 2299.00",
-    image: "img/hero/B4.jpg?height=600&width=1200",
-    buttonText: "Try Now",
-    buttonLink: "/shop",
-  },
-  {
-    id: 3,
-    title: "Family Meal Deal",
-    description: "2 Large Pizzas, 4 Burgers, and 2L Soda for Rs. 3999.00",
-    image: "img/hero/B5.jpg?height=600&width=1200",
-    buttonText: "Feed the Family",
-    buttonLink: "/shop",
-  },
-  {
-    id: 4,
-    title: "Family Meal Deal",
-    description: "2 Large Pizzas, 4 Burgers, and 2L Soda for Rs. 5999.00",
-    image: "img/hero/B6.jpg?height=600&width=1200",
-    buttonText: "Feed the Family",
+    title: "Special Deals Every Week",
+    description: "Check out our weekly specials and save on your favorite dishes!",
+    image: "/img/hero/fallback-2.jpg",
+    buttonText: "View Specials",
     buttonLink: "/shop",
   },
 ];

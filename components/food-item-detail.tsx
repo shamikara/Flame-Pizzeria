@@ -28,6 +28,8 @@ export type FoodItem = {
   category: string
   foodType: number
   customizations: Customization[]
+  ratingAverage?: number
+  ratingCount?: number
 }
 
 export function FoodItemDetail({ item }: { item: FoodItem }) {

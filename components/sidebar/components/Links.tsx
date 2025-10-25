@@ -15,6 +15,7 @@ import {
   CalendarDays,
   ChefHat,
   ClipboardList,
+  Megaphone,
 } from "lucide-react";
 
 import { UserPayload } from "@/lib/session"; // Import the type
@@ -28,6 +29,7 @@ const allDashboardLinks = [
   { href: "/dashboard/orders", label: "Orders", icon: ShoppingCart, roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'] },
   { href: "/dashboard/foods", label: "Foods", icon: Package, roles: ['ADMIN', 'MANAGER', 'CHEF', 'WAITER'] },
   { href: "/dashboard/customizations", label: "Add-on Extras", icon: Salad, roles: ['ADMIN', 'MANAGER', 'CHEF'] },
+  { href: "/dashboard/promotions", label: "Promotion Banners", icon: Megaphone, roles: ['ADMIN', 'MANAGER'] },
   { href: "/dashboard/catering", label: "Catering Requests", icon: CalendarDays, roles: ['ADMIN', 'MANAGER'] },
   { href: "/dashboard/employees", label: "Employees", icon: Users2, roles: ['ADMIN', 'MANAGER'] },
   { href: "/dashboard/users", label: "Customers", icon: User, roles: ['ADMIN', 'MANAGER'] },

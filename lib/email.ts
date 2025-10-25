@@ -20,6 +20,20 @@ type TemplateData = {
     requestId: number | string
     eventDate?: string
     guestCount?: number
+    billSnapshot?: {
+      currency: string
+      subtotal: number
+      serviceCharge: number
+      tax: number
+      total: number
+      lines: Array<{
+        id: string
+        name: string
+        price: number
+        quantity: number
+        lineTotal: number
+      }>
+    }
   }
   "password-reset": {
     resetLink: string
@@ -123,21 +137,85 @@ function buildTemplate(template: TemplateName, data: TemplateData[TemplateName])
   switch (template) {
     case "catering-confirmation": {
       const payload = data as TemplateData["catering-confirmation"]
+      const hasBillSnapshot = Boolean(payload.billSnapshot)
+      const currency = (value: number) =>
+        payload.billSnapshot?.currency
+          ? new Intl.NumberFormat('en-LK', {
+              style: 'currency',
+              currency: payload.billSnapshot.currency,
+              maximumFractionDigits: 0,
+            }).format(value)
+          : `LKR ${value.toLocaleString('en-LK', { maximumFractionDigits: 0 })}`
+      const billLinesHtml = hasBillSnapshot
+        ? payload.billSnapshot!.lines
+            .map(
+              (line) => `
+          <tr>
+            <td style="padding:6px 8px; border-bottom:1px solid #f1f1f1;">
+              <div style="font-weight:600;">${line.name}</div>
+              <div style="font-size:12px; color:#555;">${currency(line.price)} × ${line.quantity}</div>
+            </td>
+            <td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f1f1; font-weight:600;">${currency(line.lineTotal)}</td>
+          </tr>
+        `,
+            )
+            .join('')
+        : ''
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 640px; color: #2f2f2f;">
           <h1 style="color: #e67e22;">Hi ${payload.name},</h1>
           <p>Thanks for choosing Flames Pizzeria for your event. We've logged request <strong>#${payload.requestId}</strong>.</p>
           ${payload.eventDate ? `<p><strong>Event date:</strong> ${payload.eventDate}</p>` : ""}
           ${payload.guestCount ? `<p><strong>Guest count:</strong> ${payload.guestCount}</p>` : ""}
+          ${
+            hasBillSnapshot
+              ? `
+          <div style="margin-top:24px; padding:16px; border:1px solid #f1f1f1; border-radius:10px; background:#fff8f1;">
+            <h2 style="margin:0 0 12px 0; font-size:18px; color:#d35400;">Estimated cost breakdown</h2>
+            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+              <tbody>
+                ${billLinesHtml}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td style="padding:6px 8px; text-align:right; font-weight:600;">Subtotal</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:600;">${currency(payload.billSnapshot!.subtotal)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 8px; text-align:right; color:#555;">Service charge</td>
+                  <td style="padding:6px 8px; text-align:right; color:#555;">${currency(payload.billSnapshot!.serviceCharge)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 8px; text-align:right; color:#555;">Estimated tax</td>
+                  <td style="padding:6px 8px; text-align:right; color:#555;">${currency(payload.billSnapshot!.tax)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 8px; text-align:right; font-weight:700; border-top:2px solid #d35400;">Estimated total</td>
+                  <td style="padding:12px 8px; text-align:right; font-weight:700; border-top:2px solid #d35400;">${currency(payload.billSnapshot!.total)}</td>
+                </tr>
+              </tfoot>
+            </table>
+            <p style="font-size:12px; color:#7f8c8d; margin-top:12px;">Final pricing will adjust once we confirm menu selections, dietary requirements, and logistics.</p>
+          </div>
+          `
+              : ''
+          }
           <p>Our catering team will reach out within 24 hours to finalize the menu and logistics.</p>
           <p>Thank you for choosing Flames Pizzeria for your event!</p>
           <br/><br/>
           <p style="margin-top: 24px;">Cheers,<br/>Flames Pizzeria Catering Team</p>
         </div>
       `
+      const textBillLines = hasBillSnapshot
+        ? `\n\nEstimated cost breakdown: ${payload.billSnapshot!.lines
+            .map(
+              (line) => `${line.name} x${line.quantity} = ${currency(line.lineTotal)}`,
+            )
+            .join('; ')}\nSubtotal: ${currency(payload.billSnapshot!.subtotal)}\nService charge: ${currency(payload.billSnapshot!.serviceCharge)}\nEstimated tax: ${currency(payload.billSnapshot!.tax)}\nEstimated total: ${currency(payload.billSnapshot!.total)}`
+        : ''
       const text = `Hi ${payload.name},\nYour catering request (#${payload.requestId}) is in!$${
         payload.eventDate ? `\nEvent date: ${payload.eventDate}` : ""
-      }$${payload.guestCount ? `\nGuest count: ${payload.guestCount}` : ""}\n\nWe'll be in touch soon.\nFlames Pizzeria Catering Team`
+      }$$${payload.guestCount ? `\nGuest count: ${payload.guestCount}` : ""}${textBillLines}\n\nWe'll be in touch soon.\nFlames Pizzeria Catering Team`
       return { html, text: text.replace(/\$/g, "") }
     }
     case "password-reset": {

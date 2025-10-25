@@ -5,15 +5,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoginForm } from '@/components/login-form';
 import { RegisterForm } from '@/components/register-form';
 
+// Define the search params type
+type SearchParams = {
+  tab?: string | string[];
+  email?: string | string[];
+  [key: string]: string | string[] | undefined;
+};
+
 // The page now receives searchParams and passes them down
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: SearchParams;
 }) {
-  // Determine which tab to show by default. Useful for redirects.
-  const defaultTab = searchParams?.tab === 'register' ? 'register' : 'login';
-  const defaultEmail = typeof searchParams?.email === 'string' ? searchParams.email : '';
+  // Safely extract search params
+  const tabParam = Array.isArray(searchParams.tab) ? searchParams.tab[0] : searchParams.tab;
+  const emailParam = Array.isArray(searchParams.email) ? searchParams.email[0] : searchParams.email;
+  
+  const defaultTab = tabParam === 'register' ? 'register' : 'login';
+  const defaultEmail = emailParam || '';
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">

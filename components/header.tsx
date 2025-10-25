@@ -5,13 +5,11 @@ import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { ShoppingCart, Menu, X, LogOut, User as UserIcon, LayoutDashboard, Sun, Moon, Loader2 } from "lucide-react"
-import { useCart } from "@/components/cart-provider"
+import { Menu, X, LogOut, User as UserIcon, LayoutDashboard, Sun, Moon, Loader2, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { useSession } from "@/components/session-provider"
-import { usePathname, useRouter } from "next/navigation";
-import { ProfileModal } from "@/components/profile-modal";
+import { usePathname } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +21,7 @@ import {
 import { CartSheet } from "./cart-sheet";
 import { Bell } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { AccountSettingsModal } from './account-settings-modal';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -31,10 +30,9 @@ export default function Header() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [themeMounted, setThemeMounted] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
-  const { resolvedTheme, setTheme } = useTheme()
-  const { itemCount } = useCart();
-  const { user, handleLogout: sessionLogout, refreshSession } = useSession()
-  const router = useRouter();
+  const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState(false)
+  const { resolvedTheme, setTheme } = useTheme();
+  const { user, handleLogout: sessionLogout } = useSession();
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/dashboard');
 
@@ -268,7 +266,21 @@ export default function Header() {
                   </DropdownMenuItem>
                 )}
 
-                <ProfileModal />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    <UserIcon className="mr-2 h-4 w-4" />
+                    <span>My Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  className="cursor-pointer"
+                  onClick={() => setIsAccountSettingsOpen(true)}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Account Settings</span>
+                </DropdownMenuItem>
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-50">
                   {loggingOut ? (
@@ -322,6 +334,11 @@ export default function Header() {
           <Link href="/custom-orders" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
             Bulk Orders
           </Link>
+          {user?.role === 'CUSTOMER' && (
+            <Link href="/profile" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
+              My Profile
+            </Link>
+          )}
           <Link href="/login" className="text-lg font-medium" onClick={() => setIsMenuOpen(false)}>
             Login
           </Link>
@@ -342,6 +359,11 @@ export default function Header() {
           )}
         </nav>
       </div>
+      {/* Account Settings Modal */}
+      <AccountSettingsModal 
+        open={isAccountSettingsOpen}
+        onOpenChange={setIsAccountSettingsOpen}
+      />
     </header>
   )
 }

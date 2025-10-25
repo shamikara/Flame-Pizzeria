@@ -1,17 +1,39 @@
 import { sendEmail } from '@/lib/email';
 import prisma from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { getServerSession } from '@/lib/session';
 
-const MIN_GUESTS = 9;
-const MAX_GUESTS = 101;
-const MIN_LEAD_DAYS = 5;
+const MIN_GUESTS = 25;
+const MAX_GUESTS = 150;
+const MIN_LEAD_DAYS = 6;
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    const requestBody = await request.json();
 
-    const guestCount = Number(data.guestCount);
-    const eventDate = new Date(data.eventDate);
+    const {
+      eventType,
+      eventDate: eventDateRaw,
+      guestCount: guestCountRaw,
+      contactName,
+      contactEmail,
+      menuItems,
+      specialRequests,
+      billSnapshot,
+      ...unknownFields
+    } = requestBody;
+
+    // Ensure we don't silently drop unexpected fields without logging for debugging
+    if (Object.keys(unknownFields).length > 0) {
+      console.debug('[CATERING_REQUEST] Ignored extra fields:', Object.keys(unknownFields));
+    }
+
+    const session = await getServerSession();
+    const userId = session?.userId ?? null;
+
+    const guestCount = Number(guestCountRaw);
+    const eventDate = new Date(eventDateRaw);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -63,29 +85,67 @@ export async function POST(request: Request) {
       );
     }
     
+    const quoteSubtotal = billSnapshot?.subtotal ?? null;
+    const quoteServiceCharge = billSnapshot?.serviceCharge ?? null;
+    const quoteTax = billSnapshot?.tax ?? null;
+    const quoteTotal = billSnapshot?.total ?? null;
+    const depositDue = quoteTotal != null ? Number((quoteTotal * 0.25).toFixed(2)) : null;
+
     const cateringRequest = await prisma.cateringrequest.create({
       data: {
-        ...data,
-        guestCount,
+        eventType,
         eventDate,
-        status: 'PENDING'
-      }
+        guestCount,
+        contactName,
+        contactEmail,
+        menuItems: {
+          ...menuItems,
+          // Store the calculated totals in the menuItems JSON field
+          totals: billSnapshot
+            ? {
+                subtotal: quoteSubtotal,
+                serviceCharge: quoteServiceCharge,
+                tax: quoteTax,
+                total: quoteTotal,
+              }
+            : null,
+          depositDue,
+        },
+        specialRequests,
+        status: 'PENDING',
+      },
     });
 
     const emailResult = await sendEmail({
-      to: data.contactEmail,
+      to: contactEmail,
       subject: 'Catering Request Received',
       template: 'catering-confirmation',
       data: {
-        name: data.contactName,
-        requestId: cateringRequest.id
+        name: contactName,
+        requestId: cateringRequest.id,
+        eventDate: eventDate.toLocaleDateString('en-GB', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        guestCount,
+        billSnapshot: billSnapshot ?? undefined
       }
     });
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       id: cateringRequest.id,
-      // Include toast data in response
+      status: cateringRequest.status,
+      totals: billSnapshot
+        ? {
+            subtotal: quoteSubtotal,
+            serviceCharge: quoteServiceCharge,
+            tax: quoteTax,
+            total: quoteTotal,
+          }
+        : null,
+      depositDue,
       toast: {
         title: emailResult.success 
           ? 'Request Submitted' 
@@ -95,7 +155,9 @@ export async function POST(request: Request) {
           : 'Request submitted but email failed',
         variant: emailResult.success ? 'success' : 'warning'
       }
-    });
+    };
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Catering request error:', error);

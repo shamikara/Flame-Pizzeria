@@ -63,8 +63,8 @@ export async function middleware(request: NextRequest) {
     }
     
     const rolePermissions: Record<UserPayload['role'], string[]> = {
-        ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/catering', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
-        MANAGER: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/catering', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
+        ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/promotions', '/dashboard/catering', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
+        MANAGER: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/promotions', '/dashboard/catering', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
         CHEF: ['/dashboard/chef/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/profile'],
         WAITER: ['/dashboard/waiter/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
         STORE_KEEP: ['/dashboard/store-keep/overview', '/dashboard/store-keep/reports', '/dashboard/ingredients', '/dashboard/profile'],

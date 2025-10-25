@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation"
 import { Loader2, Utensils } from "lucide-react"
 import { getImagePath } from "@/lib/image-utils"
 import { FoodTypeBadge } from "@/components/food-type-badge"
+import { StarRating } from "@/components/star-rating"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type Customization = {
@@ -29,6 +30,8 @@ type FoodItem = {
   foodType: number
   customizations?: Customization[]
   nutrition?: Record<string, number> | null
+  ratingAverage?: number
+  ratingCount?: number
 }
 
 export function FoodItemGrid({ items }: { items: FoodItem[] }) {
@@ -169,6 +172,7 @@ function FoodItemCard({ item }: { item: FoodItem }) {
             <div className="flex items-center gap-2 mt-1">
               <FoodTypeBadge type={item.foodType ?? 0} />
             </div>
+            <StarRating value={item.ratingAverage ?? 5} count={item.ratingCount ?? 0} className="mt-2" />
           </Link>
           <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
           <p className="font-bold">Rs. {item.price.toFixed(2)}</p>

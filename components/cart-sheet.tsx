@@ -13,7 +13,7 @@ import { Trash2, ShoppingCart, Plus, Minus } from "lucide-react"
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD", // You can change this to "LKR" for Sri Lankan Rupees or other currency
+    currency: "LKR", // You can change this to "LKR" for Sri Lankan Rupees or other currency
   }).format(price);
 };
 

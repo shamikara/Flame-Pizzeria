@@ -14,8 +14,11 @@ export function OrderSummary() {
   const { cart, removeFromCart, updateQuantity, subtotal } = useCart()
 
   // These calculations are correct
-  const tax = subtotal * 0.08
-  const total = subtotal + tax
+  const serviceChargeRate = 0.1
+  const taxRate = 0.08
+  const serviceCharge = subtotal * serviceChargeRate
+  const tax = (subtotal + serviceCharge) * taxRate
+  const total = subtotal + serviceCharge + tax
 
   // 2. Use `cart` instead of `items`
   if (!cart || cart.length === 0) {
@@ -115,6 +118,10 @@ export function OrderSummary() {
         <div className="flex justify-between text-sm">
           <span>Subtotal</span>
           <span>Rs. {subtotal.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>Service Charge (10%)</span>
+          <span>Rs. {serviceCharge.toFixed(2)}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span>Tax (8%)</span>

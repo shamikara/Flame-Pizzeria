@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { order_status } from "@prisma/client";
 import { getServerSession } from "@/lib/session";
 import { deductInventoryForOrder, InventoryError } from "@/lib/inventory";
+import { sendEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,6 +71,25 @@ export async function POST(request: NextRequest) {
           transactionId: paymentIntentId,
         },
       });
+    }
+
+    // Send order confirmation email
+    try {
+      const customer = await prisma.user.findUnique({
+        where: { id: order.userId },
+        select: { email: true },
+      });
+
+      if (customer?.email) {
+        await sendEmail({
+          to: customer.email,
+          subject: `Your Flames Pizzeria order #${order.id} is confirmed!`,
+          template: "order-confirmation",
+          data: { orderId: order.id },
+        });
+      }
+    } catch (emailError) {
+      console.error("[CONFIRM_PAYMENT_EMAIL_ERROR]", emailError);
     }
 
     return NextResponse.json({ success: true, order });

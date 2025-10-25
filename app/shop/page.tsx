@@ -73,26 +73,52 @@ async function getFoodItems(categorySlug: string, sort: SortOption, search: stri
 
   const dbItems = await prisma.fooditem.findMany({
     where,
-    include: { customizations: true, category: true },
+    include: {
+      customizations: true,
+      category: true,
+      ratings: { select: { stars: true } },
+      _count: { select: { ratings: true } },
+    },
   })
 
-  const mapped = dbItems.map((item: { id: any; name: any; description: any; price: any; imageUrl: any; category: { name: any }; foodType: any; nutrition: any; customizations: any[] }) => ({
-    id: Number(item.id),
-    name: item.name,
-    description: item.description || "",
-    longDescription: item.description || "",
-    price: item.price,
-    image: item.imageUrl || "/placeholder.svg",
-    category: item.category?.name || "unknown",
-    foodType: item.foodType ?? 0,
-    nutrition: item.nutrition ?? null,
-    customizations:
-      item.customizations?.map((c) => ({
-        id: Number(c.id),
-        name: c.name,
-        price: c.price,
-      })) || [],
-  }))
+  const mapped = dbItems.map((item: {
+    id: any;
+    name: any;
+    description: any;
+    price: any;
+    imageUrl: any;
+    category: { name: any };
+    foodType: any;
+    nutrition: any;
+    customizations: any[];
+    ratings?: { stars: number }[];
+    _count?: { ratings?: number };
+  }) => {
+    const ratingCount = item._count?.ratings ?? item.ratings?.length ?? 0
+    const ratingAverage = ratingCount
+      ? item.ratings!.reduce((sum, rating) => sum + rating.stars, 0) / ratingCount
+      : 5
+
+    return {
+      id: Number(item.id),
+      name: item.name,
+      description: item.description || "",
+      longDescription: item.description || "",
+      price: item.price,
+      image: item.imageUrl || "/placeholder.svg",
+      category: item.category?.name || "unknown",
+      foodType: item.foodType ?? 0,
+      nutrition: item.nutrition ?? null,
+      customizations:
+        item.customizations?.map((c) => ({
+          id: Number(c.id),
+          name: c.name,
+          price: c.price,
+        })) || [],
+      ratingAverage,
+      ratingCount,
+    }
+  })
 
   const sorters: Record<SortOption, (a: FoodItem, b: FoodItem) => number> = {
     recommended: (a, b) => a.id - b.id,

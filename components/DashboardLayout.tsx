@@ -29,6 +29,7 @@ import flame from "@/public/img/logo.png";
 import { UserPayload } from "@/lib/session"; // <-- CHANGE 1: Import the user type
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/components/session-provider";
+import { SupportModal } from "@/components/support-modal";
 
 // Your Logo Component (for the mobile sidebar)
 const Logo = () => (
@@ -181,7 +182,7 @@ export default function DashboardLayout({
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/profile" className="cursor-pointer w-full">Settings</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>Support</DropdownMenuItem>
+                  <SupportModal />
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
                     Logout
