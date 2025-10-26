@@ -80,24 +80,7 @@ async function getUpcomingOrdersImpact() {
           foodItem: {
             select: {
               name: true,
-              recipe: {
-                select: {
-                  ingredients: {
-                    select: {
-                      quantity: true,
-                      unit: true,
-                      ingredient: {
-                        select: {
-                          id: true,
-                          name: true,
-                          stock: true,
-                          unit: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
+              // Note: Recipe relation not available in current schema
             },
           },
         },
@@ -132,9 +115,9 @@ async function getUpcomingOrdersImpact() {
     }
   }
 
-  return Array.from(impact.values())
-    .sort((a, b) => b.required - a.required)
-    .slice(0, 5)
+  // Note: Recipe relation not available in current schema
+  // Return empty array for now - would need recipe model and relations to calculate properly
+  return []
 }
 
 export default async function StoreKeepOverviewPage() {
@@ -260,7 +243,7 @@ export default async function StoreKeepOverviewPage() {
         <CardHeader>
           <CardTitle className="text-gray-200">Upcoming order impact</CardTitle>
           <CardDescription className="text-gray-400">
-            Ingredients that will be consumed by open orders.
+            Ingredients that will be consumed by open orders (recipe calculation not available).
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -42,15 +42,18 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          // Update catering request status
-          await prisma.cateringrequest.update({
-            where: { id: payment.orderId },
-            data: {
-              status: "CONFIRMED",
-            },
-          });
+          // Update catering request status using orderId as fallback
+          const requestId = payment.cateringRequestId || payment.orderId;
+          if (requestId) {
+            await prisma.cateringrequest.update({
+              where: { id: requestId },
+              data: {
+                status: "CONFIRMED",
+              },
+            });
+          }
 
-          console.log(`Payment ${paymentIntent.id} completed for request ${payment.orderId}`);
+          console.log(`Payment ${paymentIntent.id} completed for request ${requestId}`);
         }
         break;
 

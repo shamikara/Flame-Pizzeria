@@ -145,14 +145,16 @@ model orderitem {
 }
 
 model payment {
-  id            Int            @id @default(autoincrement())
-  amount        Float
-  method        payment_method
-  status        payment_status
-  transactionId String?
-  createdAt     DateTime       @default(now())
-  orderId       Int
-  order         order          @relation(fields: [orderId], references: [id])
+  id                Int              @id @default(autoincrement())
+  amount            Float
+  method            payment_method
+  status            payment_status
+  transactionId     String?
+  createdAt         DateTime         @default(now())
+  orderId           Int
+  order             order            @relation(fields: [orderId], references: [id])
+  cateringrequest   cateringrequest? @relation(fields: [cateringrequestId], references: [id])
+  cateringrequestId Int?
 
   @@index([orderId], map: "payment_orderId_fkey")
 }
@@ -354,7 +356,7 @@ model leadership {
 }
 
 model cateringrequest {
-  id              Int      @id @default(autoincrement())
+  id              Int       @id @default(autoincrement())
   eventType       String
   eventDate       DateTime
   guestCount      Int
@@ -362,8 +364,9 @@ model cateringrequest {
   contactEmail    String
   menuItems       Json
   specialRequests String?
-  status          String   @default("PENDING")
-  createdAt       DateTime @default(now())
+  status          String    @default("PENDING")
+  createdAt       DateTime  @default(now())
+  payments        payment[]
 }
 
 model passwordreset {

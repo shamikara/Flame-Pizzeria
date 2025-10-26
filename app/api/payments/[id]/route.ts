@@ -3,11 +3,13 @@ import prisma from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     const payment = await prisma.payment.findFirst({
-      where: { orderId: parseInt(params.id) }
+      where: { orderId: parseInt(id) }
     });
 
     if (!payment) {

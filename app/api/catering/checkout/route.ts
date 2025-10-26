@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     // Create payment record in database
     await prisma.payment.create({
       data: {
-        orderId: parseInt(requestId),
+        orderId: parseInt(requestId), // Using orderId temporarily until schema migration
         amount: depositDue,
         status: 'PENDING',
         method: 'CARD',

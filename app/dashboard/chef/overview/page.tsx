@@ -24,73 +24,10 @@ async function getKitchenStats() {
   }
 }
 
-async function getActiveIngredientLoad() {
-  const activeOrders = await db.order.findMany({
-    where: {
-      status: {
-        in: [order_status.PENDING, order_status.CONFIRMED, order_status.PREPARING],
-      },
-    },
-    select: {
-      id: true,
-      items: {
-        select: {
-          quantity: true,
-          foodItem: {
-            select: {
-              name: true,
-              recipe: {
-                select: {
-                  ingredients: {
-                    select: {
-                      quantity: true,
-                      unit: true,
-                      ingredient: {
-                        select: {
-                          id: true,
-                          name: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  })
-
-  const requirements = new Map<
-    number,
-    { name: string; requiredQuantity: number; unit: string }
-  >()
-
-  for (const order of activeOrders) {
-    for (const item of order.items) {
-      const recipeIngredients = item.foodItem.recipe?.ingredients ?? []
-      for (const recipeIngredient of recipeIngredients) {
-        const ingredientId = recipeIngredient.ingredient.id
-        const existing = requirements.get(ingredientId)
-        const required = recipeIngredient.quantity * item.quantity
-
-        if (existing) {
-          existing.requiredQuantity += required
-        } else {
-          requirements.set(ingredientId, {
-            name: recipeIngredient.ingredient.name,
-            requiredQuantity: required,
-            unit: recipeIngredient.unit,
-          })
-        }
-      }
-    }
-  }
-
-  return Array.from(requirements.values())
-    .sort((a, b) => b.requiredQuantity - a.requiredQuantity)
-    .slice(0, 5)
+async function getActiveIngredientLoad(): Promise<{ name: string; requiredQuantity: number; unit: string }[]> {
+  // Note: Recipe relation not available in current schema
+  // Return empty array for now - would need recipe model and relations to calculate properly
+  return []
 }
 
 async function getTickets() {
@@ -208,15 +145,15 @@ export default async function ChefOverviewPage() {
         <Card className="col-span-2 border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900">
           <CardHeader>
             <CardTitle className="text-gray-200">Ingredient Load</CardTitle>
-            <CardDescription className="text-gray-400">Top ingredients needed for active tickets.</CardDescription>
+            <CardDescription className="text-gray-400">Top ingredients needed for active tickets (recipe calculation not available).</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {ingredientLoad.length === 0 && (
-                <p className="text-sm text-gray-400">No ingredient load detected.</p>
+                <p className="text-sm text-gray-400">Recipe-based ingredient calculation not available. This feature requires recipe relations in the database schema.</p>
               )}
-              {ingredientLoad.map((entry) => (
-                <div key={entry.name} className="flex items-center justify-between text-sm">
+              {ingredientLoad.map((entry, index) => (
+                <div key={entry.name + index} className="flex items-center justify-between text-sm">
                   <span className="text-gray-300">{entry.name}</span>
                   <span className="text-white font-medium">
                     {entry.requiredQuantity.toFixed(2)} {entry.unit.toLowerCase()}
