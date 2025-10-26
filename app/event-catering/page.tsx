@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/session-provider";
+import { Spinner } from "@/components/ui/spinner";
 import { Loader2 } from "lucide-react";
 
 interface ServiceItem {
@@ -179,7 +180,7 @@ export default function EventCateringPage() {
 
   return (
     <div className="container mx-auto py-12">
-      <h1 className="text-4xl font-bold mb-8 flame-text text-center">Event Catering</h1>
+      <h1 className="text-4xl font-bold mb-8 flame-text text-center text-foreground">Event Catering</h1>
       
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left side - Catering Form */}
@@ -216,9 +217,9 @@ export default function EventCateringPage() {
         <div className="lg:w-96">
           <Card className="sticky top-8">
             <CardHeader>
-              <CardTitle className="text-xl">Your Bill</CardTitle>
+              <CardTitle className="text-xl text-card-foreground">Your Bill</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               {services.length === 0 ? (
                 <p className="text-muted-foreground text-sm">
                   Select services to see your bill
@@ -229,12 +230,12 @@ export default function EventCateringPage() {
                     {services.map((service) => (
                       <div key={service.id} className="flex justify-between">
                         <div>
-                          <p className="font-medium">{service.name}</p>
+                          <p className="font-medium text-card-foreground">{service.name}</p>
                           <p className="text-sm text-muted-foreground">
                             {formatCurrency.format(service.price)} × {service.quantity}
                           </p>
                         </div>
-                        <span className="font-medium">
+                        <span className="font-medium text-card-foreground">
                           {formatCurrency.format(service.price * service.quantity)}
                         </span>
                       </div>
@@ -256,7 +257,7 @@ export default function EventCateringPage() {
                       <span>Tax ({(taxRate * 100).toFixed(0)}%)</span>
                       <span>{formatCurrency.format(displayedTax)}</span>
                     </div>
-                    <div className="flex justify-between font-bold pt-2 border-t">
+                    <div className="flex justify-between font-bold pt-2 border-t text-card-foreground">
                       <span>Total</span>
                       <span>{formatCurrency.format(displayedTotal)}</span>
                     </div>
@@ -270,10 +271,10 @@ export default function EventCateringPage() {
                   {paymentStatus && (
                     <div className={`mt-4 p-3 rounded-lg border ${
                       paymentStatus.status === 'COMPLETED'
-                        ? 'bg-green-50 border-green-200'
+                        ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'
                         : paymentStatus.status === 'FAILED'
-                        ? 'bg-red-50 border-red-200'
-                        : 'bg-yellow-50 border-yellow-200'
+                        ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                        : 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800'
                     }`}>
                       <div className="flex items-center justify-between">
                         <div>
@@ -305,7 +306,7 @@ export default function EventCateringPage() {
                   >
                     {isCheckoutLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Spinner size="sm" className="mr-2" />
                         Preparing payment…
                       </>
                     ) : paymentStatus?.status === 'COMPLETED' ? (

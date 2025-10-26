@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Mail, Loader2 } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 import Image from "next/image"
 
 interface NewsletterSubscriptionProps {
@@ -88,7 +89,7 @@ export function NewsletterSubscription({
               disabled={isSubscribing}
               className="bg-white text-orange-600 hover:bg-gray-100 transition"
             >
-              {isSubscribing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Subscribe"}
+              {isSubscribing ? <Spinner size="sm" className="text-orange-600" /> : "Subscribe"}
             </Button>
           </form>
         </div>
@@ -128,7 +129,7 @@ export function NewsletterSubscription({
             >
               {isSubscribing ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Spinner size="sm" className="mr-2" />
                   Subscribing...
                 </>
               ) : (
@@ -167,7 +168,7 @@ export function NewsletterSubscription({
           disabled={isSubscribing}
           className="bg-orange-500 hover:bg-orange-600 transition"
         >
-          {isSubscribing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Subscribe"}
+          {isSubscribing ? <Spinner size="sm" className="text-orange-600" /> : "Subscribe"}
         </Button>
       </form>
     </motion.div>

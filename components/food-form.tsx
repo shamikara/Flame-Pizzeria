@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 
 const FOOD_TYPE_FLAGS = [
@@ -423,7 +424,7 @@ export function FoodForm({ foodItem, onFormSubmit, nextFoodId }: FoodFormProps) 
           <Label htmlFor="category">Category *</Label>
           {isLoadingCategories ? (
             <div className="flex items-center gap-2 text-sm text-gray-400">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner size="sm" />
               Loading categories...
             </div>
           ) : (
@@ -496,7 +497,7 @@ export function FoodForm({ foodItem, onFormSubmit, nextFoodId }: FoodFormProps) 
         </p>
         {isLoadingIngredients ? (
           <div className="flex items-center gap-2 text-sm text-gray-400">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Spinner size="sm" />
             Loading ingredients...
           </div>
         ) : ingredientOptions.length === 0 ? (
@@ -585,7 +586,7 @@ export function FoodForm({ foodItem, onFormSubmit, nextFoodId }: FoodFormProps) 
         <Button type="submit" disabled={isSubmitting || isLoadingCategories}>
           {isSubmitting ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Spinner size="sm" className="mr-2" />
               {foodItem ? "Updating..." : "Creating..."}
             </>
           ) : (

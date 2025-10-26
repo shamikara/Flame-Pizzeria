@@ -18,6 +18,7 @@ import { useCart } from "@/components/cart-provider";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Loader2, CheckCircle2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 const formSchema = z.object({
   email: z.string().email(),
@@ -166,8 +167,10 @@ export function CheckoutForm({ onOrderCreated }: CheckoutFormProps) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          <span>Loading...</span>
+          <div className="flex items-center gap-3">
+            <Spinner size="md" />
+            <span>Loading...</span>
+          </div>
         </CardContent>
       </Card>
     );
@@ -299,7 +302,7 @@ export function CheckoutForm({ onOrderCreated }: CheckoutFormProps) {
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Spinner size="sm" className="mr-2" />
                     Creating Order...
                   </>
                 ) : (

@@ -184,7 +184,7 @@ export function LoginForm({ searchParams, onLoginSuccess }: LoginFormProps) {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner size="sm" className="mr-2" />
                 Signing In...
               </>
             ) : (

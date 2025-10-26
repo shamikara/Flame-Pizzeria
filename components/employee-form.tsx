@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { Spinner } from "@/components/ui/spinner";
 import { user_role } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,14 @@ export function EmployeeForm({ onFormSubmit }: EmployeeFormProps) {
           )} />
         </div>
         <Button type="submit" className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Creating..." : "Create Employee"}
+          {form.formState.isSubmitting ? (
+            <>
+              <Spinner size="sm" className="mr-2" />
+              Creating...
+            </>
+          ) : (
+            "Create Employee"
+          )}
         </Button>
       </form>
     </Form>

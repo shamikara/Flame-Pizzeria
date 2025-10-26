@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 type CateringQuoteLine = {
     id: string;
@@ -80,6 +81,10 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isGuestCountValid, setIsGuestCountValid] = useState(true);
     const [guestCountInput, setGuestCountInput] = useState('50');
+    const [isEventTypeValid, setIsEventTypeValid] = useState(false);
+    const [isServiceStyleValid, setIsServiceStyleValid] = useState(false);
+    const [isEventDateValid, setIsEventDateValid] = useState(true);
+    const [isBudgetRangeValid, setIsBudgetRangeValid] = useState(false);
 
     const MIN_GUESTS = 25;
     const MAX_GUESTS = 150;
@@ -175,12 +180,22 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
         return lines;
     }, [guestCount, selectedBudget, selectedEvent, selectedFoodCategories, selectedServiceStyle]);
 
+    // Validate step 1 fields in real-time
     useEffect(() => {
-        if (!onServicesUpdate || preventServicesUpdate) {
-            return;
-        }
-        onServicesUpdate(billLines);
-    }, [billLines, onServicesUpdate, preventServicesUpdate]);
+        // Event Type validation
+        setIsEventTypeValid(formData.eventType.trim() !== '');
+
+        // Service Style validation
+        setIsServiceStyleValid(formData.serviceStyle.trim() !== '');
+
+        // Budget Range validation
+        setIsBudgetRangeValid(formData.budgetRange.trim() !== '');
+
+        // Event Date validation
+        const selectedEventDate = new Date(formData.eventDate);
+        selectedEventDate.setHours(0, 0, 0, 0);
+        setIsEventDateValid(selectedEventDate >= minEventDate);
+    }, [formData.eventType, formData.serviceStyle, formData.budgetRange, formData.eventDate, minEventDate]);
 
     const handleCategoryToggle = (value: string, isChecked: boolean) => {
         setFormData((prev) => {
@@ -205,10 +220,12 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
         const newErrors: Record<string, string> = {};
         if (!formData.contactName) newErrors.contactName = 'Name is required';
         if (!formData.contactEmail.includes('@')) newErrors.contactEmail = 'Valid email required';
+        if (!formData.eventType) newErrors.eventType = 'Select an event type';
         if (formData.guestCount < MIN_GUESTS || formData.guestCount > MAX_GUESTS) {
             newErrors.guestCount = `Guest count must be between ${MIN_GUESTS} and ${MAX_GUESTS}`;
         }
         if (!formData.serviceStyle) newErrors.serviceStyle = 'Select a service style';
+        if (!formData.budgetRange) newErrors.budgetRange = 'Select a budget range';
 
         const selectedEventDate = new Date(formData.eventDate);
         selectedEventDate.setHours(0, 0, 0, 0);
@@ -339,19 +356,27 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
         onServicesUpdate?.([]);
         setGuestCountInput('50');
         setIsGuestCountValid(true);
+        setIsEventTypeValid(false);
+        setIsServiceStyleValid(false);
+        setIsEventDateValid(true);
+        setIsBudgetRangeValid(false);
     };
 
     return (
         <div className="space-y-6">
             {step === 1 && (
-                <div className="space-y-4 rounded-xl border border-gray-800 bg-gray-900/60 p-8">
-                    <h3 className="text-xl font-semibold">Event Details</h3>
+                <div className="space-y-4 rounded-xl border bg-card p-8 shadow-sm">
+                    <h3 className="text-xl font-semibold text-card-foreground">Event Details</h3>
+                    <p className="text-sm text-muted-foreground mb-4">* Required fields</p>
                     <Select
                         value={formData.eventType}
-                        onValueChange={(value) => setFormData({ ...formData, eventType: value })}
+                        onValueChange={(value) => {
+                            setFormData({ ...formData, eventType: value });
+                            setErrors({ ...errors, eventType: '' });
+                        }}
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Event Type" />
+                            <SelectValue placeholder="Event Type *" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="wedding">Wedding</SelectItem>
@@ -362,10 +387,13 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                             <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                     </Select>
+                    {errors.eventType && (
+                        <p className="text-sm text-red-500">{errors.eventType}</p>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm mb-1">Event Date</label>
+                            <label className="block text-sm mb-1 text-foreground">Event Date *</label>
                             <div className=" pt-16 w-full h-full">
                             <Calendar
                                 className="justify-center mx-auto"
@@ -382,13 +410,13 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                             {errors.eventDate && (
                                 <p className="text-sm text-red-500">{errors.eventDate}</p>
                             )}
-                            <p className="text-xs text-gray-400 mt-2 ml-12">
+                            <p className="text-xs text-muted-foreground mt-2 ml-12">
                                 * Events must be scheduled at least {MIN_LEAD_DAYS} days in advance.
                             </p>
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm mb-1">Guest Count</label>
+                            <label className="block text-sm mb-1 text-foreground">Guest Count *</label>
                             <Input
                                 type="number"
                                 min={MIN_GUESTS}
@@ -467,7 +495,7 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                                     setFormData({ ...formData, guestCount: parsedGuestCount });
                                 }}
                             />
-                            <p className="text-xs text-gray-400 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 Guest count must be between {MIN_GUESTS} and {MAX_GUESTS} guests.
                             </p>
 
@@ -476,7 +504,7 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                             )}
 
                             <div>
-                                <label className="block text-sm mb-1 mt-5">Preferred Cuisine or Focus</label>
+                                <label className="block text-sm mb-1 mt-5 text-foreground">Preferred Cuisine or Focus</label>
                                 <Input
                                     placeholder="E.g. Italian-inspired, vegetarian-friendly"
                                     value={formData.preferredCuisine}
@@ -489,7 +517,7 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
 
                             <div className="grid gap-4">
                                 <div>
-                                    <label className="block text-sm mb-1 mt-5">Service Style</label>
+                                    <label className="block text-sm mb-1 mt-5 text-foreground">Service Style *</label>
                                     <Select
                                         value={formData.serviceStyle}
                                         onValueChange={(value) => {
@@ -498,7 +526,7 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                                         }}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Choose service style" />
+                                            <SelectValue placeholder="Choose service style *" />
                                         </SelectTrigger>
                                         <SelectContent>
                                         <SelectItem value="buffet">Buffet</SelectItem>
@@ -512,13 +540,16 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                                 )}
                             </div>
                             <div>
-                                <label className="block text-sm mb-1 mt-5">Budget Range (per guest)</label>
+                                <label className="block text-sm mb-1 mt-5 text-foreground">Budget Range (per guest) *</label>
                                 <Select
                                     value={formData.budgetRange}
-                                        onValueChange={(value) => setFormData({ ...formData, budgetRange: value })}
+                                        onValueChange={(value) => {
+                                            setFormData({ ...formData, budgetRange: value });
+                                            setErrors({ ...errors, budgetRange: '' });
+                                        }}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select budget" />
+                                            <SelectValue placeholder="Select budget *" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="under-1500">Under LKR 1,500</SelectItem>
@@ -527,10 +558,13 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                                             <SelectItem value="over-5000">Over LKR 5,000</SelectItem>
                                         </SelectContent>
                                     </Select>
+                                    {errors.budgetRange && (
+                                        <p className="text-sm text-red-500">{errors.budgetRange}</p>
+                                    )}
                                 </div>
                             </div>
                             <div className="mt-6 space-y-3">
-                                <label className="text-sm font-semibold">Food categories to feature</label>
+                                <label className="text-sm font-semibold text-foreground">Food categories to feature</label>
                                 <p className="text-xs text-muted-foreground">
                                     Choose the menu sections you want highlighted in the sample bill. Pricing is calculated per guest.
                                 </p>
@@ -563,7 +597,7 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
 
                     <div className="gap-4">
                         <div>
-                            <label className="block text-sm mb-1 mb-5 mt-8">Venue Address (optional)</label>
+                            <label className="block text-sm mb-1 mb-5 mt-8 text-foreground">Venue Address (optional)</label>
                             <Textarea
                                 placeholder="Where will the event be hosted?"
                                 value={formData.venueAddress}
@@ -575,7 +609,7 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                         </div>
 
                         <div>
-                            <label className="block text-sm mb-1 my-5">Menu Details</label>
+                            <label className="block text-sm mb-1 my-5 text-foreground">Menu Details</label>
                             <Textarea
                                 placeholder="List items, dietary needs, kid-friendly options, etc."
                                 value={formData.menuDetails}
@@ -590,7 +624,7 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
 
             {step === 2 && (
                 <div className="space-y-4">
-                    <h3 className="text-xl font-semibold">Contact Info</h3>
+                    <h3 className="text-xl font-semibold text-card-foreground">Contact Info</h3>
                     <div className="space-y-1">
                         <Input
                             placeholder="Your Name"
@@ -629,10 +663,10 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
             )}
 
             {billLines.length > 0 && (
-                <div className="space-y-4 rounded-xl border border-primary/40 bg-primary/10/40 p-5 shadow-sm">
+                <div className="space-y-4 rounded-xl border border-primary/40 bg-primary/5 p-5 shadow-sm">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h4 className="text-lg font-semibold">Example Bill Snapshot</h4>
+                            <h4 className="text-lg font-semibold text-card-foreground">Example Bill Snapshot</h4>
                             <p className="text-xs text-muted-foreground">Auto-generated based on your current selections</p>
                         </div>
                         <span className="rounded-full bg-primary/20 px-3 py-1 text-xs font-medium text-primary">
@@ -667,7 +701,7 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                             <span>Estimated tax ({(TAX_RATE * 100).toFixed(0)}%)</span>
                             <span>{formatCurrency(estimatedTax)}</span>
                         </div>
-                        <div className="flex justify-between pt-2 text-base font-semibold">
+                        <div className="flex justify-between pt-2 text-base font-semibold text-card-foreground">
                             <span>Estimated total</span>
                             <span>{formatCurrency(estimatedTotal)}</span>
                         </div>
@@ -688,14 +722,30 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                 <Button
                     onClick={() => {
                         if (step === 1) {
+                            // Validate all required fields for step 1
+                            const step1Errors: Record<string, string> = {};
+
+                            if (!isEventTypeValid) {
+                                step1Errors.eventType = 'Please select an event type';
+                            }
+                            if (!isServiceStyleValid) {
+                                step1Errors.serviceStyle = 'Please select a service style';
+                            }
+                            if (!isBudgetRangeValid) {
+                                step1Errors.budgetRange = 'Please select a budget range';
+                            }
+                            if (!isEventDateValid) {
+                                step1Errors.eventDate = `Event date must be at least ${MIN_LEAD_DAYS} days from today`;
+                            }
                             if (!isGuestCountValid || isGuestCountOutOfRange) {
-                                setErrors((prev) => ({
-                                    ...prev,
-                                    guestCount:
-                                        prev.guestCount || `Guest count must be between ${MIN_GUESTS} and ${MAX_GUESTS} guests.`,
-                                }));
+                                step1Errors.guestCount = `Guest count must be between ${MIN_GUESTS} and ${MAX_GUESTS} guests`;
+                            }
+
+                            if (Object.keys(step1Errors).length > 0) {
+                                setErrors(step1Errors);
                                 return;
                             }
+
                             setStep(step + 1);
                             return;
                         }
@@ -703,13 +753,13 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
                         handleSubmit();
                     }}
                     disabled={
-                        (step === 1 && (!isGuestCountValid || isGuestCountOutOfRange)) ||
+                        (step === 1 && (!isGuestCountValid || isGuestCountOutOfRange || !isEventTypeValid || !isServiceStyleValid || !isBudgetRangeValid || !isEventDateValid)) ||
                         (step === 2 && isSubmitting)
                     }
                 >
                     {step === 2 && isSubmitting ? (
                         <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <Spinner size="sm" className="mr-2" />
                             Submitting...
                         </>
                     ) : step === 2 ? (

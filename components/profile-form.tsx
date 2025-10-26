@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { updateProfile, changePassword } from "@/app/actions/profile";
 import { Separator } from "@/components/ui/separator";
 import { User as UserIcon, Lock, Mail, Phone, MapPin, Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 const profileSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -36,6 +36,14 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 interface ProfileFormProps {
   user: Pick<User, 'firstName' | 'lastName' | 'contact' | 'address' | 'email'>;
+}
+
+interface User {
+  firstName: string;
+  lastName: string;
+  contact: string | null;
+  address: string | null;
+  email: string;
 }
 
 export function ProfileForm({ user }: ProfileFormProps) {
@@ -197,7 +205,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               >
                 {profileForm.formState.isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Spinner size="sm" className="mr-2" />
                     Updating...
                   </>
                 ) : (
@@ -292,7 +300,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               >
                 {passwordForm.formState.isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Spinner size="sm" className="mr-2" />
                     Changing...
                   </>
                 ) : (

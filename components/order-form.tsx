@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { Spinner } from "@/components/ui/spinner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -198,7 +199,14 @@ export function OrderForm({ users, onFormSubmit }: OrderFormProps) {
           className="w-full"
           disabled={form.formState.isSubmitting}
         >
-          {form.formState.isSubmitting ? "Creating..." : "Create Order"}
+          {form.formState.isSubmitting ? (
+            <>
+              <Spinner size="sm" className="mr-2" />
+              Creating...
+            </>
+          ) : (
+            "Create Order"
+          )}
         </Button>
       </form>
     </Form>

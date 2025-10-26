@@ -20,18 +20,34 @@ export function HeroCarousel({ promotions }: { promotions: Promotion[] }) {
   const [currentSlide, setCurrentSlide] = useState(0)
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev === promotions.length - 1 ? 0 : prev + 1))
+    setCurrentSlide((prev) => (prev + 1) % promotions.length)
   }
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev === 0 ? promotions.length - 1 : prev - 1))
+    setCurrentSlide((prev) => (prev - 1 + promotions.length) % promotions.length)
   }
 
-  // Auto-advance slides
+  // Auto-advance slides (continuous loop)
   useEffect(() => {
-    const interval = setInterval(nextSlide, 5000)
-    return () => clearInterval(interval)
-  }, [])
+    if (promotions.length > 0) {
+      const interval = setInterval(nextSlide, 5000)
+      return () => clearInterval(interval)
+    }
+  }, [promotions.length])
+
+  // Handle empty promotions gracefully
+  if (!promotions || promotions.length === 0) {
+    return (
+      <div className="relative overflow-hidden rounded-xl my-8">
+        <div className="relative h-[300px] md:h-[400px] lg:h-[500px] w-full bg-gradient-to-r from-gray-400 to-gray-600 flex items-center justify-center">
+          <div className="text-white text-center">
+            <h2 className="text-2xl md:text-4xl font-bold mb-4">No promotions available</h2>
+            <p className="text-sm md:text-base">Check back later for exciting offers!</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative overflow-hidden rounded-xl my-8">

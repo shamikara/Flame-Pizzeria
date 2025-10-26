@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Form,
   FormControl,
@@ -159,7 +160,14 @@ export function ChangePasswordForm({ forceCurrentPassword = true, onSuccess }: C
             />
 
             <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? "Updating..." : "Change Password"}
+              {isSubmitting ? (
+                <>
+                  <Spinner size="sm" className="mr-2" />
+                  Updating...
+                </>
+              ) : (
+                "Change Password"
+              )}
             </Button>
           </form>
         </Form>

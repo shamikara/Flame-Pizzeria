@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Loader2 } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 
 const formSchema = z
   .object({
@@ -44,7 +45,7 @@ export function RegisterForm({ defaultEmail = "" }: { defaultEmail?: string }) {
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true)
-  
+
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -57,23 +58,30 @@ export function RegisterForm({ defaultEmail = "" }: { defaultEmail?: string }) {
           lastName: data.lastName,
         }),
       })
-  
+
       const result = await res.json()
-  
+
       if (!res.ok) {
         // Use the specific error message from the backend if it exists
         throw new Error(result.error || "An unknown error occurred");
       }
-  
+
       toast({
         title: "Registration Successful!",
         description: `Welcome, ${result.user.firstName}! Redirecting you now...`,
       })
-  
-      // Refresh the page state. This is more robust than a hardcoded redirect.
-      // Your app's main layout or middleware will now detect the new session
-      // and handle redirecting the user to the correct dashboard or page.
-      router.refresh();
+
+      // Small delay to show success message before redirect
+      await new Promise(resolve => setTimeout(resolve, 1500))
+
+      // Redirect to shop page (customers) or dashboard (staff)
+      const userRole = result.user.role
+      if (userRole === 'CUSTOMER') {
+        router.push('/shop')
+      } else {
+        // For staff roles, redirect to appropriate dashboard
+        router.push('/dashboard/overview')
+      }
 
     } catch (error: any) {
       console.error("Registration error:", error)
@@ -164,7 +172,7 @@ export function RegisterForm({ defaultEmail = "" }: { defaultEmail?: string }) {
         />
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isSubmitting && <Spinner size="sm" className="mr-2" />}
           {isSubmitting ? "Creating Account..." : "Create Account"}
         </Button>
       </form>

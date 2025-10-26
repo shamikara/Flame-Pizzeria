@@ -1,9 +1,20 @@
-import { Suspense } from 'react';
+"use client"
+
+import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LoginForm } from '@/components/login-form';
-import { RegisterForm } from '@/components/register-form';
+import { Loader2 } from 'lucide-react';
+
+// Dynamic imports for better performance
+const LoginForm = dynamic(() => import('@/components/login-form').then(m => m.LoginForm), {
+  loading: () => <LoginFormLoading />
+});
+
+const RegisterForm = dynamic(() => import('@/components/register-form').then(m => m.RegisterForm), {
+  loading: () => <RegisterFormLoading />
+});
 
 // Define the search params type
 type SearchParams = {
@@ -12,16 +23,35 @@ type SearchParams = {
   [key: string]: string | string[] | undefined;
 };
 
-// The page now receives searchParams and passes them down
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+// Loading component for the entire page
+function LoginPageLoading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4">
+            <Image src="/img/logo.png" alt="Flames Pizzeria" width={60} height={60} />
+          </div>
+          <CardTitle className="text-2xl">Loading...</CardTitle>
+          <CardDescription>Please wait while we prepare your login page</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+            <p className="text-sm text-muted-foreground">Loading login page...</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Main login page component
+function LoginPageContent({ searchParams }: { searchParams: SearchParams }) {
   // Safely extract search params
   const tabParam = Array.isArray(searchParams.tab) ? searchParams.tab[0] : searchParams.tab;
   const emailParam = Array.isArray(searchParams.email) ? searchParams.email[0] : searchParams.email;
-  
+
   const defaultTab = tabParam === 'register' ? 'register' : 'login';
   const defaultEmail = emailParam || '';
 
@@ -41,14 +71,11 @@ export default function LoginPage({
               <TabsTrigger value="login">Sign In</TabsTrigger>
               <TabsTrigger value="register">Sign Up</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login" className="mt-6">
-              {/* Using Suspense is good practice for components that use searchParams */}
-              <Suspense fallback={<div>Loading...</div>}>
-                <LoginForm searchParams={searchParams} />
-              </Suspense>
+              <LoginForm searchParams={searchParams} />
             </TabsContent>
-            
+
             <TabsContent value="register" className="mt-6">
               <RegisterForm defaultEmail={defaultEmail} />
             </TabsContent>
@@ -57,4 +84,52 @@ export default function LoginPage({
       </Card>
     </div>
   );
+}
+
+// Loading component for login form
+function LoginFormLoading() {
+  return (
+    <div className="flex items-center justify-center py-8">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+        <p className="text-sm text-muted-foreground">Loading login form...</p>
+      </div>
+    </div>
+  );
+}
+
+// Loading component for register form
+function RegisterFormLoading() {
+  return (
+    <div className="flex items-center justify-center py-8">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+        <p className="text-sm text-muted-foreground">Loading registration form...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main export with client-side loading
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Minimal loading time for better UX (reduces flash)
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 300); // Reduced to 300ms for faster perceived loading
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return <LoginPageLoading />;
+  }
+
+  return <LoginPageContent searchParams={searchParams} />;
 }
