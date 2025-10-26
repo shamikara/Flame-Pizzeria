@@ -8,6 +8,7 @@ import { FeaturedItems } from "@/components/featured-items";
 import { CategoryShowcase } from "@/components/category-showcase";
 import { Testimonials } from "@/components/testimonials";
 import { CTASection } from "@/components/cta-section";
+import { NewsletterModal } from "@/components/newsletter-modal";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -185,6 +186,7 @@ export default function HomePage() {
           </div>
         ) : (
           <main className="min-h-screen">
+            <NewsletterModal />
             {isLoading.promotions ? (
               <div className="h-[500px] flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
@@ -224,6 +226,7 @@ export default function HomePage() {
 
   return (
     <div className="container mx-auto px-4">
+      <NewsletterModal />
       <HeroCarousel promotions={formattedPromotions} />
       {isLoading.items ? (
         <div className="py-12 text-center">

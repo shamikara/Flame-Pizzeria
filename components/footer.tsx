@@ -1,13 +1,14 @@
 import Link from "next/link"
 import { Facebook, Instagram, Twitter } from "lucide-react"
 import Image from "next/image"
+import { NewsletterSubscription } from "./newsletter-subscription"
 
 export default function Footer() {
   return (
     <footer className="border-t bg-muted/40">
       <div className="container px-4 py-8 md:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+          <div className="md:col-span-2">
             <Image src="img/logo.png" className=" ml-6 mb-2" alt="Flames" width={120} height={120} />
             <p className="text-sm text-muted-foreground">
             Delicious pizza, burgers & submarines, short eats, pasta and deserts made with fresh ingredients and filled with love.
@@ -78,11 +79,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-muted-foreground hover:text-primary">
-                  Contact
-                </Link>
-              </li>
-              <li>
                 <Link href="/privacy-policy" className="text-muted-foreground hover:text-primary">
                   Privacy Policy
                 </Link>
@@ -98,6 +94,11 @@ export default function Footer() {
               <p className="mt-2">Phone: (123) 456-7890</p>
               <p>Email: info@tastybites.com</p>
             </address>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-bold mb-4">Stay Updated</h3>
+            <NewsletterSubscription variant="compact" className="bg-transparent border border-gray-200" />
           </div>
         </div>
 
