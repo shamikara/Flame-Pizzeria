@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import {
   Dialog,
   DialogContent,
@@ -14,14 +15,17 @@ import { X } from "lucide-react"
 
 export function NewsletterModal() {
   const [isOpen, setIsOpen] = useState(false)
+  const pathname = usePathname()
 
   useEffect(() => {
-    // Check if user has visited before
-    const hasVisited = localStorage.getItem('hasVisitedHome')
-    const hasSubscribed = localStorage.getItem('hasSubscribed')
+    // Only show on homepage (/)
+    if (pathname !== '/') return
 
-    // Show modal only if user hasn't visited before and hasn't subscribed
-    if (!hasVisited && !hasSubscribed) {
+    // Check if user has already interacted with the modal (subscribed or dismissed)
+    const hasInteractedWithModal = localStorage.getItem('hasInteractedWithNewsletterModal')
+
+    // Show modal only if user hasn't interacted with it before and is on homepage
+    if (!hasInteractedWithModal) {
       // Small delay to ensure page loads first
       const timer = setTimeout(() => {
         setIsOpen(true)
@@ -29,14 +33,17 @@ export function NewsletterModal() {
 
       return () => clearTimeout(timer)
     }
-  }, [])
+  }, [pathname])
 
   const handleClose = () => {
+    // Mark that user has dismissed the modal - don't show again
+    localStorage.setItem('hasInteractedWithNewsletterModal', 'true')
     setIsOpen(false)
   }
 
   const handleSubscribed = () => {
-    localStorage.setItem('hasSubscribed', 'true')
+    // Mark that user has subscribed - don't show again
+    localStorage.setItem('hasInteractedWithNewsletterModal', 'true')
     setIsOpen(false)
   }
 
@@ -59,7 +66,10 @@ export function NewsletterModal() {
             Join our newsletter for exclusive deals and be the first to know about new menu items!
           </DialogDescription>
         </DialogHeader>
-        <NewsletterSubscription variant="modal" />
+        <NewsletterSubscription
+          variant="modal"
+          onSubscribed={handleSubscribed}
+        />
         <div className="text-center">
           <Button variant="ghost" onClick={handleClose} className="text-sm">
             Maybe later
