@@ -6,10 +6,7 @@ import Image from "next/image"
 import dynamic from "next/dynamic"
 import { motion, AnimatePresence } from "framer-motion"
 import { useToast } from "@/hooks/use-toast"
-<<<<<<< HEAD
 import { Spinner } from "@/components/ui/spinner"
-=======
->>>>>>> db9f9e1d (code optimize)
 import "./globals.css"
 
 // Lazy-loaded sections for better performance
@@ -169,16 +166,12 @@ export default function HomePage() {
         >
           <HeroCarousel promotions={formattedPromotions} />
           {isLoading ? (
-<<<<<<< HEAD
             <div className="py-12 flex items-center justify-center">
               <div className="flex flex-col items-center gap-4">
                 <Spinner size="lg" />
                 <p className="text-muted-foreground text-lg">Loading menu...</p>
               </div>
             </div>
-=======
-            <div className="py-12 text-center text-muted-foreground text-lg">Loading menu...</div>
->>>>>>> db9f9e1d (code optimize)
           ) : (
             <FeaturedItems items={featuredItems} />
           )}
@@ -265,11 +258,7 @@ function IntroScreen({
                 >
                   {isSubscribing ? (
                     <div className="flex items-center gap-2">
-<<<<<<< HEAD
                       <Spinner size="sm" color="white" />
-=======
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
->>>>>>> db9f9e1d (code optimize)
                       Subscribing...
                     </div>
                   ) : (
