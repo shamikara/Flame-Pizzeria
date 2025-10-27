@@ -208,6 +208,13 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
 
     const formatCurrency = (value: number) => currencyFormatter.format(value);
 
+    // Call onServicesUpdate whenever bill lines change
+    useEffect(() => {
+        if (onServicesUpdate && !preventServicesUpdate) {
+            onServicesUpdate(billLines);
+        }
+    }, [billLines, onServicesUpdate, preventServicesUpdate]);
+
     const estimatedSubtotal = useMemo(
         () => billLines.reduce((sum, line) => sum + line.price * line.quantity, 0),
         [billLines]
@@ -353,7 +360,9 @@ export function CateringForm({ onServicesUpdate, onSubmitSuccess, preventService
         });
         setStep(1);
         setErrors({});
-        onServicesUpdate?.([]);
+        if (!preventServicesUpdate) {
+            onServicesUpdate?.([]);
+        }
         setGuestCountInput('50');
         setIsGuestCountValid(true);
         setIsEventTypeValid(false);

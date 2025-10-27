@@ -42,18 +42,33 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          // Update catering request status using orderId as fallback
-          const requestId = payment.cateringRequestId || payment.orderId;
-          if (requestId) {
-            await prisma.cateringrequest.update({
-              where: { id: requestId },
-              data: {
-                status: "CONFIRMED",
-              },
-            });
-          }
+          // For catering requests, the orderId field contains the catering request ID
+          // For regular orders, orderId contains the actual order ID
+          if (payment.orderId) {
+            // Check if this is a catering request (catering request IDs are typically sequential from 1)
+            // or if there's a payment for a catering request
+            const isCateringPayment = payment.transactionId?.includes('catering') ||
+              (payment.orderId > 0 && payment.orderId < 10000); // Assuming catering IDs start from 1
 
-          console.log(`Payment ${paymentIntent.id} completed for request ${requestId}`);
+            if (isCateringPayment) {
+              await prisma.cateringrequest.update({
+                where: { id: payment.orderId },
+                data: {
+                  status: "CONFIRMED",
+                },
+              });
+              console.log(`Catering payment ${paymentIntent.id} completed for request ${payment.orderId}`);
+            } else {
+              // This is a regular order payment
+              await prisma.order.update({
+                where: { id: payment.orderId },
+                data: {
+                  status: "CONFIRMED",
+                },
+              });
+              console.log(`Order payment ${paymentIntent.id} completed for order ${payment.orderId}`);
+            }
+          }
         }
         break;
 

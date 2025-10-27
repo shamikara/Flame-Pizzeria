@@ -170,9 +170,12 @@ export default function EmployeesPage() {
 
           <div className="rounded-xl border border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900 shadow-xl overflow-hidden">
             {loading ? (
-              <div className="p-8 text-center text-gray-400 animate-pulse">
-                <Users className="w-10 h-10 mx-auto mb-3 opacity-60" />
-                Loading employees... <Spinner />
+              <div className="flex flex-col items-center justify-center p-8 text-center text-gray-400 animate-pulse">
+                <Users className="w-10 h-10 mb-3 opacity-60" />
+                <div className="flex items-center gap-2">
+                  <Spinner size="md" />
+                  <span>Loading employees...</span>
+                </div>
               </div>
             ) : employees.length === 0 ? (
               <div className="p-8 text-center text-gray-400">

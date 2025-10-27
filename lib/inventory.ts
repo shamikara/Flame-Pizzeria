@@ -77,6 +77,8 @@ export async function deductInventoryForOrder(
   order: OrderWithRecipeIngredients,
   tx: TransactionClient
 ) {
+  console.log("[INVENTORY] Starting inventory deduction for order:", order.id)
+
   const requirements = new Map<
     number,
     {
@@ -86,8 +88,10 @@ export async function deductInventoryForOrder(
   >()
 
   for (const item of order.items) {
+    console.log("[INVENTORY] Processing item:", item.foodItem.name, "quantity:", item.quantity)
     const recipe = item.foodItem.recipe
     if (!recipe) {
+      console.error("[INVENTORY] Missing recipe for item:", item.foodItem.name)
       throw new InventoryError(
         "MISSING_RECIPE",
         `Food item ${item.foodItem.name} is missing an associated recipe.`
@@ -95,6 +99,7 @@ export async function deductInventoryForOrder(
     }
 
     if (!recipe.ingredients.length) {
+      console.error("[INVENTORY] Recipe has no ingredients:", recipe.name)
       throw new InventoryError(
         "MISSING_RECIPE",
         `Recipe ${recipe.name} has no ingredient breakdown.`
@@ -104,6 +109,7 @@ export async function deductInventoryForOrder(
     for (const recipeIngredient of recipe.ingredients) {
       const ingredient = recipeIngredient.ingredient
       if (!ingredient) {
+        console.error("[INVENTORY] Missing ingredient for recipe ingredient:", recipeIngredient.id)
         throw new InventoryError(
           "MISSING_INGREDIENT",
           `Recipe ingredient ${recipeIngredient.id} does not reference a valid ingredient.`
@@ -130,11 +136,15 @@ export async function deductInventoryForOrder(
   }
 
   if (requirements.size === 0) {
+    console.log("[INVENTORY] No ingredients required for this order")
     return
   }
 
+  console.log("[INVENTORY] Inventory requirements calculated:", requirements.size, "ingredients")
+
   for (const { requiredBase, ingredient } of requirements.values()) {
     const decrementAmount = fromBaseQuantity(requiredBase, ingredient.unit)
+    console.log(`[INVENTORY] Deducting ${formatQuantity(decrementAmount, ingredient.unit)} of ${ingredient.name}`)
 
     const result = await tx.ingredient.updateMany({
       where: {
@@ -149,6 +159,7 @@ export async function deductInventoryForOrder(
     })
 
     if (result.count === 0) {
+      console.error(`[INVENTORY] Insufficient stock for ${ingredient.name}. Need ${formatQuantity(decrementAmount, ingredient.unit)}`)
       throw new InventoryError(
         "INSUFFICIENT_STOCK",
         `Not enough ${ingredient.name} in stock. Need ${formatQuantity(
@@ -157,5 +168,9 @@ export async function deductInventoryForOrder(
         )}.`
       )
     }
+
+    console.log(`[INVENTORY] Successfully deducted ${formatQuantity(decrementAmount, ingredient.unit)} of ${ingredient.name}`)
   }
+
+  console.log("[INVENTORY] Inventory deduction completed successfully for order:", order.id)
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import React from 'react';
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -17,7 +18,14 @@ const RegisterForm = dynamic(() => import('@/components/register-form').then(m =
 });
 
 // Define the search params type
-type SearchParams = {
+type SearchParams = Promise<{
+  tab?: string | string[];
+  email?: string | string[];
+  [key: string]: string | string[] | undefined;
+}>;
+
+// Define the resolved search params type
+type ResolvedSearchParams = {
   tab?: string | string[];
   email?: string | string[];
   [key: string]: string | string[] | undefined;
@@ -48,9 +56,10 @@ function LoginPageLoading() {
 
 // Main login page component
 function LoginPageContent({ searchParams }: { searchParams: SearchParams }) {
-  // Safely extract search params
-  const tabParam = Array.isArray(searchParams.tab) ? searchParams.tab[0] : searchParams.tab;
-  const emailParam = Array.isArray(searchParams.email) ? searchParams.email[0] : searchParams.email;
+  // Safely extract search params using React.use()
+  const params = React.use(searchParams);
+  const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
+  const emailParam = Array.isArray(params.email) ? params.email[0] : params.email;
 
   const defaultTab = tabParam === 'register' ? 'register' : 'login';
   const defaultEmail = emailParam || '';

@@ -40,6 +40,22 @@ type TemplateData = {
   }
   "order-confirmation": {
     orderId: number | string
+    customerName: string
+    customerEmail: string
+    customerPhone: string
+    deliveryAddress: string
+    total: number
+    status: string
+    orderType: string
+    createdAt: string
+    items: Array<{
+      name: string
+      quantity: number
+      basePrice: number
+      lineTotal: number
+      customizations?: string[]
+    }>
+    estimatedDelivery?: string
   }
   "order-receipt": {
     orderId: number | string
@@ -89,17 +105,25 @@ export async function sendEmail<T extends TemplateName>({
 }): Promise<EmailResult> {
   try {
     const { html, text } = buildTemplate(template, data)
+    console.log("[EMAIL] Template built for:", template, "to:", to)
 
     if (!isConfigured) {
+      console.log("[EMAIL] Email not configured, using mock send. SMTP config:", {
+        hasUser: Boolean(smtpUser),
+        hasPass: Boolean(smtpPass),
+        user: smtpUser,
+        passLength: smtpPass?.length
+      })
       logMockSend({ to, subject, html })
       return {
         success: true,
         toastTitle: "Request Submitted",
-        toastMessage: "Email mocked (RESEND_API_KEY not set)",
+        toastMessage: "Email mocked (Gmail credentials not configured)",
         data: { id: "mock-email-id" },
       }
     }
 
+    console.log("[EMAIL] Sending actual email via Gmail...")
     const transporter = createTransport()
 
     const info = await transporter.sendMail({
@@ -110,6 +134,7 @@ export async function sendEmail<T extends TemplateName>({
       text,
     })
 
+    console.log("[EMAIL] Email sent successfully:", info.messageId)
     return {
       success: true,
       toastTitle: "Email Sent",
@@ -117,7 +142,7 @@ export async function sendEmail<T extends TemplateName>({
       data: { id: info.messageId },
     }
   } catch (error) {
-    console.error("[Email] sendEmail error", error)
+    console.error("[EMAIL] sendEmail error:", error)
     const message =
       error instanceof Error
         ? error.message
@@ -145,7 +170,7 @@ function buildTemplate(template: TemplateName, data: TemplateData[TemplateName])
               currency: payload.billSnapshot.currency,
               maximumFractionDigits: 0,
             }).format(value)
-          : `LKR ${value.toLocaleString('en-LK', { maximumFractionDigits: 0 })}`
+          : `LKR ${value.toLocaleString('en-LK', { maximumFractionDigits: 0 })}` 
       const billLinesHtml = hasBillSnapshot
         ? payload.billSnapshot!.lines
             .map(
@@ -235,19 +260,72 @@ function buildTemplate(template: TemplateName, data: TemplateData[TemplateName])
           <p style="margin-top: 24px;">Flames Pizzeria Support</p>
         </div>
       `
-      const text = `We received a password-reset request for your Flames Pizzeria account. Use the link below within 60 minutes.\n\n${payload.resetLink}\n\nIf this wasn't you, ignore this email.`
+      const text = `We received a password-reset request for your Flames Pizzeria account. Use the link below within 60 minutes.\n\n${payload.resetLink}\n\nIf this wasn't you, ignore this email.` 
       return { html, text }
     }
     case "order-confirmation": {
       const payload = data as TemplateData["order-confirmation"]
+      const currency = (amount: number) => `Rs. ${amount.toFixed(2)}`
+      
+      const itemsHtml = payload.items
+        .map((item) => {
+          const customizations = item.customizations?.length
+            ? `<div style="margin-top:4px; font-size:12px; color:#666;">Add-ons: ${item.customizations.join(", ")}</div>`
+            : ""
+          return `
+            <tr>
+              <td style="padding:8px 0;">
+                <div style="font-weight:600;">${item.quantity}× ${item.name}</div>
+                <div style="font-size:12px; color:#666;">Base price: ${currency(item.basePrice)}</div>
+                ${customizations}
+              </td>
+              <td style="padding:8px 0; text-align:right; font-weight:600;">${currency(item.lineTotal)}</td>
+            </tr>
+          `
+        })
+        .join("")
+
       const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 640px; color: #2f2f2f;">
-          <h1 style="color: #e67e22;">Order confirmed!</h1>
-          <p>Thanks for ordering from Flames Pizzeria. Your order <strong>#${payload.orderId}</strong> is being prepared.</p>
-          <p>We'll notify you as soon as it's ready.</p>
+        <div style="font-family: Arial, sans-serif; max-width: 640px; color: #2f2f2f; margin:0 auto;">
+          <h1 style="color: #e67e22;">Order Confirmed, ${payload.customerName}!</h1>
+          <p>Thank you for choosing Flames Pizzeria! Your order <strong>#${payload.orderId}</strong> has been confirmed and payment processed.</p>
+          <div style="background:#f8f9fa; padding:16px; border-radius:8px; margin:20px 0;">
+            <h3 style="margin:0 0 12px 0; color:#e67e22;">Order Details</h3>
+            <p style="margin:4px 0;"><strong>Customer:</strong> ${payload.customerName}</p>
+            <p style="margin:4px 0;"><strong>Phone:</strong> ${payload.customerPhone}</p>
+            <p style="margin:4px 0;"><strong>Delivery Address:</strong> ${payload.deliveryAddress}</p>
+            <p style="margin:4px 0;"><strong>Order Type:</strong> ${payload.orderType}</p>
+            ${payload.estimatedDelivery ? `<p style="margin:4px 0;"><strong>Estimated Delivery:</strong> ${payload.estimatedDelivery}</p>` : ""}
+          </div>
+          <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+            <thead>
+              <tr>
+                <th style="text-align:left; padding-bottom:8px; border-bottom:1px solid #eee;">Items</th>
+                <th style="text-align:right; padding-bottom:8px; border-bottom:1px solid #eee;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td style="padding-top:12px; border-top:2px solid #e67e22; font-weight:bold;">Grand Total</td>
+                <td style="padding-top:12px; border-top:2px solid #e67e22; font-weight:bold; text-align:right;">${currency(payload.total)}</td>
+              </tr>
+            </tfoot>
+          </table>
+          <p style="margin-top:24px; color:#666;">We're preparing your order right away. You'll receive updates as your order progresses through our kitchen.</p>
+          <p style="margin-top:16px;">Thank you for choosing Flames Pizzeria!<br/>— The Flames Team</p>
         </div>
       `
-      const text = `Thanks for ordering from Flames Pizzeria. Your order #${payload.orderId} is confirmed and being prepared.`
+      
+      const textItems = payload.items
+        .map((item) => {
+          const extras = item.customizations?.length ? ` (Add-ons: ${item.customizations.join(", ")})` : ""
+          return `  - ${item.quantity}x ${item.name}${extras} = ${currency(item.lineTotal)}`
+        })
+        .join("\n")
+      const text = `Hi ${payload.customerName},\n\nYour order #${payload.orderId} is confirmed!\n\nOrder Details:\nCustomer: ${payload.customerName}\nPhone: ${payload.customerPhone}\nDelivery Address: ${payload.deliveryAddress}\nOrder Type: ${payload.orderType}\n${payload.estimatedDelivery ? `Estimated Delivery: ${payload.estimatedDelivery}\n` : ""}\n\nItems:\n${textItems}\n\nGrand Total: ${currency(payload.total)}\n\nWe're preparing your order now. You'll receive updates soon!\n\nThank you for choosing Flames Pizzeria!`
       return { html, text }
     }
     case "order-receipt": {

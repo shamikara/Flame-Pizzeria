@@ -557,3 +557,403 @@ export function generateSalesPredictionPDF(data: any) {
   
   return doc;
 }
+
+// ============================================
+// ORDER REPORT PDF
+// ============================================
+
+export function generateDailyOrderReportPDF(data: any) {
+  const doc = new jsPDF('portrait');
+  
+  let startY = addLetterhead(
+    doc,
+    'DAILY ORDER REPORT',
+    `Date: ${data.date}`
+  );
+  
+  // Summary Statistics
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(20, startY, 60, 25, 3, 3, 'F');
+  doc.roundedRect(90, startY, 60, 25, 3, 3, 'F');
+  doc.roundedRect(160, startY, 30, 25, 3, 3, 'F');
+  
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.textLight);
+  doc.text('Total Orders', 25, startY + 8);
+  doc.text('Total Revenue', 95, startY + 8);
+  doc.text('Payments', 165, startY + 8);
+  
+  doc.setFontSize(12);
+  doc.setTextColor(...COLORS.text);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${data.totalOrders}`, 25, startY + 18);
+  doc.text(`Rs. ${data.totalRevenue.toFixed(2)}`, 95, startY + 18);
+  doc.text(`Rs. ${data.totalPayments.toFixed(2)}`, 165, startY + 18);
+  doc.setFont('helvetica', 'normal');
+  
+  startY += 35;
+  
+  // Status Breakdown
+  if (Object.keys(data.statusBreakdown).length > 0) {
+    doc.setFontSize(12);
+    doc.setTextColor(...COLORS.text);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Status Breakdown', 20, startY);
+    doc.setFont('helvetica', 'normal');
+    
+    startY += 8;
+    
+    const statusData = Object.entries(data.statusBreakdown).map(([status, count]) => [
+      status.replace(/_/g, ' '),
+      count.toString(),
+    ]);
+    
+    autoTable(doc, {
+      startY: startY,
+      head: [['Status', 'Count']],
+      body: statusData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: COLORS.primary,
+        fontSize: 9,
+        fontStyle: 'bold',
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      margin: { left: 20, right: 20 },
+    });
+    
+    startY = (doc as any).lastAutoTable.finalY + 15;
+  }
+  
+  // Top Selling Items
+  if (data.topSellingItems.length > 0) {
+    doc.setFontSize(12);
+    doc.setTextColor(...COLORS.text);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Top Selling Items', 20, startY);
+    doc.setFont('helvetica', 'normal');
+    
+    startY += 8;
+    
+    const itemsData = data.topSellingItems.map(item => [
+      item.name,
+      item.quantity.toString(),
+      `Rs. ${item.revenue.toFixed(2)}`,
+      item.category,
+    ]);
+    
+    autoTable(doc, {
+      startY: startY,
+      head: [['Item', 'Quantity', 'Revenue', 'Category']],
+      body: itemsData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: COLORS.secondary,
+        fontSize: 9,
+        fontStyle: 'bold',
+      },
+      styles: {
+        fontSize: 7,
+        cellPadding: 2,
+      },
+      margin: { left: 20, right: 20 },
+    });
+    
+    startY = (doc as any).lastAutoTable.finalY + 15;
+  }
+  
+  // Payment Methods
+  if (Object.keys(data.paymentMethodBreakdown).length > 0) {
+    doc.setFontSize(12);
+    doc.setTextColor(...COLORS.text);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Payment Methods', 20, startY);
+    doc.setFont('helvetica', 'normal');
+    
+    startY += 8;
+    
+    const paymentData = Object.entries(data.paymentMethodBreakdown).map(([method, amount]) => [
+      method,
+      `Rs. ${amount.toFixed(2)}`,
+    ]);
+    
+    autoTable(doc, {
+      startY: startY,
+      head: [['Method', 'Amount']],
+      body: paymentData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: COLORS.success,
+        fontSize: 9,
+        fontStyle: 'bold',
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      margin: { left: 20, right: 20 },
+    });
+    
+    startY = (doc as any).lastAutoTable.finalY + 15;
+  }
+  
+  // Detailed Orders (if space allows)
+  if (data.orders.length <= 10 && startY < 200) {
+    doc.setFontSize(12);
+    doc.setTextColor(...COLORS.text);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Details', 20, startY);
+    doc.setFont('helvetica', 'normal');
+    
+    startY += 8;
+    
+    data.orders.forEach(order => {
+      if (startY > 250) {
+        doc.addPage();
+        startY = 20;
+      }
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Order #${order.id}`, 20, startY);
+      startY += 6;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Customer: ${order.customer.name}`, 25, startY);
+      startY += 4;
+      doc.text(`Status: ${order.status.replace(/_/g, ' ')} | Total: Rs. ${order.total.toFixed(2)}`, 25, startY);
+      startY += 4;
+      doc.text(`Date: ${new Date(order.createdAt).toLocaleString()}`, 25, startY);
+      startY += 8;
+      
+      // Order items
+      if (order.items.length > 0) {
+        const orderItems = order.items.map(item => [
+          `${item.quantity}x ${item.name}`,
+          `Rs. ${item.subtotal.toFixed(2)}`,
+        ]);
+        
+        autoTable(doc, {
+          startY: startY,
+          head: [['Item', 'Amount']],
+          body: orderItems,
+          theme: 'plain',
+          styles: {
+            fontSize: 7,
+            cellPadding: 2,
+          },
+          columnStyles: {
+            0: { cellWidth: 40 },
+            1: { cellWidth: 20, halign: 'right' },
+          },
+          margin: { left: 25 },
+        });
+        
+        startY = (doc as any).lastAutoTable.finalY + 8;
+      }
+    });
+  }
+  
+  const totalPages = (doc as any).internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    addFooter(doc, i, totalPages);
+  }
+  
+  return doc;
+}
+
+export function generateWeeklyOrderReportPDF(data: any) {
+  const doc = new jsPDF('landscape');
+  
+  let startY = addLetterhead(
+    doc,
+    'WEEKLY ORDER REPORT',
+    `Period: ${data.startDate} to ${data.endDate}`
+  );
+  
+  // Summary Statistics
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(20, startY, 60, 30, 3, 3, 'F');
+  doc.roundedRect(90, startY, 60, 30, 3, 3, 'F');
+  doc.roundedRect(160, startY, 60, 30, 3, 3, 'F');
+  doc.roundedRect(230, startY, 50, 30, 3, 3, 'F');
+  
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.textLight);
+  doc.text('Total Orders', 25, startY + 8);
+  doc.text('Total Revenue', 95, startY + 8);
+  doc.text('Avg Daily Orders', 165, startY + 8);
+  doc.text('Avg Daily Revenue', 235, startY + 8);
+  
+  doc.setFontSize(12);
+  doc.setTextColor(...COLORS.text);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${data.totalOrders}`, 25, startY + 20);
+  doc.text(`Rs. ${data.totalRevenue.toFixed(2)}`, 95, startY + 20);
+  doc.text(`${(data.totalOrders / 7).toFixed(1)}`, 165, startY + 20);
+  doc.text(`Rs. ${(data.totalRevenue / 7).toFixed(2)}`, 235, startY + 20);
+  doc.setFont('helvetica', 'normal');
+  
+  startY += 40;
+  
+  // Daily Breakdown
+  if (data.dailyBreakdown.length > 0) {
+    doc.setFontSize(12);
+    doc.setTextColor(...COLORS.text);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Daily Breakdown', 20, startY);
+    doc.setFont('helvetica', 'normal');
+    
+    startY += 8;
+    
+    const dailyData = data.dailyBreakdown.map((day: any) => [
+      new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+      day.orders.toString(),
+      `Rs. ${day.revenue.toFixed(2)}`,
+      `Rs. ${day.payments.toFixed(2)}`,
+    ]);
+    
+    autoTable(doc, {
+      startY: startY,
+      head: [['Date', 'Orders', 'Revenue', 'Payments']],
+      body: dailyData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: COLORS.primary,
+        fontSize: 9,
+        fontStyle: 'bold',
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      margin: { left: 20, right: 20 },
+    });
+    
+    startY = (doc as any).lastAutoTable.finalY + 15;
+  }
+  
+  // Check if we need a new page
+  if (startY > 200) {
+    doc.addPage();
+    startY = 20;
+  }
+  
+  // Status Breakdown
+  if (Object.keys(data.statusBreakdown).length > 0) {
+    doc.setFontSize(12);
+    doc.setTextColor(...COLORS.text);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Status Breakdown', 20, startY);
+    doc.setFont('helvetica', 'normal');
+    
+    startY += 8;
+    
+    const statusData = Object.entries(data.statusBreakdown).map(([status, count]) => [
+      status.replace(/_/g, ' '),
+      count.toString(),
+    ]);
+    
+    autoTable(doc, {
+      startY: startY,
+      head: [['Status', 'Count']],
+      body: statusData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: COLORS.primary,
+        fontSize: 9,
+        fontStyle: 'bold',
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      margin: { left: 20, right: 20 },
+    });
+    
+    startY = (doc as any).lastAutoTable.finalY + 15;
+  }
+  
+  // Top Selling Items
+  if (data.topSellingItems.length > 0) {
+    doc.setFontSize(12);
+    doc.setTextColor(...COLORS.text);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Top Selling Items', 20, startY);
+    doc.setFont('helvetica', 'normal');
+    
+    startY += 8;
+    
+    const itemsData = data.topSellingItems.map(item => [
+      item.name,
+      item.quantity.toString(),
+      `Rs. ${item.revenue.toFixed(2)}`,
+      item.category,
+    ]);
+    
+    autoTable(doc, {
+      startY: startY,
+      head: [['Item', 'Quantity', 'Revenue', 'Category']],
+      body: itemsData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: COLORS.secondary,
+        fontSize: 9,
+        fontStyle: 'bold',
+      },
+      styles: {
+        fontSize: 7,
+        cellPadding: 2,
+      },
+      margin: { left: 20, right: 20 },
+    });
+    
+    startY = (doc as any).lastAutoTable.finalY + 15;
+  }
+  
+  // Payment Methods
+  if (Object.keys(data.paymentMethodBreakdown).length > 0) {
+    doc.setFontSize(12);
+    doc.setTextColor(...COLORS.text);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Payment Methods', 20, startY);
+    doc.setFont('helvetica', 'normal');
+    
+    startY += 8;
+    
+    const paymentData = Object.entries(data.paymentMethodBreakdown).map(([method, amount]) => [
+      method,
+      `Rs. ${amount.toFixed(2)}`,
+    ]);
+    
+    autoTable(doc, {
+      startY: startY,
+      head: [['Method', 'Amount']],
+      body: paymentData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: COLORS.success,
+        fontSize: 9,
+        fontStyle: 'bold',
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      margin: { left: 20, right: 20 },
+    });
+  }
+  
+  const totalPages = (doc as any).internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    addFooter(doc, i, totalPages);
+  }
+  
+  return doc;
+}

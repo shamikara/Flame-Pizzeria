@@ -25,10 +25,11 @@ export async function GET() {
           include: {
             foodItem: {
               select: {
+                id: true,
                 name: true,
                 price: true,
               },
-            },
+            },,
           },
         },
       },

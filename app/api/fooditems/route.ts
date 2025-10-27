@@ -395,7 +395,7 @@ export async function PUT(request: Request) {
         include: { category: true },
       })
 
-      const existingRecipe = await tx.recipe.findUnique({
+      const existingRecipe = await tx.recipe.findFirst({
         where: { foodItemId: updatedFoodItem.id },
       })
 
@@ -452,6 +452,7 @@ export async function DELETE(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    const force = searchParams.get('force') === 'true'
 
     if (!id) {
       return NextResponse.json({ error: 'Food item ID is required' }, { status: 400 })
@@ -462,51 +463,44 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Food item ID must be a positive integer' }, { status: 400 })
     }
 
-    const [foodItem, orderItemCount] = await Promise.all([
-      prisma.fooditem.findUnique({
-        where: { id: foodItemId },
-        select: { id: true },
-      }),
-      prisma.orderitem.count({ where: { foodItemId } }),
-    ])
+    const foodItem = await prisma.fooditem.findUnique({
+      where: { id: foodItemId },
+      select: { id: true, imageUrl: true },
+    })
 
     if (!foodItem) {
       return NextResponse.json({ error: 'Food item not found' }, { status: 404 })
     }
 
-    if (orderItemCount > 0) {
-      return NextResponse.json(
-        {
-          error: 'Cannot delete food item with existing order history. Consider marking it inactive instead.',
-          code: 'FOODITEM_HAS_ORDERS',
-        },
-        { status: 409 }
-      )
+    // Check if force delete is requested
+    if (!force) {
+      const orderItemCount = await prisma.orderitem.count({ where: { foodItemId } })
+
+      if (orderItemCount > 0) {
+        return NextResponse.json(
+          {
+            error: 'Cannot delete food item with existing order history. Consider marking it inactive instead.',
+            code: 'FOODITEM_HAS_ORDERS',
+          },
+          { status: 409 }
+        )
+      }
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.recipeingredient.deleteMany({
-        where: {
-          recipe: {
-            foodItemId,
-          },
-        },
-      })
+    // Delete image file if it exists
+    if (foodItem.imageUrl) {
+      try {
+        const imagePath = path.join(process.cwd(), 'public', foodItem.imageUrl)
+        await fs.unlink(imagePath)
+      } catch (error) {
+        // Log error but don't fail the deletion if image file doesn't exist
+        console.warn('Failed to delete image file:', error)
+      }
+    }
 
-      await tx.recipe.deleteMany({ where: { foodItemId } })
-
-      await tx.customizationingredient.deleteMany({
-        where: {
-          customization: {
-            foodItemId,
-          },
-        },
-      })
-
-      await tx.customization.deleteMany({ where: { foodItemId } })
-      await tx.rating.deleteMany({ where: { foodItemId } })
-
-      await tx.fooditem.delete({ where: { id: foodItemId } })
+    // With CASCADE deletes, this will automatically delete all related records
+    await prisma.fooditem.delete({
+      where: { id: foodItemId },
     })
 
     return NextResponse.json({ message: 'Food item deleted successfully' })

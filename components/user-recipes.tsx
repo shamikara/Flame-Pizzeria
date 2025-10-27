@@ -165,9 +165,9 @@ export function UserRecipes() {
 
       {recipes.length === 0 ? (
         <div className="text-center py-12 border-2 border-dashed border-gray-800 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-300">You havent shared a recipe yet</h3>
+          <h3 className="text-lg font-medium text-gray-300">You haven't shared a recipe yet</h3>
           <p className="mt-2 text-sm text-gray-400 max-w-md mx-auto">
-            Showcase your favouritessubmit a new recipe to get started.
+            Showcase your favourites & submit a new recipe to get started.
           </p>
           <Button className="mt-4" asChild>
             <Link href="/recipes/share">Share Your First Recipe</Link>

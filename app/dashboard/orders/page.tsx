@@ -26,7 +26,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { MoreHorizontal, Eye, Printer, ShoppingBag } from "lucide-react";
+import { MoreHorizontal, Eye, Printer, ShoppingBag, Download, FileText, Calendar } from "lucide-react";
+import { generateDailyOrderReportPDF, generateWeeklyOrderReportPDF } from '@/lib/pdf-generator';
 import { PopularItemsPieChart } from "@/components/charts/popular-items-pie-chart";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession, SessionUserRole } from "@/components/session-provider";
@@ -125,6 +126,8 @@ export default function OrdersPage() {
   const [popularItems, setPopularItems] = useState<PopularItemData[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDownloadingDaily, setIsDownloadingDaily] = useState(false);
+  const [isDownloadingWeekly, setIsDownloadingWeekly] = useState(false);
 
   const fetchAllData = async () => {
     try {
@@ -173,12 +176,58 @@ export default function OrdersPage() {
     }
   };
 
-  const triggerStatusChange = (orderId: number, status: string) => {
-    if (requiresConfirmation.has(status)) {
-      setPendingAction({ orderId, status });
-      return;
+  const handleDownloadDailyReport = async () => {
+    setIsDownloadingDaily(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      console.log('Fetching daily report for:', today);
+      
+      const response = await fetch(`/api/orders/reports/daily?date=${today}`);
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', errorText);
+        throw new Error(`API returned ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Report data received:', data);
+      
+      const doc = generateDailyOrderReportPDF(data);
+      doc.save(`daily-order-report-${today}.pdf`);
+      
+      console.log('PDF generated and downloaded successfully');
+    } catch (error) {
+      console.error('Failed to download daily report:', error);
+      // Show error to user
+      alert(`Failed to generate daily report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsDownloadingDaily(false);
+      console.log('Daily report download complete');
     }
-    updateStatus(orderId, status);
+  };
+
+  const handleDownloadWeeklyReport = async () => {
+    setIsDownloadingWeekly(true);
+    try {
+      console.log('Starting weekly report download');
+      const response = await fetch('/api/orders/reports/weekly');
+      console.log('Response status:', response.status);
+      if (!response.ok) throw new Error('Failed to fetch weekly report data');
+
+      const data = await response.json();
+      console.log('Report data received:', data);
+      const doc = generateWeeklyOrderReportPDF(data);
+      console.log('Generating PDF...');
+      doc.save(`weekly-order-report-${data.startDate}-to-${data.endDate}.pdf`);
+      console.log('PDF generated and downloaded successfully');
+    } catch (error) {
+      console.error('Failed to download weekly report:', error);
+    } finally {
+      setIsDownloadingWeekly(false);
+      console.log('Weekly report download complete');
+    }
   };
 
   useEffect(() => {
@@ -293,7 +342,49 @@ export default function OrdersPage() {
         </div>
 
         <div className="rounded-xl border border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900 shadow-xl p-6">
-          <h3 className="text-xl font-semibold mb-4 text-gray-200">Order Statistics</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-semibold text-gray-200">Order Statistics</h3>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadDailyReport}
+                disabled={isDownloadingDaily}
+                className="text-gray-300 border-gray-600 hover:bg-gray-800"
+              >
+                {isDownloadingDaily ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Daily PDF
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadWeeklyReport}
+                disabled={isDownloadingWeekly}
+                className="text-gray-300 border-gray-600 hover:bg-gray-800"
+              >
+                {isDownloadingWeekly ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Weekly PDF
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
           <div className="space-y-4">
             <div className="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
               <span className="text-gray-300">Total Orders</span>
@@ -317,9 +408,12 @@ export default function OrdersPage() {
 
       <div className="rounded-xl border border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900 shadow-xl overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-gray-400">
-            <ShoppingBag className="w-10 h-10 mx-auto mb-3 opacity-60 animate-pulse" />
-            Loading orders... <Spinner />
+          <div className="flex flex-col items-center justify-center p-8 text-center text-gray-400">
+            <ShoppingBag className="w-10 h-10 mb-3 opacity-60 animate-pulse" />
+            <div className="flex items-center gap-2">
+              <Spinner size="md" />
+              <span>Loading orders...</span>
+            </div>
           </div>
         ) : orders.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
@@ -378,7 +472,7 @@ export default function OrdersPage() {
                               .map((status) => (
                                 <DropdownMenuItem
                                   key={status}
-                                  onClick={() => triggerStatusChange(order.id, status)}
+                                  onClick={() => updateStatus(order.id, status)}
                                   className="text-gray-200 hover:bg-gray-700"
                                 >
                                   {status.replace(/_/g, " ")}

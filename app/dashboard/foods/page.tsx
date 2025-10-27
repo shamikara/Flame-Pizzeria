@@ -67,6 +67,8 @@ export default function FoodsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodItemWithCategory | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showMarkInactiveOption, setShowMarkInactiveOption] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
@@ -109,13 +111,20 @@ export default function FoodsPage() {
     if (!selectedFood) return;
 
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       const res = await fetch(`/api/fooditems?id=${selectedFood.id}`, {
         method: "DELETE",
       });
 
       if (!res.ok) {
-        throw new Error("Failed to delete food item");
+        const errorData = await res.json().catch(() => ({}));
+        if (res.status === 409 && errorData.code === 'FOODITEM_HAS_ORDERS') {
+          setDeleteError(errorData.error);
+          setShowMarkInactiveOption(true);
+          return;
+        }
+        throw new Error(errorData.error || "Failed to delete food item");
       }
 
       toast({
@@ -125,11 +134,12 @@ export default function FoodsPage() {
 
       setDeleteDialogOpen(false);
       setSelectedFood(null);
+      setShowMarkInactiveOption(false);
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to delete food item. Please try again.",
+        description: error.message || "Failed to delete food item. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -137,11 +147,90 @@ export default function FoodsPage() {
     }
   };
 
-  const handleFormSubmit = () => {
-    setAddDialogOpen(false);
+  const handleMarkInactive = async () => {
+    if (!selectedFood) return;
+
+    setIsDeleting(true);
+    try {
+      const formData = new FormData();
+      formData.append("name", selectedFood.name);
+      formData.append("description", selectedFood.description || "");
+      formData.append("price", selectedFood.price.toString());
+      formData.append("categoryId", selectedFood.categoryId.toString());
+      formData.append("isActive", "false");
+      formData.append("foodType", "0");
+      formData.append("nutrition", "null");
+      formData.append("recipeIngredients", "[]");
+
+      const res = await fetch(`/api/fooditems?id=${selectedFood.id}`, {
+        method: "PUT",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to mark item as inactive");
+      }
+
+      toast({
+        title: "Success",
+        description: `${selectedFood.name} has been marked as inactive.`,
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedFood(null);
+      setShowMarkInactiveOption(false);
+      setDeleteError(null);
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to mark item as inactive. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditFormSubmit = () => {
     setEditDialogOpen(false);
     setSelectedFood(null);
     fetchData();
+  };
+
+  const handleForceDelete = async () => {
+    if (!selectedFood) return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/fooditems?id=${selectedFood.id}&force=true`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to force delete food item");
+      }
+
+      toast({
+        title: "Force Delete Successful",
+        description: `${selectedFood.name} and all related records have been deleted.`,
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedFood(null);
+      setShowMarkInactiveOption(false);
+      setDeleteError(null);
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Force Delete Failed",
+        description: error.message || "Failed to force delete food item. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const filteredFoods = foods.filter((food) => {
@@ -204,7 +293,7 @@ export default function FoodsPage() {
                 <DialogHeader>
                   <DialogTitle className="text-white">Add New Food Item</DialogTitle>
                 </DialogHeader>
-                <FoodForm onFormSubmit={handleFormSubmit} />
+                <FoodForm onFormSubmit={handleEditFormSubmit} />
               </DialogContent>
             </Dialog>
           </div>
@@ -250,9 +339,12 @@ export default function FoodsPage() {
       {/* Food Items Table */}
       <div className="rounded-xl border border-gray-800 bg-gradient-to-b from-gray-950 to-gray-900 shadow-xl overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-400">
-            <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 opacity-60 animate-pulse" />
-            <Spinner /> Loading menu items...
+          <div className="flex flex-col items-center justify-center p-8 text-center text-gray-400">
+            <UtensilsCrossed className="w-10 h-10 mb-3 opacity-60 animate-pulse" />
+            <div className="flex items-center gap-2">
+              <Spinner size="md" />
+              <span>Loading menu items...</span>
+            </div>
           </div>
         ) : (
           <Table>
@@ -342,7 +434,7 @@ export default function FoodsPage() {
           <DialogHeader>
             <DialogTitle className="text-white">Edit Food Item</DialogTitle>
           </DialogHeader>
-          {selectedFood && <FoodForm foodItem={selectedFood as any} onFormSubmit={handleFormSubmit} />}
+          {selectedFood && <FoodForm foodItem={selectedFood as any} onFormSubmit={handleEditFormSubmit} />}
         </DialogContent>
       </Dialog>
 
@@ -350,30 +442,72 @@ export default function FoodsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="bg-gradient-to-b from-gray-900 to-gray-800 border border-gray-700">
           <DialogHeader>
-            <DialogTitle className="text-white">Confirm Deletion</DialogTitle>
+            <DialogTitle className="text-white">
+              {showMarkInactiveOption ? "Cannot Delete Item" : "Confirm Deletion"}
+            </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Are you sure you want to delete "{selectedFood?.name}"? This action cannot be undone.
+              {showMarkInactiveOption ? (
+                <div className="space-y-2">
+                  <p className="text-red-400">{deleteError}</p>
+                  <p>Would you like to mark this item as inactive instead? This will hide it from customers while preserving order history.</p>
+                </div>
+              ) : (
+`Are you sure you want to delete "${selectedFood?.name}" ? This action cannot be undone.`              )}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setDeleteError(null);
+                setShowMarkInactiveOption(false);
+              }}
               disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting ? (
-                <>
-                  <Spinner /> Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </>
-              )}
-            </Button>
+            {showMarkInactiveOption ? (
+              <>
+                <Button variant="secondary" onClick={handleMarkInactive} disabled={isDeleting}>
+                  {isDeleting ? (
+                    <>
+                      <Spinner size="sm" className="mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Mark as Inactive"
+                  )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleForceDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Spinner size="sm" className="mr-2" />
+                      Force Deleting...
+                    </>
+                  ) : (
+                    "Force Delete"
+                  )}
+                </Button>
+              </>
+            ) : (
+              <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
+                {isDeleting ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </>
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

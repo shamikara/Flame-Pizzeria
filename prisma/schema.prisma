@@ -26,8 +26,8 @@ model user {
   communityRecipes   communityrecipe[]
   employee           employee?
   notifications      notification[]
-  orders             order[]
-  ratings            rating[]
+  orders             order[]           @relation("OrderUser")
+  ratings            rating[]          @relation("UserRatings")
   recipeComments     recipecomment[]
 }
 
@@ -67,10 +67,10 @@ model fooditem {
   updatedAt      DateTime        @updatedAt
   categoryId     Int
   likes          Like[]          @relation("FoodItemLikes")
-  customizations customization[]
+  customizations customization[] @relation("FoodItemCustomizations")
   category       category        @relation(fields: [categoryId], references: [id])
-  orderItems     orderitem[]
-  ratings        rating[]
+  orderItems     orderitem[]     @relation("FoodItemOrderItems")
+  ratings        rating[]        @relation("FoodItemRatings")
 
   @@index([categoryId], map: "fooditem_categoryId_fkey")
 }
@@ -80,7 +80,7 @@ model customization {
   name        String
   price       Float
   foodItemId  Int
-  foodItem    fooditem                  @relation(fields: [foodItemId], references: [id])
+  foodItem    fooditem                  @relation("FoodItemCustomizations", fields: [foodItemId], references: [id], onDelete: Cascade)
   ingredients customizationingredient[]
 
   @@index([foodItemId], map: "customization_foodItemId_fkey")
@@ -103,29 +103,30 @@ model order {
   id                Int            @id @default(autoincrement())
   total             Float
   status            order_status   @default(PENDING)
-  type              order_type
-  notes             String?
-  address           String
-  phone             String
-  tableNumber       String?
+  paymentStatus     payment_status @default(PENDING)
+  paymentMethod     payment_method @default(CASH)
   deliveryAddress   String?
+  deliveryFee       Float          @default(0)
+  specialRequests   String?        @db.Text
+  estimatedDelivery DateTime?
+  deliveredAt       DateTime?
+  preparedAt        DateTime?
+  isPaid            Boolean        @default(false)
+  paymentIntentId   String?        @unique
+  isReviewed        Boolean        @default(false)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   userId            Int
-  preparedById      Int?
   deliveredById     Int?
-  inventoryDeducted Boolean        @default(false)
-  deliveredAt       DateTime?
-  delivery          delivery?
-  notifications     notification[]
+  preparedById      Int?
+  items             orderitem[]
+  user              user           @relation("OrderUser", fields: [userId], references: [id])
   deliveredBy       employee?      @relation("OrderDeliveredBy", fields: [deliveredById], references: [id])
   preparedBy        employee?      @relation("OrderPreparedBy", fields: [preparedById], references: [id])
-  user              user           @relation(fields: [userId], references: [id])
-  items             orderitem[]
-  payments          payment[]
+  payment           payment[]
+  delivery          delivery[]
+  reviews           rating[]
 
-  @@index([deliveredById], map: "order_deliveredById_fkey")
-  @@index([preparedById], map: "order_preparedById_fkey")
   @@index([userId], map: "order_userId_fkey")
 }
 
@@ -137,24 +138,22 @@ model orderitem {
   customizations Json?
   orderId        Int
   foodItemId     Int
-  foodItem       fooditem @relation(fields: [foodItemId], references: [id])
-  order          order    @relation(fields: [orderId], references: [id])
+  foodItem       fooditem @relation("FoodItemOrderItems", fields: [foodItemId], references: [id], onDelete: Cascade)
+  order          order    @relation("OrderOrderItems", fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([foodItemId], map: "orderitem_foodItemId_fkey")
   @@index([orderId], map: "orderitem_orderId_fkey")
 }
 
 model payment {
-  id                Int              @id @default(autoincrement())
-  amount            Float
-  method            payment_method
-  status            payment_status
-  transactionId     String?
-  createdAt         DateTime         @default(now())
-  orderId           Int
-  order             order            @relation(fields: [orderId], references: [id])
-  cateringrequest   cateringrequest? @relation(fields: [cateringrequestId], references: [id])
-  cateringrequestId Int?
+  id            Int            @id @default(autoincrement())
+  amount        Float
+  method        payment_method
+  status        payment_status
+  transactionId String?
+  createdAt     DateTime       @default(now())
+  orderId       Int
+  order         order          @relation(fields: [orderId], references: [id])
 
   @@index([orderId], map: "payment_orderId_fkey")
 }
@@ -271,17 +270,22 @@ model PromotionBanner {
 }
 
 model rating {
-  id         Int      @id @default(autoincrement())
+  id         Int         @id @default(autoincrement())
   stars      Int
-  comment    String?  @db.Text
-  createdAt  DateTime @default(now())
+  comment    String?     @db.Text
+  isApproved Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
   userId     Int
   foodItemId Int
-  foodItem   fooditem @relation(fields: [foodItemId], references: [id])
-  user       user     @relation(fields: [userId], references: [id])
+  orderId    Int?        @unique
+  user       user        @relation("UserRatings", fields: [userId], references: [id])
+  foodItem   fooditem    @relation(fields: [foodItemId], references: [id])
+  order      order?      @relation(fields: [orderId], references: [id])
 
-  @@index([foodItemId], map: "rating_foodItemId_fkey")
-  @@index([userId], map: "rating_userId_fkey")
+  @@index([userId], name: "rating_userId_fkey")
+  @@index([foodItemId], name: "rating_foodItemId_fkey")
+  @@index([orderId], name: "rating_orderId_fkey")
 }
 
 model inventoryalert {
@@ -356,7 +360,7 @@ model leadership {
 }
 
 model cateringrequest {
-  id              Int       @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   eventType       String
   eventDate       DateTime
   guestCount      Int
@@ -364,9 +368,8 @@ model cateringrequest {
   contactEmail    String
   menuItems       Json
   specialRequests String?
-  status          String    @default("PENDING")
-  createdAt       DateTime  @default(now())
-  payments        payment[]
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now())
 }
 
 model passwordreset {

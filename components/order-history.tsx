@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Package, Clock, CheckCircle, XCircle, Truck, Loader2 } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle, Truck, Loader2, RefreshCw } from 'lucide-react';
+import { useCart } from '@/components/cart-provider';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY_FOR_PICKUP' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
 
@@ -55,6 +58,11 @@ export function OrderHistory() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reordering, setReordering] = useState<string | null>(null);
+
+  const { addToCart, clearCart } = useCart();
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -83,6 +91,48 @@ export function OrderHistory() {
       currency: 'LKR',
       minimumFractionDigits: 2,
     }).format(amount);
+  };
+
+  const handleReorder = async (order: Order) => {
+    try {
+      setReordering(order.id);
+
+      // Clear current cart and add all items from this order
+      clearCart();
+
+      // Add each item from the order to the cart
+      for (const item of order.items) {
+        addToCart({
+          productId: item.foodItem.name, // Using name as productId for now
+          name: item.foodItem.name,
+          price: item.foodItem.price,
+          image: '', // No image available from order history
+          customizations: item.customizations.map(c => ({
+            id: Math.random(), // Generate temporary ID
+            name: c.name,
+            price: c.price || 0
+          }))
+        }, item.quantity);
+      }
+
+      toast({
+        title: "Order items added to cart!",
+        description: `Added ${order.items.length} items from Order #${String(order.id).substring(0, 8).toUpperCase()} to your cart.`,
+      });
+
+      // Navigate to shop page
+      router.push('/shop');
+
+    } catch (error) {
+      console.error('Error reordering:', error);
+      toast({
+        title: "Failed to reorder",
+        description: "There was an error adding items to your cart. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setReordering(null);
+    }
   };
 
   if (loading) {
@@ -184,8 +234,22 @@ export function OrderHistory() {
                       <a href={`/orders/${order.id}`}>View Details</a>
                     </Button>
                     {order.status === 'DELIVERED' && (
-                      <Button size="sm" asChild>
-                        <a href="#">Reorder</a>
+                      <Button
+                        size="sm"
+                        onClick={() => handleReorder(order)}
+                        disabled={reordering === order.id}
+                      >
+                        {reordering === order.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Reordering...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Reorder
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>

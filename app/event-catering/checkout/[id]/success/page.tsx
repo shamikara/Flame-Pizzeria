@@ -53,6 +53,34 @@ export default function EventCateringPaymentSuccessPage() {
 
           // Show success message
           if (paymentIntent) {
+            console.log('[CATERING_SUCCESS] Confirming payment for request:', requestId);
+
+            // Confirm the payment and update status
+            try {
+              const confirmResponse = await fetch('/api/catering/confirm-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  requestId,
+                  paymentIntentId: paymentIntent
+                })
+              });
+
+              if (confirmResponse.ok) {
+                const confirmData = await confirmResponse.json();
+                console.log('[CATERING_SUCCESS] Payment confirmed:', confirmData);
+
+                // Update local request status
+                if (confirmData.request) {
+                  setRequest(confirmData.request);
+                }
+              } else {
+                console.error('[CATERING_SUCCESS] Payment confirmation failed:', await confirmResponse.text());
+              }
+            } catch (confirmError) {
+              console.error('[CATERING_SUCCESS] Error confirming payment:', confirmError);
+            }
+
             toast({
               title: "Payment successful!",
               description: "Your catering deposit has been processed successfully.",

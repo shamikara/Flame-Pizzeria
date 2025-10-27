@@ -37,6 +37,10 @@ export default function RecipesBoardPage() {
   const { user } = useSession();
   const { toast } = useToast();
 
+  const isCustomerOrAbove = user?.role === 'CUSTOMER' || user?.role === 'ADMIN' || user?.role === 'MANAGER' || user?.role === 'CHEF' || user?.role === 'WAITER' || user?.role === 'STORE_KEEP' || user?.role === 'DELIVERY_PERSON' || user?.role === 'KITCHEN_HELPER' || user?.role === 'STAFF';
+  const isGuestUser = !user;
+  const canManageRecipes = user?.role === 'CUSTOMER' || user?.role === 'ADMIN' || user?.role === 'MANAGER';
+
   const fetchRecipes = async () => {
     try {
       setLoading(true);
@@ -73,6 +77,7 @@ export default function RecipesBoardPage() {
   };
 
   const handleToggleView = () => {
+    if (!canManageRecipes) return;
     setShowMyRecipes(!showMyRecipes);
     if (!showMyRecipes && myRecipes.length === 0) {
       // Fetch my recipes if we're switching to "My Recipes" view and haven't loaded them yet
@@ -135,7 +140,7 @@ export default function RecipesBoardPage() {
         <div>
           <h1 className="text-2xl font-bold">Community Recipe Board</h1>
           <p className="text-sm text-muted-foreground">
-            {showMyRecipes ? 'Your shared recipes' : 'Discover recipes from our community'}
+            {showMyRecipes ? 'Your shared recipes' : isGuestUser ? 'Discover recipes from our community (sign in to share your own)' : 'Discover recipes from our community'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -152,46 +157,50 @@ export default function RecipesBoardPage() {
             </svg>
             Community Recipes
           </Button>
-          <Button
-            variant={showMyRecipes ? "default" : "outline"}
-            onClick={handleToggleView}
-            className="gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chef-hat">
-              <path d="M6 13.87A4 4 0 0 1 7.41 7a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.1 5.1 0 0 1 16.59 7 4 4 0 0 1 18 13.87"/>
-              <path d="M8 22h8"/>
-              <path d="M12 15v7"/>
-              <path d="M12 13.87V10"/>
-            </svg>
-            My Recipes
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <PlusCircle className="h-4 w-4" />
-                Share Recipe
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Share Your Recipe</DialogTitle>
-                <p className="text-sm text-muted-foreground">
-                  Share your favorite recipe with the community. Our team will review it before publishing.
-                </p>
-              </DialogHeader>
-              <div className="py-4">
-                <CommunityRecipeForm
-                  onSuccess={() => {
-                    setIsDialogOpen(false);
-                    fetchMyRecipes();
-                    if (!showMyRecipes) {
-                      fetchRecipes();
-                    }
-                  }}
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
+          {canManageRecipes && (
+            <Button
+              variant={showMyRecipes ? "default" : "outline"}
+              onClick={handleToggleView}
+              className="gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chef-hat">
+                <path d="M6 13.87A4 4 0 0 1 7.41 7a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.1 5.1 0 0 1 16.59 7 4 4 0 0 1 18 13.87"/>
+                <path d="M8 22h8"/>
+                <path d="M12 15v7"/>
+                <path d="M12 13.87V10"/>
+              </svg>
+              My Recipes
+            </Button>
+          )}
+          {canManageRecipes && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <PlusCircle className="h-4 w-4" />
+                  Share Recipe
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Share Your Recipe</DialogTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Share your favorite recipe with the community. Our team will review it before publishing.
+                  </p>
+                </DialogHeader>
+                <div className="py-4">
+                  <CommunityRecipeForm
+                    onSuccess={() => {
+                      setIsDialogOpen(false);
+                      fetchMyRecipes();
+                      if (!showMyRecipes) {
+                        fetchRecipes();
+                      }
+                    }}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 
@@ -286,7 +295,14 @@ export default function RecipesBoardPage() {
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-primary">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-primary"
+                    onClick={() => {
+                      setSelected(recipe);
+                    }}
+                  >
                     View Recipe
                   </Button>
                 </div>
