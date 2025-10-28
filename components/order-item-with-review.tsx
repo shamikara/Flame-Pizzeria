@@ -6,23 +6,27 @@ import { Button } from '@/components/ui/button'
 import { ReviewForm } from './review-form'
 import { format } from 'date-fns'
 
+interface Review {
+  id: string
+  rating: number
+  comment: string | null
+  createdAt: string
+}
+
+interface FoodItem {
+  id: string
+  name: string
+  price: number
+  imageUrl?: string | null
+}
+
 interface OrderItemWithReviewProps {
   item: {
     id: string
     quantity: number
-    foodItem: {
-      id: string
-      name: string
-      price: number
-      imageUrl?: string | null
-    }
+    foodItem: FoodItem
     customizations: Array<{ name: string; price: number }>
-    review?: {
-      id: string
-      rating: number
-      comment: string | null
-      createdAt: string
-    } | null
+    review?: Review | null
   }
   orderStatus: string
   orderId: string
@@ -36,10 +40,24 @@ export function OrderItemWithReview({
   onReviewSubmit 
 }: OrderItemWithReviewProps) {
   const [showReviewForm, setShowReviewForm] = useState(false)
-  const [showReviews, setShowReviews] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const hasReview = !!item.review
   const canReview = orderStatus === 'DELIVERED' && !hasReview
+  
+  const handleReviewSubmit = async () => {
+    setIsSubmitting(true)
+    try {
+      if (onReviewSubmit) {
+        await onReviewSubmit()
+      }
+      setShowReviewForm(false)
+    } catch (error) {
+      console.error('Error submitting review:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
   const currency = new Intl.NumberFormat("en-LK", {
     style: "currency",
     currency: "LKR",
@@ -77,7 +95,7 @@ export function OrderItemWithReview({
             </div>
           </div>
 
-          {hasReview && (
+          {hasReview && item.review && (
             <div className="mt-3 pt-3 border-t border-gray-800">
               <div className="flex items-center gap-2">
                 <div className="flex">
@@ -85,20 +103,22 @@ export function OrderItemWithReview({
                     <Star
                       key={i}
                       className={`h-4 w-4 ${
-                        i < item.review!.rating
+                        i < (item.review?.rating || 0)
                           ? 'text-yellow-500 fill-yellow-500'
                           : 'text-gray-600'
                       }`}
                     />
                   ))}
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {format(new Date(item.review!.createdAt), 'MMM d, yyyy')}
-                </span>
+                {item.review?.createdAt && (
+                  <span className="text-sm text-muted-foreground">
+                    {format(new Date(item.review.createdAt), 'MMM d, yyyy')}
+                  </span>
+                )}
               </div>
               {item.review?.comment && (
                 <p className="mt-2 text-sm text-gray-300">
-                  "{item.review.comment}"
+                  {item.review.comment}
                 </p>
               )}
             </div>
@@ -116,24 +136,14 @@ export function OrderItemWithReview({
           )}
 
           {showReviewForm && (
-            <div className="mt-4 pt-3 border-t border-gray-800">
+            <div className="mt-4 p-4 bg-gray-800/50 rounded-lg">
+              <h4 className="text-sm font-medium mb-3">Write a Review</h4>
               <ReviewForm
-                orderId={orderId}
                 foodItemId={item.foodItem.id}
-                foodItemName={item.foodItem.name}
-                onSuccess={() => {
-                  setShowReviewForm(false)
-                  onReviewSubmit?.()
-                }}
+                onSuccess={handleReviewSubmit}
+                onCancel={() => setShowReviewForm(false)}
+                isSubmitting={isSubmitting}
               />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2"
-                onClick={() => setShowReviewForm(false)}
-              >
-                Cancel
-              </Button>
             </div>
           )}
         </div>

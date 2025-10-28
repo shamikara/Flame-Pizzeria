@@ -7,26 +7,21 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 
 interface ReviewFormProps {
-  orderId: string
   foodItemId: string
-  foodItemName: string
-  existingRating?: number
-  existingComment?: string
-  onSuccess?: () => void
+  onSuccess: () => void
+  onCancel: () => void
+  isSubmitting?: boolean
 }
 
 export function ReviewForm({
-  orderId,
   foodItemId,
-  foodItemName,
-  existingRating,
-  existingComment,
-  onSuccess
+  onSuccess,
+  onCancel,
+  isSubmitting = false
 }: ReviewFormProps) {
-  const [rating, setRating] = useState(existingRating || 0)
+  const [rating, setRating] = useState(5)
   const [hover, setHover] = useState(0)
-  const [comment, setComment] = useState(existingComment || '')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [comment, setComment] = useState('')
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,8 +36,6 @@ export function ReviewForm({
       return
     }
 
-    setIsSubmitting(true)
-
     try {
       const response = await fetch('/api/reviews', {
         method: 'POST',
@@ -50,9 +43,8 @@ export function ReviewForm({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          orderId,
-          foodItemId,
-          rating,
+          foodItemId: parseInt(foodItemId, 10),
+          stars: rating,
           comment: comment.trim() || null,
         }),
       })
@@ -61,14 +53,13 @@ export function ReviewForm({
         throw new Error('Failed to submit review')
       }
 
+      const data = await response.json()
       toast({
         title: "Review submitted!",
         description: "Thank you for your feedback!",
       })
 
-      if (onSuccess) {
-        onSuccess()
-      }
+      onSuccess()
     } catch (error) {
       console.error('Error submitting review:', error)
       toast({
@@ -76,14 +67,11 @@ export function ReviewForm({
         description: "Failed to submit review. Please try again later.",
         variant: "destructive",
       })
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="space-y-4 p-4 border rounded-lg">
-      <h3 className="text-lg font-medium">Review {foodItemName}</h3>
+    <div className="space-y-4">
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex items-center">
@@ -116,9 +104,22 @@ export function ReviewForm({
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Submitting...' : 'Submit Review'}
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Review'}
+            </Button>
+          </div>
         </div>
       </form>
     </div>

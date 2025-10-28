@@ -7,6 +7,7 @@ import { getServerSession } from "@/lib/session"
 import prisma from "@/lib/db"
 import Link from "next/link"
 import { OrderItemWithReview } from "@/components/order-item-with-review"
+import { format } from "date-fns"
 
 const statusStyles: Record<string, string> = {
   PENDING: "bg-yellow-500/20 text-yellow-400 border-yellow-500/40",
@@ -28,20 +29,30 @@ const currency = new Intl.NumberFormat("en-LK", {
 const isStaffRole = (role: string) => ["ADMIN", "MANAGER", "CHEF", "WAITER", "STORE_KEEP", "DELIVERY_PERSON", "KITCHEN_HELPER", "STAFF"].includes(role);
 
 export default async function OrderDetailsPage({ params }: { params: { orderId: string } }) {
+  // Ensure params is properly awaited
+  const { orderId } = await Promise.resolve(params);
   const session = await getServerSession();
   if (!session) {
     redirect(`/login?callbackUrl=/orders/${params.orderId}`);
   }
 
-  const orderId = Number(params.orderId);
-  if (!Number.isInteger(orderId)) {
+  const parsedOrderId = Number(orderId);
+  if (!Number.isInteger(parsedOrderId)) {
     notFound();
   }
 
+  // First, get the order with its items
   const order = await prisma.order.findUnique({
-    where: { id: orderId },
+    where: { id: parsedOrderId },
     include: {
-      user: { select: { firstName: true, lastName: true, email: true } },
+      user: { 
+        select: { 
+          id: true,
+          firstName: true, 
+          lastName: true, 
+          email: true 
+        } 
+      },
       items: {
         include: {
           foodItem: {
@@ -52,23 +63,35 @@ export default async function OrderDetailsPage({ params }: { params: { orderId: 
               imageUrl: true,
             },
           },
-          review: {
-            select: {
-              id: true,
-              rating: true,
-              comment: true,
-              createdAt: true,
-            },
-          },
         },
       },
-      payments: true,
+      payment: true,
     },
-  }) as any; // Temporary type assertion to bypass TypeScript errors
+  });
 
   if (!order) {
     notFound();
   }
+
+  // Get all food item IDs from the order
+  const foodItemIds = order.items.map((item: any) => item.foodItemId);
+
+  // Fetch all ratings for these food items by the current user
+  const ratings = await prisma.rating.findMany({
+    where: {
+      foodItemId: { in: foodItemIds },
+      userId: session.userId,
+    },
+  });
+
+  // Create a map of foodItemId to rating
+  const ratingMap = new Map(ratings.map(rating => [rating.foodItemId, rating]));
+
+  // Add the rating to each order item
+  const orderItemsWithRatings = order.items.map(item => ({
+    ...item,
+    review: ratingMap.get(item.foodItemId) || null,
+  }));
 
   if (order.userId !== session.userId && !isStaffRole(session.role)) {
     notFound();
@@ -94,31 +117,46 @@ export default async function OrderDetailsPage({ params }: { params: { orderId: 
       .filter((entry): entry is { name: string; price: number } => Boolean(entry));
   };
 
-  const orderItems = order.items.map((item) => {
+  const orderItems = orderItemsWithRatings.map((item) => {
     const customizations = normalizeCustomizations(item.customizations as unknown);
     const customizationsTotal = customizations.reduce((sum, custom) => sum + (custom?.price ?? 0), 0);
     const linePrice = Number(item.foodItem.price) + customizationsTotal;
+    
+    // Format the review data if it exists
+    const review = item.review ? {
+      id: item.review.id.toString(),
+      rating: item.review.stars,
+      comment: item.review.comment || null,
+      createdAt: item.review.createdAt.toISOString(),
+    } : undefined;
+    
     return {
       id: item.id,
       quantity: item.quantity,
-      name: item.foodItem.name,
-      unitPrice: linePrice,
-      subtotal: linePrice * item.quantity,
+      foodItem: {
+        id: item.foodItem.id.toString(),
+        name: item.foodItem.name,
+        price: item.foodItem.price,
+        imageUrl: item.foodItem.imageUrl || undefined,
+      },
       customizations,
+      linePrice,
+      total: linePrice * item.quantity,
+      review,
     };
   });
 
   const totals = {
-    subtotal: orderItems.reduce((sum, item) => sum + item.subtotal, 0),
+    subtotal: orderItems.reduce((sum, item) => sum + item.total, 0),
   };
 
-  const payments = order.payments.map((payment) => ({
+  const payments = (order.payment || []).map((payment: any) => ({
     id: payment.id,
     status: payment.status,
     method: payment.method,
-    amount: Number(payment.amount),
+    amount: payment.amount,
     transactionId: payment.transactionId,
-    createdAt: new Date(payment.createdAt),
+    createdAt: payment.createdAt,
   }));
 
   return (
@@ -139,21 +177,29 @@ export default async function OrderDetailsPage({ params }: { params: { orderId: 
             <CardTitle>Items</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {order.items.map((item) => (
-              <OrderItemWithReview
-                key={item.id}
-                item={{
-                  ...item,
-                  foodItem: item.foodItem,
-                  customizations: normalizeCustomizations(item.customizations as unknown)
-                }}
-                orderStatus={order.status}
-                orderId={order.id.toString()}
-                onReviewSubmit={() => {
-                  // This will be handled by the client component
-                }}
-              />
-            ))}
+            {orderItems.map((item) => {
+              const orderItem = {
+                id: item.id.toString(),
+                quantity: item.quantity,
+                foodItem: item.foodItem,
+                customizations: item.customizations,
+                review: item.review ? {
+                  id: item.review.id,
+                  rating: item.review.rating,
+                  comment: item.review.comment,
+                  createdAt: item.review.createdAt
+                } : undefined
+              };
+              
+              return (
+                <OrderItemWithReview
+                  key={item.id}
+                  item={orderItem}
+                  orderStatus={order.status}
+                  orderId={order.id.toString()}
+                />
+              );
+            })}
           </CardContent>
         </Card>
 
