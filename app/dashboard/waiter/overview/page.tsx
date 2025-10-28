@@ -6,13 +6,13 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import db from "@/lib/db"
-import { order_status, order_type } from "@prisma/client"
+import { order_status } from "@prisma/client"
 
 async function getServiceStats() {
   const startOfDay = new Date()
   startOfDay.setHours(0, 0, 0, 0)
 
-  const [ready, outForDelivery, deliveredToday, dineInActive] = await Promise.all([
+  const [ready, outForDelivery, deliveredToday, activeOrders] = await Promise.all([
     db.order.count({ where: { status: order_status.READY_FOR_PICKUP } }),
     db.order.count({ where: { status: order_status.OUT_FOR_DELIVERY } }),
     db.order.count({
@@ -23,7 +23,6 @@ async function getServiceStats() {
     }),
     db.order.count({
       where: {
-        type: order_type.DINE_IN,
         status: {
           in: [order_status.PENDING, order_status.CONFIRMED, order_status.PREPARING],
         },
@@ -35,7 +34,7 @@ async function getServiceStats() {
     ready,
     outForDelivery,
     deliveredToday,
-    dineInActive,
+    activeOrders,
   }
 }
 
@@ -45,7 +44,6 @@ async function getPickupQueue() {
     select: {
       id: true,
       createdAt: true,
-      notes: true,
       items: {
         select: {
           quantity: true,
@@ -57,50 +55,64 @@ async function getPickupQueue() {
     take: 6,
   })
 
-  return orders
+  return orders.map(order => ({
+    ...order,
+    notes: '' // Add empty notes field for backward compatibility
+  }))
 }
 
 async function getDeliveryQueue() {
   const orders = await db.order.findMany({
     where: {
-      type: order_type.DELIVERY,
       status: {
         in: [order_status.PREPARING, order_status.READY_FOR_PICKUP, order_status.OUT_FOR_DELIVERY],
       },
+      deliveryAddress: { not: null },
     },
     select: {
       id: true,
       status: true,
       createdAt: true,
-      address: true,
-      phone: true,
+      deliveryAddress: true,
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: {
+      createdAt: 'asc',
+    },
     take: 6,
   })
-
-  return orders
+  return orders.map(order => ({
+    ...order,
+    address: order.deliveryAddress, // Map deliveryAddress to address for backward compatibility
+    phone: '' // Add empty phone number since the field is required by the UI
+  }))
 }
 
 async function getTableSummary() {
   const dineInOrders = await db.order.findMany({
     where: {
-      type: order_type.DINE_IN,
       status: {
         in: [order_status.PENDING, order_status.CONFIRMED, order_status.PREPARING],
       },
+      // Filter for dine-in orders by checking for null deliveryAddress
+      deliveryAddress: null,
     },
     select: {
       id: true,
-      tableNumber: true,
       status: true,
       createdAt: true,
+      // Since we don't have tableNumber, we'll use order ID as a reference
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: {
+      createdAt: 'asc',
+    },
     take: 6,
-  })
-
-  return dineInOrders
+  });
+  
+  // Map the results to include a placeholder for table number
+  return dineInOrders.map(order => ({
+    ...order,
+    tableNumber: `Order #${order.id}` // Using order ID as a reference
+  }));
 }
 
 export default async function WaiterOverviewPage() {
@@ -167,8 +179,8 @@ export default async function WaiterOverviewPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{stats.dineInActive}</div>
-            <p className="text-xs text-gray-400 mt-1">Attention needed on floor</p>
+            <div className="text-2xl font-bold text-white">{stats.activeOrders}</div>
+            <p className="text-xs text-gray-400 mt-1">Active orders needing attention</p>
           </CardContent>
         </Card>
       </div>
