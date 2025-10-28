@@ -27,6 +27,7 @@ model user {
   employee           employee?
   notifications      notification[]
   orders             order[]           @relation("OrderUser")
+  reviewedRatings    rating[]          @relation("ReviewedRatings")
   ratings            rating[]          @relation("UserRatings")
   recipeComments     recipecomment[]
 }
@@ -325,17 +326,24 @@ model fooditem {
 }
 
 model rating {
-  id         Int      @id @default(autoincrement())
-  stars      Int
-  comment    String?  @db.Text
-  createdAt  DateTime @default(now())
-  userId     Int
-  foodItemId Int
-  foodItem   fooditem @relation("FoodItemRatings", fields: [foodItemId], references: [id], onDelete: Cascade)
-  user       user     @relation("UserRatings", fields: [userId], references: [id], onDelete: Cascade)
+  id           Int       @id @default(autoincrement())
+  stars        Int
+  comment      String?   @db.Text
+  status       String    @default("PENDING")
+  adminComment String?   @db.Text
+  reviewedAt   DateTime?
+  reviewedById Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  userId       Int
+  foodItemId   Int
+  foodItem     fooditem  @relation("FoodItemRatings", fields: [foodItemId], references: [id], onDelete: Cascade)
+  reviewedBy   user?     @relation("ReviewedRatings", fields: [reviewedById], references: [id])
+  user         user      @relation("UserRatings", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "rating_userId_fkey")
   @@index([foodItemId], map: "rating_foodItemId_fkey")
+  @@index([reviewedById], map: "rating_reviewedById_fkey")
 }
 
 model orderitem {
