@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "@/components/session-provider";
 import { Spinner } from "@/components/ui/spinner";
 import { Loader2 } from "lucide-react";
+import { LoginDialog } from "@/components/auth/login-dialog";
 
 interface ServiceItem {
   id: string;
@@ -43,6 +44,8 @@ export default function EventCateringPage() {
   } | null>(null);
   const [isFormSubmitted, setIsFormSubmitted] = useState(false);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const { user, isLoading: sessionLoading } = useSession();
@@ -130,7 +133,7 @@ export default function EventCateringPage() {
     }
 
     if (!user) {
-      router.push(`/login?redirect=/event-catering/checkout/${submittedRequest.id}`);
+      setShowLoginDialog(true);
       return;
     }
 
@@ -175,6 +178,46 @@ export default function EventCateringPage() {
       });
     } finally {
       setIsCheckoutLoading(false);
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (!user) {
+      setShowLoginDialog(true);
+      return;
+    }
+    
+    setIsCheckingOut(true);
+    try {
+      // Proceed with creating the order
+      const response = await fetch("/api/event-catering/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          services,
+          eventType: "catering",
+          // Add other necessary fields
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create order");
+      }
+
+      // Redirect to checkout page
+      router.push(`/event-catering/checkout/${data.orderId}`);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to proceed to checkout",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCheckingOut(false);
     }
   };
 
@@ -299,27 +342,34 @@ export default function EventCateringPage() {
                   <p className="mt-4 text-xs text-muted-foreground">
                     A 25% advance secures your booking. The remaining balance is due once menu and logistics are finalised.
                   </p>
-                  <Button
-                    className="mt-4 w-full"
-                    disabled={sessionLoading || isCheckoutLoading || !submittedRequest || paymentStatus?.status === 'COMPLETED'}
-                    onClick={handleProceedToPayment}
-                  >
-                    {isCheckoutLoading ? (
-                      <>
-                        <Spinner size="sm" className="mr-2" />
-                        Preparing payment…
-                      </>
-                    ) : paymentStatus?.status === 'COMPLETED' ? (
-                      "Payment Completed"
-                    ) : (
-                      "Proceed to payment"
+                  <div className="space-y-4">
+                    <Button
+                      onClick={handleCheckout}
+                      className="w-full mt-6"
+                      size="lg"
+                      disabled={services.length === 0 || isFormSubmitted || isCheckingOut}
+                    >
+                      {isCheckoutLoading || isCheckingOut ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {isCheckingOut ? "Preparing Checkout..." : "Processing..."}
+                        </>
+                      ) : (
+                        "Proceed to Payment"
+                      )}
+                    </Button>
+                    
+                    {!user && (
+                      <p className="text-sm text-center text-muted-foreground">
+                        You'll need to log in to complete your payment
+                      </p>
                     )}
-                  </Button>
-                  {submittedRequest && (
-                    <p className="mt-2 text-[10px] uppercase tracking-wide text-muted-foreground">
-                      Editing the form will refresh the quote and require a new submission.
-                    </p>
-                  )}
+                  </div>
+                  <LoginDialog 
+                    open={showLoginDialog} 
+                    onOpenChange={setShowLoginDialog}
+                    onSuccess={handleCheckout}
+                  />
                 </>
               )}
             </CardContent>

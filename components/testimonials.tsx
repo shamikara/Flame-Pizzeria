@@ -84,13 +84,13 @@ export function Testimonials() {
   }
 
   return (
-    <section className="py-16">
+    <section className="py-16 mx-auto backdrop-blur-sm bg-white/50 dark:bg-black/50 rounded-5xl shadow-lg overflow-hidden my-5">
       <h2 className="text-3xl font-bold mb-8 text-center text-gray-900 dark:text-white">
         What Our Customers Say
       </h2>
       
       <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div className="max-w-5xl mx-auto border border-gray-200 dark:border-gray-700 rounded-2xl">
           <div className="p-8 md:p-12">
             {displayReviews.length > 0 ? (
               <div className="text-center">

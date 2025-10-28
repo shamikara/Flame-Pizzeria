@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-
+import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -162,17 +162,85 @@ export default function OrdersPage() {
   const pendingCount = orderList.filter((o) => o.status === "PENDING").length;
   const deliveredCount = orderList.filter((o) => o.status === "DELIVERED").length;
 
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
   const updateStatus = async (orderId: number, status: string) => {
     try {
+      setError(null);
+      console.log(`Updating order ${orderId} status to ${status}`);
+      
       const res = await fetch(`/api/orders/${orderId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Failed to update status");
+      
+      let data;
+      try {
+        data = await res.json();
+        console.log('API Response:', { status: res.status, data });
+      } catch (jsonError) {
+        console.error('Failed to parse JSON response:', jsonError);
+        throw new Error('Invalid response from server. Please try again.');
+      }
+      
+      if (!res.ok) {
+        console.error('API Error:', { status: res.status, data });
+        // If we have a detailed error message from the server, use it
+        if (data && data.error) {
+          throw new Error(data.error);
+        }
+        // Otherwise, provide a more helpful message based on status code
+        const statusMessages: Record<number, string> = {
+          400: 'Invalid request. Please check the status value.',
+          401: 'You are not authorized to perform this action.',
+          403: 'You do not have permission to update this order status.',
+          404: 'Order not found.',
+          500: 'An unexpected error occurred on the server.'
+        };
+        throw new Error(statusMessages[res.status] || `Failed to update status (${res.status})`);
+      }
+      
+      // Show success message
+      toast({
+        title: "Success",
+        description: `Order status updated to ${status}`,
+        variant: "default",
+      });
+      
+      // Refresh the orders list
       fetchAllData();
     } catch (err) {
-      console.error(err);
+      // Safely extract error information
+      const errorInfo = {
+        message: err instanceof Error ? err.message : String(err),
+        name: err instanceof Error ? err.name : 'UnknownError',
+        stack: err instanceof Error ? err.stack : undefined,
+        raw: err,
+        orderId,
+        status
+      };
+      
+      console.error("Update status error:", errorInfo);
+      
+      // Get a user-friendly error message
+      let errorMessage = 'Failed to update order status';
+      if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = String(err.message);
+      } else if (err) {
+        errorMessage = String(err);
+      }
+      
+      setError(errorMessage);
+      
+      // Show error toast with more details
+      toast({
+        title: "Update Failed",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000 // Show for 5 seconds
+      });
     }
   };
 

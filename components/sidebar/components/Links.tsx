@@ -16,6 +16,7 @@ import {
   ChefHat,
   ClipboardList,
   Megaphone,
+  Star,
 } from "lucide-react";
 
 import { UserPayload } from "@/lib/session"; // Import the type
@@ -35,6 +36,7 @@ const allDashboardLinks = [
   { href: "/dashboard/users", label: "Customers", icon: User, roles: ['ADMIN', 'MANAGER'] },
   { href: "/dashboard/ingredients", label: "Inventory", icon: Factory, roles: ['ADMIN', 'MANAGER', 'STORE_KEEP'] },
   { href: "/dashboard/reports", label: "Reports", icon: LineChart, roles: ['ADMIN', 'MANAGER'] },
+  { href: "/dashboard/admin/reviews", label: "Review Moderation", icon: Star, roles: ['ADMIN'] },
 ];
 
 export function DashboardNav({ userRole }: { userRole: UserPayload['role'] }) {

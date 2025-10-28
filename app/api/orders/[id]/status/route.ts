@@ -20,28 +20,69 @@ type AllowedStatus = typeof ALLOWED_STATUSES[number]
 
 const INVENTORY_DEDUCTION_STATUSES = new Set<AllowedStatus>(['CONFIRMED'])
 
-const ORDER_WITH_ITEMS_INCLUDE = {
+// Define the base include for order with basic user info
+const ORDER_WITH_BASIC_INFO = {
   user: { select: { firstName: true, lastName: true, email: true } },
   items: {
     include: {
       foodItem: {
-        include: {
+        select: {
+          id: true,
+          name: true,
+          price: true,
           recipe: {
             include: {
               ingredients: {
                 include: {
-                  ingredient: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
+                  ingredient: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   },
-} as const
+} as const;
 
-type OrderWithItems = Prisma.orderGetPayload<{ include: typeof ORDER_WITH_ITEMS_INCLUDE }>
+// Define the type for order with items and food items
+// Base type for order with items
+interface BaseOrderWithItems extends Prisma.orderGetPayload<{
+  include: {
+    user: { select: { firstName: true, lastName: true, email: true } };
+    items: {
+      include: {
+        foodItem: {
+          include: {
+            category: true;
+            ratings: true;
+          };
+        };
+      };
+    };
+    payment: true;
+  };
+}> {}
+
+// Extended type with additional properties for inventory deduction
+type OrderWithItems = BaseOrderWithItems & {
+  // Add any additional custom fields if needed
+  items: Array<{
+    customizations?: unknown; // JSON field for customizations
+    foodItem: {
+      recipeIngredients?: Array<{
+        quantity: number;
+        unit: string;
+        ingredient: {
+          id: number;
+          name: string;
+          stock: number;
+          unit: string;
+        };
+      }>;
+    };
+  }>;
+};
 
 type OrderItemCustomization = { name: string; price: number }
 
@@ -128,26 +169,99 @@ export async function PATCH(request: Request, context: { params: { id: string } 
 
     try {
       const txResult = await prisma.$transaction(async (tx) => {
-        const orderWithIngredients = await tx.order.findUnique({
+        // Get the order with basic details first
+        const order = await tx.order.findUnique({
           where: { id: orderId },
-          include: ORDER_WITH_ITEMS_INCLUDE,
-        })
+          include: {
+            user: { select: { firstName: true, lastName: true, email: true } },
+            items: {
+              include: {
+                foodItem: {
+                  include: {
+                    category: true,
+                    ratings: true
+                  }
+                }
+                // Customizations are stored as a JSON field in orderitem
+                // No need to include them separately as they're part of the base model
+              }
+            },
+            payment: true
+          }
+        }) as OrderWithItems | null;
 
-        if (!orderWithIngredients) {
-          throw new Error('ORDER_NOT_FOUND')
+        if (!order) {
+          throw new Error('ORDER_NOT_FOUND');
         }
 
-        if (shouldDeductInventory && !orderWithIngredients.inventoryDeducted) {
-          await deductInventoryForOrder(orderWithIngredients, tx)
+        if (shouldDeductInventory && !order.inventoryDeducted) {
+          try {
+            // For each item in the order, fetch its recipe ingredients
+            const itemsWithIngredients = await Promise.all(
+              order.items.map(async (item) => {
+                const recipeIngredients = await tx.recipeingredient.findMany({
+                  where: { recipeId: item.foodItemId },
+                  include: {
+                    ingredient: true
+                  }
+                });
+                
+                return {
+                  ...item,
+                  foodItem: {
+                    ...item.foodItem,
+                    recipeIngredients: recipeIngredients.map(ri => ({
+                      quantity: ri.quantity * item.quantity, // Adjust quantity by order item quantity
+                      unit: ri.unit,
+                      ingredient: ri.ingredient
+                    }))
+                  }
+                };
+              })
+            );
+            
+            // Create a properly typed order object for inventory deduction
+            const orderForDeduction = {
+              ...order,
+              items: itemsWithIngredients.map(item => ({
+                ...item,
+                foodItem: {
+                  ...item.foodItem,
+                  // Ensure recipeIngredients is properly typed
+                  recipeIngredients: item.foodItem.recipeIngredients?.map(ri => ({
+                    quantity: ri.quantity,
+                    unit: ri.unit,
+                    ingredient: {
+                      id: ri.ingredient.id,
+                      name: ri.ingredient.name,
+                      stock: ri.ingredient.stock,
+                      unit: ri.ingredient.unit
+                    }
+                  })) || []
+                },
+                // Include customizations if they exist
+                customizations: item.customizations ? toCustomizationArray(item.customizations) : []
+              }))
+            };
+            
+            // Type assertion to match expected type
+            await deductInventoryForOrder(orderForDeduction as any, tx);
+          } catch (error) {
+            console.error('Failed to process inventory deduction:', error);
+            throw new Error('Failed to update inventory');
+          }
         }
 
         const updateData: { status: AllowedStatus; inventoryDeducted: boolean } = {
           status: status as AllowedStatus,
           inventoryDeducted: shouldDeductInventory
             ? true
-            : orderWithIngredients.inventoryDeducted,
+            : order.inventoryDeducted,
         }
 
+        console.log('Updating order with data:', { orderId, updateData });
+
+        // Update the order status
         const updatedOrder = await tx.order.update({
           where: { id: orderId },
           data: updateData,
@@ -156,26 +270,62 @@ export async function PATCH(request: Request, context: { params: { id: string } 
             status: true,
             updatedAt: true,
           },
-        })
+        });
 
-        return { updatedOrder, orderWithIngredients }
+        return { 
+          updatedOrder, 
+          orderWithIngredients: order 
+        }
       })
 
-      updated = txResult.updatedOrder as typeof updated
-      orderDetailsForNotifications = txResult.orderWithIngredients as OrderWithItems
+updated = txResult.updatedOrder
+      orderDetailsForNotifications = txResult.orderWithIngredients
     } catch (transactionError) {
+      console.error('Transaction error:', {
+        message: transactionError instanceof Error ? transactionError.message : String(transactionError),
+        name: transactionError instanceof Error ? transactionError.name : 'UnknownError',
+        stack: transactionError instanceof Error ? transactionError.stack : undefined,
+        raw: transactionError
+      });
+      
       if (transactionError instanceof InventoryError) {
         return NextResponse.json(
-          { error: transactionError.message, code: transactionError.code },
+          { 
+            error: transactionError.message, 
+            code: transactionError.code,
+            type: 'InventoryError'
+          },
           { status: 400 }
         )
       }
 
-      if ((transactionError as Error).message === 'ORDER_NOT_FOUND') {
-        return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      if (transactionError && typeof transactionError === 'object' && 'message' in transactionError && transactionError.message === 'ORDER_NOT_FOUND') {
+        return NextResponse.json(
+          { error: 'Order not found', type: 'OrderNotFound' },
+          { status: 404 }
+        )
       }
-
-      throw transactionError
+      
+      // Return detailed error information
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Failed to update order status: ${transactionError instanceof Error ? transactionError.message : String(transactionError)}`
+        : 'Failed to update order status';
+      
+      const errorResponse: Record<string, any> = { 
+        error: errorMessage,
+        type: 'ServerError'
+      };
+      
+      if (process.env.NODE_ENV === 'development') {
+        errorResponse.details = transactionError instanceof Error 
+          ? { message: transactionError.message, name: transactionError.name }
+          : { raw: String(transactionError) };
+      }
+      
+      return NextResponse.json(
+        errorResponse,
+        { status: 500 }
+      )
     }
 
     if (status === 'READY_FOR_PICKUP' && orderBeforeUpdate.status !== 'READY_FOR_PICKUP') {

@@ -54,36 +54,72 @@ function PaymentForm({ paymentData, request, formatCurrency }: {
     event.preventDefault();
 
     if (!stripe || !elements) {
+      toast({
+        title: "Error",
+        description: "Stripe has not been properly initialized.",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      const { error } = await stripe.confirmPayment({
+      // First, confirm the payment with Stripe
+      const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/event-catering/checkout/${request.id}/success`,
         },
+        redirect: 'if_required', // Don't redirect automatically
       });
 
-      if (error) {
-        toast({
-          title: "Payment failed",
-          description: error.message,
-          variant: "destructive",
+      if (stripeError) {
+        throw new Error(stripeError.message || 'Payment failed');
+      }
+
+      // Verify the payment with our server
+      const response = await fetch(`/api/event-catering/verify-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentIntentId: paymentIntent?.id,
+          requestId: request.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Payment verification failed');
+      }
+
+      // Only mark as successful if both Stripe and server verification pass
+      if (paymentIntent?.status === 'succeeded') {
+        // Update the request status in the database
+        await fetch(`/api/event-catering/update-status`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requestId: request.id,
+            status: 'payment_received',
+          }),
         });
+
+        // Redirect to success page
+        router.push(`/event-catering/checkout/${request.id}/success`);
       } else {
-        toast({
-          title: "Payment successful!",
-          description: "Your deposit has been processed.",
-        });
-        router.push("/dashboard");
+        throw new Error('Payment not completed');
       }
     } catch (error) {
+      console.error('Payment error:', error);
       toast({
         title: "Payment failed",
-        description: "Please try again or contact support.",
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
         variant: "destructive",
       });
     } finally {

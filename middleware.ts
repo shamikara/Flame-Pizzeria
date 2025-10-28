@@ -63,11 +63,52 @@ export async function middleware(request: NextRequest) {
     }
     
     const rolePermissions: Record<UserPayload['role'], string[]> = {
-        ADMIN: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/promotions', '/dashboard/catering', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
-        MANAGER: ['/dashboard/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/promotions', '/dashboard/catering', '/dashboard/employees', '/dashboard/users', '/dashboard/ingredients', '/dashboard/reports', '/dashboard/profile'],
-        CHEF: ['/dashboard/chef/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/customizations', '/dashboard/profile'],
-        WAITER: ['/dashboard/waiter/overview', '/dashboard/orders', '/dashboard/foods', '/dashboard/profile'],
-        STORE_KEEP: ['/dashboard/store-keep/overview', '/dashboard/store-keep/reports', '/dashboard/ingredients', '/dashboard/profile'],
+        ADMIN: [
+          '/dashboard/overview', 
+          '/dashboard/orders', 
+          '/dashboard/foods', 
+          '/dashboard/customizations', 
+          '/dashboard/promotions', 
+          '/dashboard/catering', 
+          '/dashboard/employees', 
+          '/dashboard/users', 
+          '/dashboard/ingredients', 
+          '/dashboard/reports',
+          '/dashboard/admin',  // This will cover all /dashboard/admin/* routes
+          '/dashboard/profile'
+        ],
+        MANAGER: [
+          '/dashboard/overview', 
+          '/dashboard/orders', 
+          '/dashboard/foods', 
+          '/dashboard/customizations', 
+          '/dashboard/promotions', 
+          '/dashboard/catering', 
+          '/dashboard/employees', 
+          '/dashboard/users', 
+          '/dashboard/ingredients', 
+          '/dashboard/reports', 
+          '/dashboard/profile'
+        ],
+        CHEF: [
+          '/dashboard/chef/overview', 
+          '/dashboard/orders', 
+          '/dashboard/foods', 
+          '/dashboard/customizations', 
+          '/dashboard/profile'
+        ],
+        WAITER: [
+          '/dashboard/waiter/overview', 
+          '/dashboard/orders', 
+          '/dashboard/foods', 
+          '/dashboard/profile'
+        ],
+        STORE_KEEP: [
+          '/dashboard/store-keep/overview', 
+          '/dashboard/store-keep/reports', 
+          '/dashboard/ingredients', 
+          '/dashboard/profile'
+        ],
         DELIVERY_PERSON: ['/dashboard/profile'],
         KITCHEN_HELPER: ['/dashboard/profile'],
         STAFF: ['/dashboard/profile'],

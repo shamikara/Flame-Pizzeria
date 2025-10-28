@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { getServerSession } from '@/lib/session';
 
-type ReviewWithUserAndFoodItem = Prisma.ratingGetPayload<{
-  include: {
-    user: { select: { firstName: true; lastName: true } };
-    foodItem: { select: { name: true } };
+type ReviewWithUserAndFoodItem = {
+  id: number;
+  stars: number;
+  comment: string | null;
+  user: {
+    firstName: string;
+    lastName: string;
   };
-}>;
+  foodItem: {
+    name: string;
+  };
+};
 
 export async function POST(request: Request) {
   try {
@@ -20,65 +25,52 @@ export async function POST(request: Request) {
       );
     }
 
-    const { orderId, foodItemId, rating, comment } = await request.json();
+    const { foodItemId, stars, comment } = await request.json();
+    
+    // Convert foodItemId to number if it's a string
+    const foodItemIdNum = typeof foodItemId === 'string' ? parseInt(foodItemId, 10) : foodItemId;
 
     // Validate input
-    if (!orderId || !foodItemId || !rating || rating < 1 || rating > 5) {
+    if (!foodItemIdNum || isNaN(foodItemIdNum)) {
       return NextResponse.json(
-        { error: 'Invalid input. Rating must be between 1 and 5' },
+        { error: 'Invalid food item ID' },
         { status: 400 }
       );
     }
 
-    // Check if order exists and belongs to user
-    const order = await prisma.order.findUnique({
-      where: { id: orderId, userId: session.userId },
-      include: { items: true }
+    if (!stars || stars < 1 || stars > 5) {
+      return NextResponse.json(
+        { error: 'Rating must be between 1 and 5 stars' },
+        { status: 400 }
+      );
+    }
+
+    // Check if food item exists
+    const foodItem = await prisma.fooditem.findUnique({
+      where: { id: foodItemIdNum }
     });
 
-    if (!order) {
+    if (!foodItem) {
       return NextResponse.json(
-        { error: 'Order not found or access denied' },
+        { error: 'Food item not found' },
         { status: 404 }
       );
     }
 
-    // Check if order is delivered
-    if (order.status !== 'DELIVERED') {
-      return NextResponse.json(
-        { error: 'Can only review delivered orders' },
-        { status: 400 }
-      );
-    }
-
-    // Check if item exists in order
-    const orderItem = order.items.find(item => item.foodItemId === foodItemId);
-    if (!orderItem) {
-      return NextResponse.json(
-        { error: 'Food item not found in this order' },
-        { status: 400 }
-      );
-    }
-
-    // Check if already reviewed
+    // Check if user has already reviewed this food item
     const existingReview = await prisma.rating.findFirst({
       where: {
         userId: session.userId,
-        foodItemId: foodItemId,
-        order: {
-          id: orderId
-        }
+        foodItemId: foodItemIdNum,
       },
-      include: {
+      select: {
+        id: true,
+        stars: true,
+        comment: true,
         user: {
           select: {
             firstName: true,
             lastName: true
-          }
-        },
-        foodItem: {
-          select: {
-            name: true
           }
         }
       }
@@ -86,14 +78,17 @@ export async function POST(request: Request) {
 
     let review;
     if (existingReview) {
-// Update existing review
+      // Update existing review
       review = await prisma.rating.update({
         where: { id: existingReview.id },
         data: {
-          stars: rating,
-          comment: comment || null,
+          stars: stars,
+          comment: comment?.trim() || null,
         },
-        include: {
+        select: {
+          id: true,
+          stars: true,
+          comment: true,
           user: {
             select: {
               firstName: true,
@@ -108,16 +103,18 @@ export async function POST(request: Request) {
         }
       });
     } else {
-// Create new review
+      // Create new review
       review = await prisma.rating.create({
         data: {
-          stars: rating,
-          comment: comment || null,
-          userId: session.userId,
-          foodItemId: foodItemId,
-          orderId: orderId,
+          stars: stars,
+          comment: comment?.trim() || null,
+          userId: session?.userId,
+          foodItemId: foodItemIdNum,
         },
-        include: {
+        select: {
+          id: true,
+          stars: true,
+          comment: true,
           user: {
             select: {
               firstName: true,
@@ -131,26 +128,9 @@ export async function POST(request: Request) {
           }
         }
       });
-
-// Update order's isReviewed status if all items are reviewed
-      const totalItems = order.items.length;
-      const reviewedItems = await prisma.rating.count({
-        where: { 
-          order: {
-            id: orderId
-          }
-        }
-      });
-
-      if (reviewedItems >= totalItems) {
-        await prisma.order.update({
-          where: { id: orderId },
-          data: {}
-        });
-      }
     }
 
-    return NextResponse.json({ review });
+    return NextResponse.json(review);
   } catch (error) {
     console.error('Error submitting review:', error);
     return NextResponse.json(
@@ -160,31 +140,36 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-// Get reviews with user and food item details
     const reviews = await prisma.rating.findMany({
-      where: {},
+      where: {
+        status: 'APPROVED',
+      },
       include: {
         user: {
           select: {
             firstName: true,
-            lastName: true
-          }
+            lastName: true,
+          },
         },
         foodItem: {
           select: {
-            name: true
-          }
-        }
+            name: true,
+          },
+        },
       },
-      orderBy: {
-        createdAt: 'desc'
-      },
+      orderBy: [
+        {
+          stars: 'desc', // Sort by highest rating first
+        },
+        {
+          createdAt: 'desc', // Then by newest first
+        },
+      ],
       take: 10
     });
 
-// Format response
     const formattedReviews = reviews.map((review) => {
       const userName = review.user ? 
         `${review.user.firstName || ''} ${review.user.lastName || ''}`.trim() : 

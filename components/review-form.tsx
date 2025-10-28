@@ -37,23 +37,30 @@ export function ReviewForm({
     }
 
     try {
+      const reviewData = {
+        foodItemId: foodItemId, // Already a number from props
+        stars: rating,
+        comment: comment.trim() || null,
+      }
+
+      console.log('Submitting review:', reviewData)
+
       const response = await fetch('/api/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          foodItemId: parseInt(foodItemId, 10),
-          stars: rating,
-          comment: comment.trim() || null,
-        }),
+        body: JSON.stringify(reviewData),
       })
 
+      const data = await response.json()
+      
       if (!response.ok) {
-        throw new Error('Failed to submit review')
+        console.error('Review submission failed:', data)
+        throw new Error(data.error || 'Failed to submit review')
       }
 
-      const data = await response.json()
+      console.log('Review submitted successfully:', data)
       toast({
         title: "Review submitted!",
         description: "Thank you for your feedback!",
