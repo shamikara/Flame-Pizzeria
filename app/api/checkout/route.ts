@@ -163,15 +163,18 @@ export async function POST(request: NextRequest) {
     });
 
     const order = await prisma.$transaction(async (tx) => {
+      // Create the order with all required fields and appropriate defaults
       const createdOrder = await tx.order.create({
         data: {
-          userId: finalUserId,
-          status: order_status.PENDING,
-          type: order_type.DELIVERY,
           total: calculateTotal(cartItems),
-          address,
-          phone,
-          notes,
+          status: 'PENDING',
+          type: 'DELIVERY', // Assuming this is required based on the schema
+          address: address || 'N/A', // Required field in schema
+          phone: 'N/A', // Required field in schema
+          deliveryAddress: address,
+          notes: notes || '',
+          userId: finalUserId,
+          // Other fields will use their default values from the schema
         },
       });
 

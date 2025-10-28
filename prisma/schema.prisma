@@ -236,32 +236,30 @@ model order {
   id                Int            @id @default(autoincrement())
   total             Float
   status            order_status   @default(PENDING)
-  paymentStatus     payment_status @default(PENDING)
-  paymentMethod     payment_method @default(CASH)
+  type              order_type
+  notes             String?
+  address           String
+  phone             String
+  tableNumber       String?
   deliveryAddress   String?
-  deliveryFee       Float          @default(0)
-  specialRequests   String?        @db.Text
-  estimatedDelivery DateTime?
-  deliveredAt       DateTime?
-  preparedAt        DateTime?
-  isPaid            Boolean        @default(false)
-  paymentIntentId   String?        @unique
-  isReviewed        Boolean        @default(false)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   userId            Int
-  deliveredById     Int?
   preparedById      Int?
-  items             orderitem[]    @relation("OrderOrderItems")
-  ratings           rating[]       @relation("OrderRatings")
-  notifications     notification[] @relation("OrderNotifications") // ✅ added opposite field
-  user              user           @relation("OrderUser", fields: [userId], references: [id])
+  deliveredById     Int?
+  inventoryDeducted Boolean        @default(false)
+  deliveredAt       DateTime?
+  delivery          delivery?
+  notifications     notification[] @relation("OrderNotifications")
   deliveredBy       employee?      @relation("OrderDeliveredBy", fields: [deliveredById], references: [id])
   preparedBy        employee?      @relation("OrderPreparedBy", fields: [preparedById], references: [id])
+  user              user           @relation("OrderUser", fields: [userId], references: [id])
+  items             orderitem[]    @relation("OrderOrderItems")
   payment           payment[]
-  delivery          delivery[]
 
   @@index([userId], map: "order_userId_fkey")
+  @@index([deliveredById], map: "order_deliveredById_fkey")
+  @@index([preparedById], map: "order_preparedById_fkey")
 }
 
 model notification {
@@ -272,7 +270,7 @@ model notification {
   orderId   Int?
   userId    Int
   createdAt DateTime @default(now())
-  order     order?   @relation("OrderNotifications", fields: [orderId], references: [id], onDelete: Cascade) // ✅ fixed
+  order     order?   @relation("OrderNotifications", fields: [orderId], references: [id], onDelete: Cascade)
   user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
@@ -330,19 +328,14 @@ model rating {
   id         Int      @id @default(autoincrement())
   stars      Int
   comment    String?  @db.Text
-  isApproved Boolean  @default(false)
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
   userId     Int
   foodItemId Int
-  orderId    Int?     @unique
-  user       user     @relation("UserRatings", fields: [userId], references: [id])
-  foodItem   fooditem @relation("FoodItemRatings", fields: [foodItemId], references: [id]) // ✅ fixed
-  order      order?   @relation("OrderRatings", fields: [orderId], references: [id]) // ✅ fixed
+  foodItem   fooditem @relation("FoodItemRatings", fields: [foodItemId], references: [id], onDelete: Cascade)
+  user       user     @relation("UserRatings", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId], name: "rating_userId_fkey")
-  @@index([foodItemId], name: "rating_foodItemId_fkey")
-  @@index([orderId], name: "rating_orderId_fkey")
+  @@index([userId], map: "rating_userId_fkey")
+  @@index([foodItemId], map: "rating_foodItemId_fkey")
 }
 
 model orderitem {
@@ -403,12 +396,6 @@ enum order_status {
   REFUNDED
 }
 
-enum order_type {
-  DINE_IN
-  DELIVERY
-  TAKEAWAY
-}
-
 enum leave_status {
   ACTIVE
   ON_LEAVE
@@ -446,4 +433,10 @@ enum recipe_status {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum order_type {
+  DINE_IN
+  DELIVERY
+  TAKEAWAY
 }

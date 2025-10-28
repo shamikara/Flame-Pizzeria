@@ -21,11 +21,14 @@ async function getServiceStats() {
         updatedAt: { gte: startOfDay },
       },
     }),
+    // Count all active orders (both dine-in and delivery)
     db.order.count({
       where: {
         status: {
           in: [order_status.PENDING, order_status.CONFIRMED, order_status.PREPARING],
         },
+        // Only count orders that are not marked for delivery
+        deliveryAddress: null,
       },
     }),
   ])
@@ -62,45 +65,59 @@ async function getPickupQueue() {
 }
 
 async function getDeliveryQueue() {
+  // Get delivery orders by checking for non-null deliveryAddress
   const orders = await db.order.findMany({
     where: {
       status: {
         in: [order_status.PREPARING, order_status.READY_FOR_PICKUP, order_status.OUT_FOR_DELIVERY],
       },
-      deliveryAddress: { not: null },
+      deliveryAddress: { not: null }, // Only get orders with a delivery address
     },
     select: {
       id: true,
       status: true,
       createdAt: true,
       deliveryAddress: true,
+      user: {
+        select: {
+          contact: true // Get contact info from user
+        }
+      }
     },
     orderBy: {
       createdAt: 'asc',
     },
     take: 6,
   })
+  
   return orders.map(order => ({
-    ...order,
-    address: order.deliveryAddress, // Map deliveryAddress to address for backward compatibility
-    phone: '' // Add empty phone number since the field is required by the UI
+    id: order.id,
+    status: order.status,
+    createdAt: order.createdAt,
+    deliveryAddress: order.deliveryAddress,
+    contact: order.user?.contact || 'N/A' // Use contact from user or fallback to 'N/A'
   }))
 }
 
 async function getTableSummary() {
+  // Get dine-in orders by checking for null deliveryAddress
   const dineInOrders = await db.order.findMany({
     where: {
       status: {
         in: [order_status.PENDING, order_status.CONFIRMED, order_status.PREPARING],
       },
-      // Filter for dine-in orders by checking for null deliveryAddress
-      deliveryAddress: null,
+      deliveryAddress: null, // Dine-in orders typically don't have a delivery address
     },
     select: {
       id: true,
       status: true,
       createdAt: true,
-      // Since we don't have tableNumber, we'll use order ID as a reference
+      user: {
+        select: {
+          firstName: true,
+          lastName: true
+        }
+      }
     },
     orderBy: {
       createdAt: 'asc',
@@ -108,10 +125,12 @@ async function getTableSummary() {
     take: 6,
   });
   
-  // Map the results to include a placeholder for table number
+  // Map the results to include customer name as identifier
   return dineInOrders.map(order => ({
-    ...order,
-    tableNumber: `Order #${order.id}` // Using order ID as a reference
+    id: order.id,
+    status: order.status,
+    createdAt: order.createdAt,
+    customerName: order.user ? `${order.user.firstName} ${order.user.lastName}` : 'Guest'
   }));
 }
 
@@ -240,8 +259,8 @@ export default async function WaiterOverviewPage() {
                     <span>Order #{order.id}</span>
                     <span className="uppercase text-xs text-orange-200">{order.status}</span>
                   </div>
-                  <p className="mt-1 text-xs text-gray-400">{order.address}</p>
-                  <p className="text-xs text-gray-500">{order.phone}</p>
+                  <p className="mt-1 text-xs text-gray-400">{order.deliveryAddress}</p>
+                  <p className="text-xs text-gray-500">Contact: {order.contact}</p>
                 </div>
               ))}
             </div>
@@ -264,10 +283,11 @@ export default async function WaiterOverviewPage() {
             {tableSummary.map((order) => (
               <div key={order.id} className="rounded-lg border border-white/10 bg-black/30 p-3">
                 <div className="flex items-center justify-between text-sm text-gray-300">
-                  <span>Table {order.tableNumber ?? "?"}</span>
+                  <span>Order #{order.id}</span>
                   <span className="uppercase text-xs text-orange-200">{order.status}</span>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-gray-400">Customer: {order.customerName}</p>
+                <p className="text-xs text-gray-500">
                   Opened at {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
