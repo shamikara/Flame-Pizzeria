@@ -54,27 +54,6 @@ model category {
   foodItems fooditem[]
 }
 
-model fooditem {
-  id             Int             @id @default(autoincrement())
-  name           String
-  description    String?
-  price          Float
-  imageUrl       String?
-  isActive       Boolean         @default(true)
-  foodType       Int             @default(0) @db.TinyInt
-  nutrition      Json?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  categoryId     Int
-  likes          Like[]          @relation("FoodItemLikes")
-  customizations customization[] @relation("FoodItemCustomizations")
-  category       category        @relation(fields: [categoryId], references: [id])
-  orderItems     orderitem[]     @relation("FoodItemOrderItems")
-  ratings        rating[]        @relation("FoodItemRatings")
-
-  @@index([categoryId], map: "fooditem_categoryId_fkey")
-}
-
 model customization {
   id          Int                       @id @default(autoincrement())
   name        String
@@ -97,52 +76,6 @@ model customizationingredient {
 
   @@index([customizationId], map: "customizationingredient_customizationId_fkey")
   @@index([ingredientId], map: "customizationingredient_ingredientId_fkey")
-}
-
-model order {
-  id                Int            @id @default(autoincrement())
-  total             Float
-  status            order_status   @default(PENDING)
-  paymentStatus     payment_status @default(PENDING)
-  paymentMethod     payment_method @default(CASH)
-  deliveryAddress   String?
-  deliveryFee       Float          @default(0)
-  specialRequests   String?        @db.Text
-  estimatedDelivery DateTime?
-  deliveredAt       DateTime?
-  preparedAt        DateTime?
-  isPaid            Boolean        @default(false)
-  paymentIntentId   String?        @unique
-  isReviewed        Boolean        @default(false)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  userId            Int
-  deliveredById     Int?
-  preparedById      Int?
-  items             orderitem[]
-  user              user           @relation("OrderUser", fields: [userId], references: [id])
-  deliveredBy       employee?      @relation("OrderDeliveredBy", fields: [deliveredById], references: [id])
-  preparedBy        employee?      @relation("OrderPreparedBy", fields: [preparedById], references: [id])
-  payment           payment[]
-  delivery          delivery[]
-  reviews           rating[]
-
-  @@index([userId], map: "order_userId_fkey")
-}
-
-model orderitem {
-  id             Int      @id @default(autoincrement())
-  quantity       Int
-  price          Float
-  specialNotes   String?
-  customizations Json?
-  orderId        Int
-  foodItemId     Int
-  foodItem       fooditem @relation("FoodItemOrderItems", fields: [foodItemId], references: [id], onDelete: Cascade)
-  order          order    @relation("OrderOrderItems", fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@index([foodItemId], map: "orderitem_foodItemId_fkey")
-  @@index([orderId], map: "orderitem_orderId_fkey")
 }
 
 model payment {
@@ -269,25 +202,6 @@ model PromotionBanner {
   @@index([isActive, startDate, endDate])
 }
 
-model rating {
-  id         Int         @id @default(autoincrement())
-  stars      Int
-  comment    String?     @db.Text
-  isApproved Boolean     @default(false)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  userId     Int
-  foodItemId Int
-  orderId    Int?        @unique
-  user       user        @relation("UserRatings", fields: [userId], references: [id])
-  foodItem   fooditem    @relation(fields: [foodItemId], references: [id])
-  order      order?      @relation(fields: [orderId], references: [id])
-
-  @@index([userId], name: "rating_userId_fkey")
-  @@index([foodItemId], name: "rating_foodItemId_fkey")
-  @@index([orderId], name: "rating_orderId_fkey")
-}
-
 model inventoryalert {
   id           Int            @id @default(autoincrement())
   message      String
@@ -318,6 +232,38 @@ model auditlog {
   createdAt  DateTime @default(now())
 }
 
+model order {
+  id                Int            @id @default(autoincrement())
+  total             Float
+  status            order_status   @default(PENDING)
+  paymentStatus     payment_status @default(PENDING)
+  paymentMethod     payment_method @default(CASH)
+  deliveryAddress   String?
+  deliveryFee       Float          @default(0)
+  specialRequests   String?        @db.Text
+  estimatedDelivery DateTime?
+  deliveredAt       DateTime?
+  preparedAt        DateTime?
+  isPaid            Boolean        @default(false)
+  paymentIntentId   String?        @unique
+  isReviewed        Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  userId            Int
+  deliveredById     Int?
+  preparedById      Int?
+  items             orderitem[]    @relation("OrderOrderItems")
+  ratings           rating[]       @relation("OrderRatings")
+  notifications     notification[] @relation("OrderNotifications") // ✅ added opposite field
+  user              user           @relation("OrderUser", fields: [userId], references: [id])
+  deliveredBy       employee?      @relation("OrderDeliveredBy", fields: [deliveredById], references: [id])
+  preparedBy        employee?      @relation("OrderPreparedBy", fields: [preparedById], references: [id])
+  payment           payment[]
+  delivery          delivery[]
+
+  @@index([userId], map: "order_userId_fkey")
+}
+
 model notification {
   id        Int      @id @default(autoincrement())
   message   String   @db.Text
@@ -326,7 +272,7 @@ model notification {
   orderId   Int?
   userId    Int
   createdAt DateTime @default(now())
-  order     order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     order?   @relation("OrderNotifications", fields: [orderId], references: [id], onDelete: Cascade) // ✅ fixed
   user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
@@ -357,6 +303,61 @@ model leadership {
   employeeId Int      @unique
   position   String?
   employee   employee @relation(fields: [employeeId], references: [id])
+}
+
+model fooditem {
+  id             Int             @id @default(autoincrement())
+  name           String
+  description    String?
+  price          Float
+  imageUrl       String?
+  isActive       Boolean         @default(true)
+  foodType       Int             @default(0) @db.TinyInt
+  nutrition      Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  categoryId     Int
+  likes          Like[]          @relation("FoodItemLikes")
+  customizations customization[] @relation("FoodItemCustomizations")
+  category       category        @relation(fields: [categoryId], references: [id])
+  orderItems     orderitem[]     @relation("FoodItemOrderItems")
+  ratings        rating[]        @relation("FoodItemRatings")
+
+  @@index([categoryId], map: "fooditem_categoryId_fkey")
+}
+
+model rating {
+  id         Int      @id @default(autoincrement())
+  stars      Int
+  comment    String?  @db.Text
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     Int
+  foodItemId Int
+  orderId    Int?     @unique
+  user       user     @relation("UserRatings", fields: [userId], references: [id])
+  foodItem   fooditem @relation("FoodItemRatings", fields: [foodItemId], references: [id]) // ✅ fixed
+  order      order?   @relation("OrderRatings", fields: [orderId], references: [id]) // ✅ fixed
+
+  @@index([userId], name: "rating_userId_fkey")
+  @@index([foodItemId], name: "rating_foodItemId_fkey")
+  @@index([orderId], name: "rating_orderId_fkey")
+}
+
+model orderitem {
+  id             Int      @id @default(autoincrement())
+  quantity       Int
+  price          Float
+  specialNotes   String?
+  customizations Json?
+  orderId        Int
+  foodItemId     Int
+  foodItem       fooditem @relation("FoodItemOrderItems", fields: [foodItemId], references: [id], onDelete: Cascade)
+  order          order    @relation("OrderOrderItems", fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([foodItemId], map: "orderitem_foodItemId_fkey")
+  @@index([orderId], map: "orderitem_orderId_fkey")
 }
 
 model cateringrequest {
