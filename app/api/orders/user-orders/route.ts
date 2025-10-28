@@ -29,7 +29,7 @@ export async function GET() {
                 name: true,
                 price: true,
               },
-            },,
+            },
           },
         },
       },

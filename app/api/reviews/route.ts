@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
+
+type ReviewWithUserAndFoodItem = Prisma.ratingGetPayload<{
+  include: {
+    user: { select: { firstName: true; lastName: true } };
+    foodItem: { select: { name: true } };
+  };
+}>;
 
 export async function POST(request: Request) {
   try {
@@ -55,64 +63,89 @@ export async function POST(request: Request) {
     // Check if already reviewed
     const existingReview = await prisma.rating.findFirst({
       where: {
-        orderId,
-        foodItemId,
-        userId: session.userId
+        userId: session.userId,
+        foodItemId: foodItemId,
+        order: {
+          id: orderId
+        }
+      },
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        },
+        foodItem: {
+          select: {
+            name: true
+          }
+        }
       }
     });
 
     let review;
     if (existingReview) {
-      // Update existing review
+// Update existing review
       review = await prisma.rating.update({
         where: { id: existingReview.id },
         data: {
           stars: rating,
           comment: comment || null,
-          isApproved: false // Reset approval status if updating
         },
         include: {
           user: {
             select: {
               firstName: true,
-              lastName: true,
-              image: true
+              lastName: true
+            }
+          },
+          foodItem: {
+            select: {
+              name: true
             }
           }
         }
       });
     } else {
-      // Create new review
+// Create new review
       review = await prisma.rating.create({
         data: {
           stars: rating,
           comment: comment || null,
           userId: session.userId,
-          foodItemId,
-          orderId,
-          isApproved: false
+          foodItemId: foodItemId,
+          orderId: orderId,
         },
         include: {
           user: {
             select: {
               firstName: true,
-              lastName: true,
-              image: true
+              lastName: true
+            }
+          },
+          foodItem: {
+            select: {
+              name: true
             }
           }
         }
       });
 
-      // Update order's isReviewed status if all items are reviewed
+// Update order's isReviewed status if all items are reviewed
       const totalItems = order.items.length;
       const reviewedItems = await prisma.rating.count({
-        where: { orderId }
+        where: { 
+          order: {
+            id: orderId
+          }
+        }
       });
 
       if (reviewedItems >= totalItems) {
         await prisma.order.update({
           where: { id: orderId },
-          data: { isReviewed: true }
+          data: {}
         });
       }
     }
@@ -129,25 +162,19 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    // Get approved reviews with user and food item details
+// Get reviews with user and food item details
     const reviews = await prisma.rating.findMany({
-      where: { isApproved: true },
+      where: {},
       include: {
         user: {
           select: {
             firstName: true,
-            lastName: true,
-            image: true
+            lastName: true
           }
         },
         foodItem: {
           select: {
             name: true
-          }
-        },
-        order: {
-          select: {
-            createdAt: true
           }
         }
       },
@@ -157,19 +184,25 @@ export async function GET() {
       take: 10
     });
 
-    // Format response
-    const formattedReviews = reviews.map(review => ({
-      id: review.id,
-      name: `${review.user.firstName} ${review.user.lastName}`,
-      rating: review.stars,
-      text: review.comment || '',
-      date: review.order.createdAt.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      userImage: review.user.image
-    }));
+// Format response
+    const formattedReviews = reviews.map((review) => {
+      const userName = review.user ? 
+        `${review.user.firstName || ''} ${review.user.lastName || ''}`.trim() : 
+        'Anonymous';
+      
+      return {
+        id: review.id,
+        name: userName,
+        rating: review.stars,
+        text: review.comment || '',
+        date: new Date(review.createdAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        userImage: null
+      };
+    });
 
     return NextResponse.json(formattedReviews);
   } catch (error) {
