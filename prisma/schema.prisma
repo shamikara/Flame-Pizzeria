@@ -22,7 +22,9 @@ model user {
   resetToken         String?
   resetTokenExpiry   DateTime?
   mustChangePassword Boolean              @default(false)
+  cateringOrders     EventCateringOrder[]
   likedRecipes       Like[]               @relation("UserLikes")
+  cateringRequests   cateringrequest[]
   communityRecipes   communityrecipe[]
   employee           employee?
   notifications      notification[]
@@ -30,8 +32,6 @@ model user {
   reviewedRatings    rating[]             @relation("ReviewedRatings")
   ratings            rating[]             @relation("UserRatings")
   recipeComments     recipecomment[]
-  cateringOrders     EventCateringOrder[]
-  cateringRequests   cateringrequest[]
 }
 
 model employee {
@@ -285,13 +285,12 @@ model notification {
 model EventCateringOrder {
   id              Int      @id @default(autoincrement())
   userId          Int
-  user            user     @relation(fields: [userId], references: [id])
   eventDate       DateTime
   guestCount      Int
   contactEmail    String
   contactPhone    String?
   specialRequests String?
-  deliveryAddress String   @db.Text // Storing as JSON string
+  deliveryAddress String   @db.Text
   menuItems       String   @db.Text
   status          String   @default("PENDING")
   subtotal        Float
@@ -303,6 +302,7 @@ model EventCateringOrder {
   paymentId       Int?     @unique
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  user            user     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([status])
@@ -392,23 +392,23 @@ model orderitem {
 
 model cateringrequest {
   id              Int            @id @default(autoincrement())
-  userId          Int
-  user            user           @relation(fields: [userId], references: [id])
   eventType       String
   eventDate       DateTime
   guestCount      Int
   contactName     String
   contactEmail    String
-  contactPhone    String?
   menuItems       Json
   specialRequests String?
   status          String         @default("PENDING")
-  paymentStatus   payment_status @default(PENDING)
-  depositAmount   Float?         @default(0)
-  totalAmount     Float?
-  paymentIntentId String?
   createdAt       DateTime       @default(now())
+  contactPhone    String?
+  depositAmount   Float?         @default(0)
+  paymentIntentId String?
+  paymentStatus   payment_status @default(PENDING)
+  totalAmount     Float?
   updatedAt       DateTime       @updatedAt
+  userId          Int
+  user            user           @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
