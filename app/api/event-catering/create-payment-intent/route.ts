@@ -3,9 +3,7 @@ import Stripe from "stripe";
 import { getServerSession } from "@/lib/session";
 import prisma from "@/lib/db";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2023-10-16",
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, );
 
 export async function POST(req: Request) {
   try {
@@ -17,7 +15,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const { orderId, amount } = await req.json();
+    // Read the request body only ONCE
+    const body = await req.json();
+    const { orderId, amount, metadata = {} } = body;
 
     if (!orderId || amount === undefined) {
       return NextResponse.json(
@@ -45,25 +45,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // Extract metadata if provided
-    const { metadata = {} } = await req.json();
-    
     // Create a PaymentIntent with the order amount and currency
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount), // amount in cents (includes deposit + delivery charge)
-      description: `Deposit and Delivery for Event Catering Order #${orderId}`,
-      metadata: {
-        orderId,
-        paymentType: 'deposit',
-        ...metadata
-      },
-      currency: "usd",
+      // Stripe expects the amount in the smallest currency unit (cents for LKR)
+      amount: Math.round(amount * 100),
+      currency: "lkr", // Use LKR to be consistent with the rest of the application
+      description: `Deposit for Event Catering Order #${orderId}`,
       metadata: {
         orderId: orderId.toString(),
         orderType: "event_catering",
         userId: session.userId.toString(),
+        ...metadata, // Include any additional metadata from the client
       },
-      description: `Deposit for Event Catering Order #${orderId}`,
     });
 
     return NextResponse.json({

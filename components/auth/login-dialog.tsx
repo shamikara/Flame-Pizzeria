@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 // Import your custom auth service
 
@@ -56,11 +57,14 @@ export function LoginDialog({
         description: "You are now logged in.",
       });
 
-      // Refresh the page to update the session
-      window.location.reload();
-      
-      onOpenChange(false);
-      if (onSuccess) onSuccess();
+      // The onSuccess callback is causing race conditions with session updates.
+      // A full page refresh is a more robust way to ensure the new session is recognized everywhere.
+      // This is a common pattern when dealing with HttpOnly cookies.
+      if (onSuccess) {
+        await onSuccess(); // This will close the dialog and update client state.
+      } else {
+        window.location.reload(); // Fallback to ensure the page reflects the new login state.
+      }
     } catch (error) {
       toast({
         title: "Login failed",
@@ -107,7 +111,12 @@ export function LoginDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging in...
+                </>
+              ) : "Login"}
             </Button>
           </DialogFooter>
         </form>

@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getServerSession } from "@/lib/session";
-import { stripe, formatAmountForStripe } from "@/lib/stripe";
-
-interface MenuItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-}
 
 interface MenuItemsData {
   items: MenuItem[];
@@ -20,6 +12,13 @@ interface MenuItemsData {
   [key: string]: any;
 }
 
+interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 interface CateringRequest {
   id: number;
   menuItems: unknown;
@@ -29,9 +28,10 @@ interface CateringRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Use the existing, correct server-side session function.
     const session = await getServerSession();
 
-    if (!session) {
+    if (!session || !session.userId) {
       return NextResponse.json({
         error: "Authentication required",
         requiresLogin: true
@@ -60,30 +60,6 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check if payment already exists and its status
-    const existingPayment = await prisma.payment.findFirst({
-      where: { orderId: requestIdNum }
-    });
-
-    if (existingPayment) {
-      if (existingPayment.status === 'COMPLETED') {
-        return NextResponse.json({
-          error: "Payment has already been completed for this request",
-          details: {
-            paymentId: existingPayment.id,
-            amount: existingPayment.amount,
-            completedAt: existingPayment.createdAt,
-            status: existingPayment.status
-          }
-        }, { status: 400 });
-      }
-
-      // Delete existing payment record to allow retry
-      await prisma.payment.delete({
-        where: { id: existingPayment.id }
-      });
-    }
-
     // Safely parse menu items with type checking
     const menuItems = cateringRequest.menuItems as MenuItemsData;
     
@@ -95,7 +71,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { depositDue, total } = menuItems;
+    const { depositDue } = menuItems;
     
     // Validate deposit amount
     if (typeof depositDue !== 'number' || depositDue <= 0) {
@@ -110,54 +86,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Log relevant information for debugging
-    console.log('Processing payment for catering request:', {
-      requestId: requestIdNum,
-      depositDue,
-      total,
-      hasMenuItems: !!(menuItems?.items?.length > 0)
+    // The API's only job is to validate the request and session.
+    // The client will be redirected to the checkout page, which will then
+    // create the payment intent. This matches the food order flow.
+    console.log(`[CATERING_CHECKOUT] Validated request ${requestIdNum} for user ${session.userId}. Ready for payment page.`);
+
+    return NextResponse.json({
+      success: true,
+      message: "Request validated. Proceeding to payment.",
+      cateringRequestId: requestIdNum
     });
-
-    try {
-      // Create Stripe payment intent
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: formatAmountForStripe(depositDue, 'lkr'),
-        currency: 'lkr',
-        metadata: {
-          requestId: requestIdNum.toString(),
-          type: 'catering_deposit',
-          userId: session.user?.id || 'unknown'
-        },
-        automatic_payment_methods: {
-          enabled: true,
-        },
-      });
-
-      // Create payment record in database
-      await prisma.payment.create({
-        data: {
-          amount: depositDue,
-          method: 'CARD',
-          status: 'PENDING',
-          transactionId: paymentIntent.id,
-          orderId: requestIdNum // Directly set orderId since we can't use connect with orderId being optional
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id,
-        amount: depositDue,
-        currency: 'LKR',
-      });
-    } catch (stripeError) {
-      console.error('Stripe error:', stripeError);
-      return NextResponse.json({
-        error: "Failed to create payment intent",
-        details: stripeError instanceof Error ? stripeError.message : 'Unknown Stripe error'
-      }, { status: 500 });
-    }
 
   } catch (error) {
     console.error("[CATERING_CHECKOUT_ERROR]", error);

@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { StripePaymentForm } from "@/components/payment/StripePaymentForm";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -36,9 +35,12 @@ export default function EventCateringCheckoutPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [clientSecret, setClientSecret] = useState<string>("");
-  const deliveryCharge = 300; // 300 LKR
 
-  const orderId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id || '0');
+  // Ensure params.id is valid before parsing. Return null if not.
+  const orderId = useMemo(() => {
+    const id = Array.isArray(params.id) ? params.id[0] : params.id;
+    return id && !isNaN(parseInt(id)) ? parseInt(id) : null;
+  }, [params.id]);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -46,8 +48,8 @@ export default function EventCateringCheckoutPage() {
         setLoading(true);
         
         // Fetch the order details
-        const res = await fetch(`/api/event-catering/${orderId}`);
-        if (!res.ok) {
+        const res = await fetch(`/api/catering/${orderId}`); // Use the correct API endpoint
+        if (!res.ok) { // Use the correct API endpoint
           const errorData = await res.json().catch(() => ({}));
           throw new Error(errorData.error || "Failed to fetch order");
         }
@@ -57,23 +59,19 @@ export default function EventCateringCheckoutPage() {
           throw new Error("No order data received");
         }
         
+        // Ensure amounts are numbers before setting state
+        orderData.depositAmount = Number(orderData.depositAmount) || 0;
+        orderData.totalAmount = Number(orderData.totalAmount) || 0;
+
         setOrder(orderData);
 
-        // Add delivery charge of 300 LKR
-        const deliveryCharge = 30000; // 300 LKR in cents
-        const totalAmount = Math.round(orderData.depositAmount * 100) + deliveryCharge;
-        
-        // Initialize Stripe payment intent
+        // Now, create the payment intent, mirroring the food order flow
         const paymentRes = await fetch("/api/event-catering/create-payment-intent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
-            orderId,
-            amount: totalAmount, // Includes deposit + delivery charge
-            metadata: {
-              depositAmount: Math.round(orderData.depositAmount * 100),
-              deliveryCharge: deliveryCharge
-            }
+            orderId: orderId,
+            amount: orderData.depositAmount // Pass the deposit amount to the API
           }),
         });
         
@@ -98,7 +96,7 @@ export default function EventCateringCheckoutPage() {
       }
     };
 
-    if (orderId) {
+    if (orderId !== null) {
       fetchOrder();
     }
   }, [orderId, router, toast]);
@@ -106,7 +104,7 @@ export default function EventCateringCheckoutPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <p>Loading Secure Checkout...</p>
       </div>
     );
   }
@@ -173,16 +171,12 @@ export default function EventCateringCheckoutPage() {
                   
                   <div className="border-t pt-4 space-y-2">
                     <div className="flex justify-between">
-                      <span>Subtotal:</span>
-                      <span>Rs. {order.totalAmount.toFixed(2)}</span>
+                      <span>Total Quote:</span>
+                      <span>Rs. {order.totalAmount?.toFixed(2) || '0.00'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Delivery Charge:</span>
-                      <span>Rs. {deliveryCharge.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold text-lg border-t pt-2">
-                      <span>Total Deposit (25% + Delivery):</span>
-                      <span>Rs. {(order.depositAmount + deliveryCharge).toFixed(2)}</span>
+                    <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-2">
+                      <span>Deposit Due (25%):</span>
+                      <span>Rs. {order.depositAmount?.toFixed(2) || '0.00'}</span>
                     </div>
                   </div>
                 </div>

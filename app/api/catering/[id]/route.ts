@@ -1,22 +1,14 @@
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/session';
 
 // For dynamic route rendering
 export const dynamic = 'force-dynamic';
 
-// Helper: safely extract ID
-function getIdFromParams(id: string | string[] | undefined): number | null {
-  if (!id) return null;
-  const parsedId = Array.isArray(id) ? id[0] : id;
-  const numId = parseInt(parsedId);
-  return isNaN(numId) ? null : numId;
-}
-
 // GET /api/catering/[id]
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string | string[] } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession();
@@ -24,8 +16,9 @@ export async function GET(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // ✅ Fix: pass params.id, not params
-    const id = getIdFromParams(params.id);
+    // Await the params promise to resolve before accessing its properties
+    const { id: paramId } = await params;
+    const id = parseInt(paramId);
     if (id === null) {
       return NextResponse.json({ error: 'Invalid request ID' }, { status: 400 });
     }
@@ -38,7 +31,24 @@ export async function GET(
       return NextResponse.json({ error: 'Catering request not found' }, { status: 404 });
     }
 
-    return NextResponse.json(cateringRequest);
+    // The menuItems field is a JSON blob, so we need to parse it.
+    const menuItemsData = cateringRequest.menuItems as any;
+
+    // Format the response to match what the checkout page expects
+    const responseData = {
+      id: cateringRequest.id,
+      depositAmount: menuItemsData.depositDue,
+      totalAmount: menuItemsData.total,
+      status: cateringRequest.status,
+      eventType: cateringRequest.eventType,
+      eventDate: cateringRequest.eventDate,
+      guestCount: cateringRequest.guestCount,
+      contactName: cateringRequest.contactName,
+      contactEmail: cateringRequest.contactEmail,
+      contactPhone: cateringRequest.contactPhone,
+    };
+
+    return NextResponse.json({ data: responseData });
   } catch (error) {
     console.error('Error in GET /api/catering/[id]:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -48,18 +58,18 @@ export async function GET(
 // PATCH /api/catering/[id]
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string | string[] } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession();
     if (!session) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
-
+    
+    const { id: paramId } = await params;
+    const id = parseInt(paramId);
     const { status } = await request.json();
 
-    // ✅ Fix: pass params.id, not params
-    const id = getIdFromParams(params.id);
     if (id === null) {
       return NextResponse.json({ error: 'Invalid request ID' }, { status: 400 });
     }
