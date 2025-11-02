@@ -25,16 +25,26 @@ const stripePromise = loadStripe(
 
 interface StripePaymentFormProps {
   orderId?: number | null;
+  paymentIntentClientSecret?: string;
+  onSuccess?: () => void;
 }
 
-export function StripePaymentForm({ orderId: propOrderId }: StripePaymentFormProps = {}) {
-  const { cart } = useCart();
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+export function StripePaymentForm({
+  orderId: propOrderId,
+  paymentIntentClientSecret: propPaymentIntentClientSecret,
+  onSuccess,
+}: StripePaymentFormProps = {}) {
+  const cartContext = useCart();
+  const [clientSecret, setClientSecret] = useState<string | null>(
+    propPaymentIntentClientSecret || null
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
-  const [elementsTheme, setElementsTheme] = useState<"dark" | "light" | null>(null);
+  const [elementsTheme, setElementsTheme] = useState<"dark" | "light" | null>(
+    null
+  );
 
   useEffect(() => {
     if (!resolvedTheme) return;
@@ -46,83 +56,79 @@ export function StripePaymentForm({ orderId: propOrderId }: StripePaymentFormPro
     const storedOrderId = propOrderId?.toString() || localStorage.getItem("last-order-id");
     setOrderId(storedOrderId);
 
+    // If we have a client secret from props, use that
+    if (propPaymentIntentClientSecret) {
+      setClientSecret(propPaymentIntentClientSecret);
+      return;
+    }
+
+    // Otherwise, create a new payment intent (for cart-based checkout)
     if (!storedOrderId) {
       setClientSecret(null);
       return;
     }
 
-    if (!cart || cart.length === 0) {
-      setClientSecret(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function initPayment() {
+    const createPaymentIntent = async () => {
       try {
         setIsLoading(true);
-
-        const res = await fetch("/api/create-payment-intent", {
+        const response = await fetch("/api/checkout/create-payment-intent", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cart }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            items: cartContext.cart.map((item) => ({
+              id: item.productId,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity
+            })),
+            orderId: storedOrderId,
+          }),
         });
 
-        const data = await res.json();
-        if (!res.ok || !data?.clientSecret) {
-          throw new Error(data?.error || "Failed to initialize payment");
-        }
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Failed to create payment intent");
 
-        if (!cancelled) setClientSecret(data.clientSecret);
-      } catch (e: any) {
+        setClientSecret(data.clientSecret);
+      } catch (err) {
+        console.error("Error creating payment intent:", err);
         toast({
-          title: "Payment setup failed",
-          description: e.message || "Unable to initialize payment.",
+          title: "Error",
+          description: err instanceof Error ? err.message : "Failed to initialize payment",
           variant: "destructive",
         });
-        setClientSecret(null);
       } finally {
         setIsLoading(false);
       }
-    }
-
-    initPayment();
-    return () => {
-      cancelled = true;
     };
-  }, [cart, toast, propOrderId]);
+
+    createPaymentIntent();
+    return () => {
+      // Cleanup function if needed
+    };
+  }, [cartContext.cart, toast, propOrderId]);
 
   const prefersDark = elementsTheme === "dark";
 
   const options = useMemo<StripeElementsOptions | undefined>(() => {
-    if (!clientSecret || !elementsTheme) return undefined;
+    if (!clientSecret) return undefined;
     return {
       clientSecret,
-      appearance: prefersDark
-        ? {
-            theme: "night",
-            variables: {
-              colorPrimary: "#8b5cf6",
-              colorBackground: "#0f172a",
-              colorText: "#f8fafc",
-              colorDanger: "#ef4444",
-              borderRadius: "10px",
-              fontFamily: "Inter, sans-serif",
-            },
-          }
-        : {
-            theme: "stripe",
-            variables: {
-              colorPrimary: "#2563eb",
-              colorBackground: "#ffffff",
-              colorText: "#111827",
-              colorDanger: "#dc2626",
-              borderRadius: "8px",
-              fontFamily: "Inter, sans-serif",
-            },
-          },
+      appearance: {
+        theme: elementsTheme === 'dark' ? 'night' : 'stripe',
+        variables: {
+          colorPrimary: "#4f46e5",
+          colorBackground: "hsl(var(--background))",
+          colorText: "hsl(var(--foreground))",
+          colorDanger: "hsl(var(--destructive))",
+          fontFamily: "Inter, system-ui, sans-serif",
+          spacingUnit: "4px",
+          borderRadius: "6px",
+        },
+      },
     };
-  }, [clientSecret, elementsTheme, prefersDark]);
+  }, [clientSecret, elementsTheme]);
 
   if (!stripePromise) {
     return (
@@ -150,39 +156,54 @@ export function StripePaymentForm({ orderId: propOrderId }: StripePaymentFormPro
     );
   }
 
+  // Only show loading state if we don't have a client secret and we're not in an error state
+  if (!clientSecret) {
+    if (isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8 space-y-4">
+          <Spinner className="h-8 w-8" />
+          <p className="text-muted-foreground">Preparing payment form...</p>
+        </div>
+      );
+    }
+
+    // If we have an error and no client secret, show error state
+    return (
+      <div className="p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Unable to initialize payment. Please try again or contact support.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardContent className="pt-6">
-        {isLoading && (
-          <div className="flex items-center justify-center py-4 text-sm">
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            Preparing payment...
-          </div>
-        )}
-        {!isLoading && !clientSecret && cart.length === 0 && (
-          <div className="text-sm text-muted-foreground">
-            Add items to cart to proceed with payment.
-          </div>
-        )}
-        {options && (
-          <Elements
-            key={`${options.clientSecret}-${prefersDark ? "dark" : "light"}`}
-            stripe={stripePromise}
-            options={options}
-          >
-            <InnerPaymentForm orderId={orderId} />
-          </Elements>
-        )}
-      </CardContent>
-    </Card>
+    <Elements
+      stripe={stripePromise}
+      options={options}
+    >
+      <InnerPaymentForm 
+        orderId={orderId || ""} 
+        onSuccess={onSuccess} 
+        clearCart={cartContext.clearCart}
+      />
+    </Elements>
   );
 }
 
-function InnerPaymentForm({ orderId }: { orderId: string }) {
+interface InnerPaymentFormProps {
+  orderId: string;
+  onSuccess?: () => void;
+  clearCart: () => void;
+}
+
+function InnerPaymentForm({ orderId, onSuccess, clearCart }: InnerPaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
-  const { clearCart } = useCart();
   const { toast } = useToast();
   const { refreshSession } = useSession();
   const [submitting, setSubmitting] = useState(false);
@@ -234,7 +255,7 @@ function InnerPaymentForm({ orderId }: { orderId: string }) {
         await refreshSession();
         clearCart();
         // Store the confirmed order ID for the confirmation page
-        localStorage.setItem('last-confirmed-order-id', orderId);
+        localStorage.setItem("last-confirmed-order-id", orderId);
         localStorage.removeItem("last-order-id");
 
         toast({
@@ -269,9 +290,9 @@ function InnerPaymentForm({ orderId }: { orderId: string }) {
         </div>
       )}
       <PaymentElement id="payment-element" />
-      <Button 
-        type="submit" 
-        className="w-full" 
+      <Button
+        type="submit"
+        className="w-full"
         disabled={!stripe || !elements || submitting}
       >
         {submitting ? (

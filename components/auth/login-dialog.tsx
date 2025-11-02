@@ -15,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 // Import your custom auth service
-import { login } from "@/lib/auth";
 
 export function LoginDialog({
   open,

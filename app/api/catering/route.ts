@@ -91,8 +91,48 @@ export async function POST(request: Request) {
     const quoteTotal = billSnapshot?.total ?? null;
     const depositDue = quoteTotal != null ? Number((quoteTotal * 0.25).toFixed(2)) : null;
 
-    const cateringRequest = await prisma.cateringrequest.create({
+    // Ensure we have a valid user ID
+    if (!userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'User authentication required',
+          toast: {
+            title: 'Authentication required',
+            message: 'Please sign in to submit a catering request',
+            variant: 'error',
+          },
+        },
+        { status: 401 }
+      );
+    }
+
+    // Check if user exists
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    });
+
+    if (!userExists) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'User not found',
+          toast: {
+            title: 'User not found',
+            message: 'The specified user account could not be found',
+            variant: 'error',
+          },
+        },
+        { status: 404 }
+      );
+    }
+
+    let cateringRequest;
+    try {
+      cateringRequest = await prisma.cateringrequest.create({
       data: {
+        userId: userId,
         eventType,
         eventDate,
         guestCount,
@@ -111,10 +151,29 @@ export async function POST(request: Request) {
             : null,
           depositDue,
         },
-        specialRequests,
+        specialRequests: specialRequests || '',
         status: 'PENDING',
+        totalAmount: quoteTotal ? Number(quoteTotal) : null,
+        depositAmount: depositDue,
       },
     });
+    } catch (error) {
+      console.error('Error creating catering request:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to create catering request',
+          details: errorMessage,
+          toast: {
+            title: 'Error',
+            message: 'Failed to submit catering request. Please try again.',
+            variant: 'error',
+          },
+        },
+        { status: 500 }
+      );
+    }
 
     const emailResult = await sendEmail({
       to: contactEmail,

@@ -8,28 +8,30 @@ datasource db {
 }
 
 model user {
-  id                 Int               @id @default(autoincrement())
+  id                 Int                  @id @default(autoincrement())
   firstName          String
   lastName           String
-  email              String            @unique
+  email              String               @unique
   password           String
   address            String?
   contact            String?
-  role               user_role         @default(CUSTOMER)
-  isActive           Boolean           @default(true)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  role               user_role            @default(CUSTOMER)
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
   resetToken         String?
   resetTokenExpiry   DateTime?
-  mustChangePassword Boolean           @default(false)
-  likedRecipes       Like[]            @relation("UserLikes")
+  mustChangePassword Boolean              @default(false)
+  likedRecipes       Like[]               @relation("UserLikes")
   communityRecipes   communityrecipe[]
   employee           employee?
   notifications      notification[]
-  orders             order[]           @relation("OrderUser")
-  reviewedRatings    rating[]          @relation("ReviewedRatings")
-  ratings            rating[]          @relation("UserRatings")
+  orders             order[]              @relation("OrderUser")
+  reviewedRatings    rating[]             @relation("ReviewedRatings")
+  ratings            rating[]             @relation("UserRatings")
   recipeComments     recipecomment[]
+  cateringOrders     EventCateringOrder[]
+  cateringRequests   cateringrequest[]
 }
 
 model employee {
@@ -86,10 +88,11 @@ model payment {
   status        payment_status
   transactionId String?
   createdAt     DateTime       @default(now())
-  orderId       Int
-  order         order          @relation(fields: [orderId], references: [id])
+  orderId       Int?
+  order         order?         @relation(fields: [orderId], references: [id])
 
   @@index([orderId], map: "payment_orderId_fkey")
+  @@index([transactionId])
 }
 
 model delivery {
@@ -279,6 +282,32 @@ model notification {
   @@index([orderId], map: "notification_orderId_fkey")
 }
 
+model EventCateringOrder {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  user            user     @relation(fields: [userId], references: [id])
+  eventDate       DateTime
+  guestCount      Int
+  contactEmail    String
+  contactPhone    String?
+  specialRequests String?
+  deliveryAddress String   @db.Text // Storing as JSON string
+  menuItems       String   @db.Text
+  status          String   @default("PENDING")
+  subtotal        Float
+  serviceCharge   Float
+  tax             Float
+  total           Float
+  depositDue      Float
+  balanceDue      Float
+  paymentId       Int?     @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
 model shift {
   id         Int      @id @default(autoincrement())
   name       String
@@ -362,16 +391,26 @@ model orderitem {
 }
 
 model cateringrequest {
-  id              Int      @id @default(autoincrement())
+  id              Int            @id @default(autoincrement())
+  userId          Int
+  user            user           @relation(fields: [userId], references: [id])
   eventType       String
   eventDate       DateTime
   guestCount      Int
   contactName     String
   contactEmail    String
+  contactPhone    String?
   menuItems       Json
   specialRequests String?
-  status          String   @default("PENDING")
-  createdAt       DateTime @default(now())
+  status          String         @default("PENDING")
+  paymentStatus   payment_status @default(PENDING)
+  depositAmount   Float?         @default(0)
+  totalAmount     Float?
+  paymentIntentId String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId])
 }
 
 model passwordreset {

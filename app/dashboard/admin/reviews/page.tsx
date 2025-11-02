@@ -12,8 +12,10 @@ type Review = {
   adminComment: string | null;
   reviewedAt: string | null;
   reviewedBy: {
-    // Add reviewedBy properties here
-  }
+    id: number;
+    name: string;
+    email: string;
+  } | null;
 }
 
 export default function AdminReviewsPage() {
