@@ -148,7 +148,7 @@ export function NewsletterSubscription({
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className={`rounded-2xl bg-gray-50 p-8 text-center shadow-md ${className}`}
+      className={`rounded-2xl bg-slate-100 p-8 text-center shadow-md ${className}`}
     >
       <Mail className="h-10 w-10 mx-auto mb-3 text-orange-500" />
       <h3 className="text-xl font-semibold mb-2 text-gray-800">Join Our Newsletter</h3>

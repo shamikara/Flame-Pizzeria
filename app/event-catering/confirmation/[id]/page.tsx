@@ -44,7 +44,7 @@ export default async function CateringConfirmationPage({
   const billSnapshot = menuItems?.billSnapshot || menuItems?.totals || {};
 
   return (
-    <div className="container mx-auto py-12 px-4">
+    <div className="container mx-auto py-12 px-4 bg-gray-500/20 rounded-lg my-10">
       <div className="max-w-3xl mx-auto text-center">
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle2 className="h-12 w-12 text-green-600" />
@@ -57,7 +57,7 @@ export default async function CateringConfirmationPage({
         </p>
 
         <Card className="mb-8 text-left">
-          <CardHeader className="bg-gray-50 border-b">
+          <CardHeader className="bg-gray-50/50 border-b">
             <CardTitle className="text-xl">Order Summary</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
@@ -118,7 +118,7 @@ export default async function CateringConfirmationPage({
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">What's Next?</h2>
           <div className="grid md:grid-cols-3 gap-6 text-left">
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-gray-100/50 rounded-lg">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3">
                 <span className="font-bold">1</span>
               </div>
@@ -128,7 +128,7 @@ export default async function CateringConfirmationPage({
               </p>
             </div>
             
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-gray-100/50 rounded-lg">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3">
                 <span className="font-bold">2</span>
               </div>
@@ -138,7 +138,7 @@ export default async function CateringConfirmationPage({
               </p>
             </div>
             
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-gray-100/50 rounded-lg">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3">
                 <span className="font-bold">3</span>
               </div>
@@ -151,7 +151,7 @@ export default async function CateringConfirmationPage({
         </div>
 
         <div className="mt-10 space-y-4">
-          <p className="text-gray-600">
+          <p className="text-orange-600 text-xl">
             Need to make changes to your request? Contact our catering team at:
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
