@@ -22,11 +22,11 @@ model user {
   resetToken         String?
   resetTokenExpiry   DateTime?
   mustChangePassword Boolean              @default(false)
-  cateringOrders     EventCateringOrder[]
-  likedRecipes       Like[]               @relation("UserLikes")
   cateringRequests   cateringrequest[]
   communityRecipes   communityrecipe[]
   employee           employee?
+  eventcateringorder eventcateringorder[]
+  like               like[]
   notifications      notification[]
   orders             order[]              @relation("OrderUser")
   reviewedRatings    rating[]             @relation("ReviewedRatings")
@@ -149,20 +149,6 @@ model recipeingredient {
   @@index([recipeId], map: "recipeingredient_recipeId_fkey")
 }
 
-model Like {
-  id         Int       @id @default(autoincrement())
-  userId     Int
-  recipeId   Int?
-  foodItemId Int?
-  createdAt  DateTime  @default(now())
-  foodItem   fooditem? @relation("FoodItemLikes", fields: [foodItemId], references: [id], onDelete: Cascade)
-  user       user      @relation("UserLikes", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, recipeId, foodItemId])
-  @@index([recipeId])
-  @@index([foodItemId])
-}
-
 model recipecomment {
   id        Int      @id @default(autoincrement())
   content   String   @db.Text
@@ -188,22 +174,6 @@ model communityrecipe {
 
   @@index([status])
   @@index([authorId])
-}
-
-model PromotionBanner {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  buttonText  String?
-  buttonLink  String?
-  imageUrl    String
-  startDate   DateTime
-  endDate     DateTime
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([isActive, startDate, endDate])
 }
 
 model inventoryalert {
@@ -282,32 +252,6 @@ model notification {
   @@index([orderId], map: "notification_orderId_fkey")
 }
 
-model EventCateringOrder {
-  id              Int      @id @default(autoincrement())
-  userId          Int
-  eventDate       DateTime
-  guestCount      Int
-  contactEmail    String
-  contactPhone    String?
-  specialRequests String?
-  deliveryAddress String   @db.Text
-  menuItems       String   @db.Text
-  status          String   @default("PENDING")
-  subtotal        Float
-  serviceCharge   Float
-  tax             Float
-  total           Float
-  depositDue      Float
-  balanceDue      Float
-  paymentId       Int?     @unique
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            user     @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([status])
-}
-
 model shift {
   id         Int      @id @default(autoincrement())
   name       String
@@ -342,14 +286,12 @@ model fooditem {
   isActive       Boolean         @default(true)
   foodType       Int             @default(0) @db.TinyInt
   nutrition      Json?
-  averageRating  Float?          @default(0)
-  reviewCount    Int             @default(0)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   categoryId     Int
-  likes          Like[]          @relation("FoodItemLikes")
   customizations customization[] @relation("FoodItemCustomizations")
   category       category        @relation(fields: [categoryId], references: [id])
+  like           like[]
   orderItems     orderitem[]     @relation("FoodItemOrderItems")
   ratings        rating[]        @relation("FoodItemRatings")
 
@@ -421,6 +363,62 @@ model passwordreset {
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model eventcateringorder {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  eventDate       DateTime
+  guestCount      Int
+  contactEmail    String
+  contactPhone    String?
+  specialRequests String?
+  deliveryAddress String   @db.Text
+  menuItems       String   @db.Text
+  status          String   @default("PENDING")
+  subtotal        Float
+  serviceCharge   Float
+  tax             Float
+  total           Float
+  depositDue      Float
+  balanceDue      Float
+  paymentId       Int?     @unique(map: "EventCateringOrder_paymentId_key")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  user            user     @relation(fields: [userId], references: [id], map: "EventCateringOrder_userId_fkey")
+
+  @@index([status], map: "EventCateringOrder_status_idx")
+  @@index([userId], map: "EventCateringOrder_userId_idx")
+}
+
+model like {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  recipeId   Int?
+  foodItemId Int?
+  createdAt  DateTime  @default(now())
+  fooditem   fooditem? @relation(fields: [foodItemId], references: [id], onDelete: Cascade, map: "Like_foodItemId_fkey")
+  user       user      @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Like_userId_fkey")
+
+  @@unique([userId, recipeId, foodItemId], map: "Like_userId_recipeId_foodItemId_key")
+  @@index([foodItemId], map: "Like_foodItemId_idx")
+  @@index([recipeId], map: "Like_recipeId_idx")
+}
+
+model promotionbanner {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  buttonText  String?
+  buttonLink  String?
+  imageUrl    String
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+
+  @@index([isActive, startDate, endDate], map: "PromotionBanner_isActive_startDate_endDate_idx")
 }
 
 enum user_role {
