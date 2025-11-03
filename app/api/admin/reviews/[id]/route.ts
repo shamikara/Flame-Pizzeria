@@ -53,7 +53,8 @@ export async function PATCH(
     });
 
     try {
-      const review = await prisma.rating.update({
+      // First, update the review status
+      const updatedReview = await prisma.rating.update({
         where: { id: parseInt(params.id) },
         data: {
           status,
@@ -67,6 +68,7 @@ export async function PATCH(
               id: true,
               firstName: true,
               lastName: true,
+              email: true,
             },
           },
           foodItem: {
@@ -75,11 +77,78 @@ export async function PATCH(
               name: true,
             },
           },
+          reviewedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
         },
       });
 
-      console.log('Successfully updated review:', review.id);
-      return NextResponse.json(review);
+      // If review is approved, update the food item's average rating
+      if (status === 'APPROVED') {
+        // Get all approved ratings for this food item
+        const approvedRatings = await prisma.rating.findMany({
+          where: {
+            foodItemId: updatedReview.foodItemId,
+            status: 'APPROVED',
+          },
+          select: {
+            stars: true,
+          },
+        });
+
+        // Calculate new average rating
+        const totalStars = approvedRatings.reduce((sum, r) => sum + (r.stars || 0), 0);
+        const averageRating = approvedRatings.length > 0 
+          ? Math.round((totalStars / approvedRatings.length) * 10) / 10 
+          : 0;
+
+        // Update the food item with the new average rating and review count
+        // Using $executeRaw to handle potential missing columns
+        await prisma.$executeRaw`
+          UPDATE fooditem
+          SET 
+            averageRating = ${averageRating},
+            reviewCount = ${approvedRatings.length},
+            updatedAt = NOW()
+          WHERE id = ${updatedReview.foodItemId}
+        `;
+      }
+
+      console.log('Successfully updated review:', updatedReview.id);
+      
+      // Prepare the response data
+      const responseData = {
+        id: updatedReview.id,
+        status: updatedReview.status,
+        comment: updatedReview.comment,
+        adminComment: updatedReview.adminComment,
+        stars: updatedReview.stars,
+        createdAt: updatedReview.createdAt,
+        updatedAt: updatedReview.updatedAt,
+        reviewedAt: updatedReview.reviewedAt?.toISOString(),
+        user: {
+          id: updatedReview.user.id,
+          firstName: updatedReview.user.firstName,
+          lastName: updatedReview.user.lastName,
+          email: updatedReview.user.email,
+        },
+        foodItem: {
+          id: updatedReview.foodItem.id,
+          name: updatedReview.foodItem.name,
+        },
+        reviewedBy: updatedReview.reviewedBy ? {
+          id: updatedReview.reviewedBy.id,
+          name: `${updatedReview.reviewedBy.firstName} ${updatedReview.reviewedBy.lastName}`,
+          email: updatedReview.reviewedBy.email,
+        } : null,
+      };
+
+      return NextResponse.json(responseData);
     } catch (error) {
       const prismaError = error as any;
       console.error('Prisma error:', {

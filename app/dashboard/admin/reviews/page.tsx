@@ -226,6 +226,16 @@ export default function AdminReviewsPage() {
                     <span className="font-semibold">{review.user.firstName} {review.user.lastName}</span>
                     <span className="text-gray-500">reviewed</span>
                     <span className="font-semibold">{review.foodItem.name}</span>
+                    {review.status === 'APPROVED' && (
+                      <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">
+                        Approved
+                      </span>
+                    )}
+                    {review.status === 'REJECTED' && (
+                      <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-800 rounded-full">
+                        Rejected
+                      </span>
+                    )}
                   </div>
                   <div className="mt-2">
                     <div className="flex items-center">
@@ -238,46 +248,69 @@ export default function AdminReviewsPage() {
                     {review.comment && (
                       <p className="mt-2 text-gray-700">{review.comment}</p>
                     )}
+                    {review.adminComment && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded border-l-4 border-gray-300">
+                        <p className="text-sm font-medium text-gray-700">Admin Note:</p>
+                        <p className="text-sm text-gray-600">{review.adminComment}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="text-sm text-gray-500">
-                  {new Date(review.createdAt).toLocaleDateString()}
+                <div className="text-sm text-gray-500 text-right">
+                  <div>{new Date(review.createdAt).toLocaleDateString()}</div>
+                  {review.reviewedAt && (
+                    <div className="text-xs text-gray-400">
+                      {review.status.toLowerCase()} on {new Date(review.reviewedAt).toLocaleDateString()}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex flex-col space-y-4">
-                  <div>
-                    <label htmlFor={`comment-${review.id}`} className="block text-sm font-medium text-gray-700 mb-1">
-                      Admin Comment (required if rejecting):
-                    </label>
-                    <textarea
-                      id={`comment-${review.id}`}
-                      rows={2}
-                      className="w-full p-2 border rounded"
-                      value={adminComment}
-                      onChange={(e) => setAdminComment(e.target.value)}
-                      placeholder="Enter reason for rejection..."
-                    />
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleApprove(review.id)}
-                      disabled={updatingId === review.id}
-                      className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-                    >
-                      {updatingId === review.id ? 'Approving...' : 'Approve'}
-                    </button>
-                    <button
-                      onClick={() => handleReject(review.id)}
-                      disabled={updatingId === review.id}
-                      className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-                    >
-                      {updatingId === review.id ? 'Rejecting...' : 'Reject'}
-                    </button>
+              {review.status !== 'APPROVED' && review.status !== 'REJECTED' && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex flex-col space-y-4">
+                    <div>
+                      <label htmlFor={`comment-${review.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                        Admin Comment (required if rejecting):
+                      </label>
+                      <textarea
+                        id={`comment-${review.id}`}
+                        rows={2}
+                        className="w-full p-2 border rounded"
+                        value={adminComment}
+                        onChange={(e) => setAdminComment(e.target.value)}
+                        placeholder="Enter reason for rejection..."
+                      />
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleApprove(review.id)}
+                        disabled={updatingId === review.id || review.status === 'APPROVED'}
+                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                      >
+                        {updatingId === review.id ? 'Approving...' : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => handleReject(review.id)}
+                        disabled={updatingId === review.id || review.status === 'REJECTED'}
+                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                      >
+                        {updatingId === review.id ? 'Rejecting...' : 'Reject'}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+              {review.status === 'APPROVED' && (
+                <div className="mt-3 p-3 bg-green-50 text-green-700 text-sm rounded border border-green-200">
+                  ✓ This review is now visible on the website
+                </div>
+              )}
+              {review.status === 'REJECTED' && (
+                <div className="mt-3 p-3 bg-red-50 text-red-700 text-sm rounded border border-red-200">
+                  This review has been rejected and is not visible to users
+                </div>
+              )}
             </div>
           ))}
         </div>
