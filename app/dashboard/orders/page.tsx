@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { format, formatISO9075 } from "date-fns"; // Added formatISO9075 import
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -128,6 +129,7 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloadingDaily, setIsDownloadingDaily] = useState(false);
   const [isDownloadingWeekly, setIsDownloadingWeekly] = useState(false);
+  const [isDownloadingMonthly, setIsDownloadingMonthly] = useState(false);
 
   const fetchAllData = async () => {
     try {
@@ -298,6 +300,81 @@ export default function OrdersPage() {
     }
   };
 
+  const handleDownloadMonthlyReport = async () => {
+    setIsDownloadingMonthly(true);
+    try {
+      console.log('Starting monthly report download');
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      
+      const response = await fetch(`/api/orders/reports/monthly?year=${today.getFullYear()}&month=${today.getMonth() + 1}`);
+      console.log('Response status:', response.status);
+      if (!response.ok) throw new Error('Failed to fetch monthly report data');
+
+      const data = await response.json();
+      console.log('Monthly report data received:', data);
+      
+      // Transform the data to match the weekly report format that the PDF generator expects
+      const reportData = {
+        startDate: data.period?.start || format(firstDay, 'yyyy-MM-dd'),
+        endDate: data.period?.end || format(lastDay, 'yyyy-MM-dd'),
+        title: `Monthly Report (${data.period?.month || format(firstDay, 'MMMM yyyy')})`,
+        totalOrders: data.summary?.totalOrders || 0,
+        totalRevenue: data.summary?.totalRevenue || 0,
+        dailyData: data.dailyData?.map((day: any) => ({
+          date: day.date,
+          day: day.day,
+          orders: day.orders || 0,
+          revenue: day.total || 0,
+          payments: day.total || 0, // Using total as payments since it's not provided
+        })) || [],
+        dailyBreakdown: data.dailyData?.map((day: any) => ({
+          date: day.date,
+          day: day.day,
+          orders: day.orders || 0,
+          revenue: day.total || 0,
+          payments: day.total || 0,
+        })) || [],
+        topSellingItems: data.topSellingItems || [],
+        statusBreakdown: {
+          'Completed': 0, // These would need to be populated from the API
+          'Pending': 0,
+          'Processing': 0,
+          'Cancelled': 0
+        },
+        paymentMethodBreakdown: {
+          'Credit Card': 0, // These would need to be populated from the API
+          'Cash': 0,
+          'Online Payment': 0,
+          'Other': 0
+        },
+        averageOrderValue: data.summary?.averageOrderValue || 0,
+        dateRange: `${format(new Date(data.period?.start || firstDay), 'MMM d, yyyy')} - ${format(new Date(data.period?.end || lastDay), 'MMM d, yyyy')}`,
+        // Add empty arrays for any other expected properties
+        popularItems: [],
+        paymentMethods: [],
+        orderStatuses: [],
+      };
+      
+      const doc = generateWeeklyOrderReportPDF(reportData);
+      
+      const monthName = format(today, 'MMMM-yyyy');
+      doc.save(`monthly-order-report-${monthName}.pdf`);
+      console.log('Monthly PDF generated and downloaded successfully');
+    } catch (error) {
+      console.error('Failed to download monthly report:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate monthly report',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloadingMonthly(false);
+      console.log('Monthly report download complete');
+    }
+  };
+
   useEffect(() => {
     fetchAllData();
   }, []);
@@ -448,6 +525,25 @@ export default function OrdersPage() {
                   <>
                     <Calendar className="mr-2 h-4 w-4" />
                     Weekly PDF
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadMonthlyReport}
+                disabled={isDownloadingMonthly}
+                className="text-gray-300 border-gray-600 hover:bg-gray-800"
+              >
+                {isDownloadingMonthly ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Monthly PDF
                   </>
                 )}
               </Button>
