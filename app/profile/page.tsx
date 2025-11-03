@@ -3,13 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Package, Utensils, Settings } from "lucide-react";
+import { User, Package, Utensils, Calendar as CalendarIcon, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderHistory } from "@/components/order-history";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSession } from "@/components/session-provider";
 import { AccountSettingsModal } from "@/components/account-settings-modal";
 import { UserRecipes } from "@/components/user-recipes";
+import { UserEvents } from "@/components/user-events";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -54,7 +55,7 @@ export default function ProfilePage() {
 
       <Tabs defaultValue="profile" className="w-full">
         <div className="flex justify-center">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3 bg-gray-900/50 border border-gray-800">
+          <TabsList className="grid w-full max-w-3xl grid-cols-4 bg-gray-900/50 border border-gray-800">
             <TabsTrigger 
               value="profile" 
               className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white"
@@ -66,6 +67,12 @@ export default function ProfilePage() {
               className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white"
             >
               <Package className="h-4 w-4" /> My Orders
+            </TabsTrigger>
+            <TabsTrigger 
+              value="events" 
+              className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white"
+            >
+              <CalendarIcon className="h-4 w-4" /> My Events
             </TabsTrigger>
             <TabsTrigger 
               value="recipes" 
@@ -128,6 +135,20 @@ export default function ProfilePage() {
 
           <TabsContent value="orders">
             <OrderHistory />
+          </TabsContent>
+
+          <TabsContent value="events">
+            <Card className="border-gray-800 bg-gray-900/50">
+              <CardHeader>
+                <CardTitle>My Events</CardTitle>
+                <p className="text-sm text-gray-400">
+                  View and manage your upcoming events
+                </p>
+              </CardHeader>
+              <CardContent>
+                <UserEvents />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="recipes">
