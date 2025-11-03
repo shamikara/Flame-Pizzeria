@@ -137,9 +137,9 @@ export function OrderHistory() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <Skeleton key={i} className="h-40 w-full rounded-lg" />
+      <div className="p-6 space-y-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-28 w-full rounded-lg bg-gray-200 dark:bg-gray-800" />
         ))}
       </div>
     );
@@ -147,118 +147,141 @@ export function OrderHistory() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-red-400">
-        <p>{error}</p>
+      <div className="p-6 text-center">
+        <p className="text-red-500 dark:text-red-400 mb-4">{error}</p>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+          onClick={() => window.location.reload()}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
       </div>
     );
   }
 
   if (orders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center space-y-4 py-12 text-center">
-        <Package className="h-12 w-12 text-gray-400" />
-        <h3 className="text-lg font-medium text-gray-200">No orders yet</h3>
-        <p className="max-w-md text-sm text-gray-400">
-          You haven't placed any orders yet. Start exploring our menu to place your first order!
-        </p>
-        <Button asChild>
-          <a href="/menu">Browse Menu</a>
+      <div className="p-8 text-center">
+        <Package className="h-14 w-14 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+        <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No orders yet</h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">Your order history will appear here</p>
+        <Button 
+          variant="default" 
+          className="bg-orange-500 hover:bg-orange-600 text-white"
+          onClick={() => router.push('/menu')}
+        >
+          Browse Menu
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-white">Order History</h2>
-      <ScrollArea className="h-[calc(100vh-250px)] pr-4">
-        <div className="space-y-4">
-          {orders.map((order) => (
-            <Card key={order.id} className="border-gray-800 bg-gray-900/50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div>
-                  <CardTitle className="text-lg font-medium">
-                    Order #{String(order.id).substring(0, 8).toUpperCase()}
-                  </CardTitle>
-                  <p className="text-sm text-gray-400">
-                    {format(new Date(order.createdAt), 'MMMM d, yyyy h:mm a')}
-                  </p>
-                </div>
-                <Badge
-                  className={`inline-flex items-center gap-1.5 border ${statusColors[order.status]}`}
-                >
-                  {statusIcons[order.status]}
-                  {order.status.replace(/_/g, ' ')}
-                </Badge>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    {order.items.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm">
-                        <div>
-                          <p className="font-medium">
-                            {item.quantity} × {item.foodItem.name}
-                          </p>
-                          {item.customizations.length > 0 && (
-                            <div className="ml-4 mt-1 space-y-1">
-                              {item.customizations.map((custom, idx) => (
-                                <p key={idx} className="text-xs text-gray-400">
-                                  • {custom.name}
-                                </p>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <span className="font-medium">
-                          {formatCurrency(
-                            (item.foodItem.price +
-                              item.customizations.reduce(
-                                (sum, c) => sum + (c.price || 0),
-                                0
-                              )) *
-                              item.quantity
-                          )}
-                        </span>
+    <div className="space-y-6 h-full flex flex-col">
+      <div className="px-1">
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Order History</h2>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full pr-2 -mr-4">
+          <div className="space-y-4 pr-4">
+            {orders.map((order) => (
+              <Card key={order.id} className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 shadow-sm hover:shadow-md transition-shadow">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center">
+                      <Package className="h-5 w-5 mr-2.5 text-orange-500 flex-shrink-0" />
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">
+                          Order #{String(order.id).slice(-6).toUpperCase()}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {format(new Date(order.createdAt), 'MMM d, yyyy - h:mm a')}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between border-t border-gray-800 pt-3">
-                    <span className="text-sm text-gray-400">Total</span>
-                    <span className="text-lg font-bold">
-                      {formatCurrency(order.total)}
-                    </span>
-                  </div>
-                  <div className="flex justify-end space-x-2 pt-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={`/orders/${order.id}`}>View Details</a>
-                    </Button>
-                    {order.status === 'DELIVERED' && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleReorder(order)}
-                        disabled={reordering === order.id}
-                      >
-                        {reordering === order.id ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Reordering...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Reorder
-                          </>
-                        )}
-                      </Button>
-                    )}
+                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={`${statusColors[order.status]} flex items-center gap-1.5 py-1 px-2.5 rounded-full border-none text-xs font-medium`}
+                    >
+                      {statusIcons[order.status]}
+                      {order.status.replace(/_/g, ' ').toLowerCase()}
+                    </Badge>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </ScrollArea>
+                <CardContent className="p-0">
+                  <div className="p-4 space-y-4">
+                    <div className="space-y-3">
+                      {order.items.map((item) => (
+                        <div key={item.id} className="flex justify-between text-sm">
+                          <div className="flex-1 min-w-0 pr-4">
+                            <p className="font-medium text-gray-900 dark:text-white truncate">
+                              {item.quantity} × {item.foodItem.name}
+                            </p>
+                            {item.customizations.length > 0 && (
+                              <div className="ml-4 mt-1 space-y-1">
+                                {item.customizations.map((custom, idx) => (
+                                  <p key={idx} className="text-xs text-gray-500 dark:text-gray-400 flex items-start">
+                                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 mt-1.5 mr-1.5 flex-shrink-0"></span>
+                                    <span className="truncate">{custom.name}</span>
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0 ml-2">
+                            <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                              {formatCurrency(
+                                (item.foodItem.price +
+                                  item.customizations.reduce(
+                                    (sum, c) => sum + (c.price || 0),
+                                    0
+                                  )) *
+                                  item.quantity
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 pt-3 mt-3">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total</span>
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">
+                        {formatCurrency(order.total)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-end p-4 border-t border-gray-200 dark:border-gray-800 space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-xs h-8 px-3 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      onClick={() => router.push(`/orders/${order.id}`)}
+                    >
+                      View Details
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      className="text-xs h-8 px-3 bg-orange-500 hover:bg-orange-600 text-white"
+                      onClick={() => handleReorder(order)} 
+                      disabled={reordering === order.id}
+                    >
+                      {reordering === order.id ? (
+                        <>
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          Adding...
+                        </>
+                      ) : 'Reorder'}
+                    </Button>
+                  </div>
+                </CardContent>
+                </Card>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
     </div>
   );
 }

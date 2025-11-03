@@ -43,109 +43,100 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="mb-10 text-center">
+        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
           My Profile
         </h1>
-        <p className="text-gray-400 mt-2">
-          Manage your account, orders, and recipes
+        <p className="mt-3 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          Manage your account settings, track orders, and view your event bookings
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <div className="flex justify-center">
-          <TabsList className="grid w-full max-w-3xl grid-cols-4 bg-gray-900/50 border border-gray-800">
+      <Tabs defaultValue="profile" className="space-y-8">
+        <div className="bg-white dark:bg-gray-900 p-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-800 max-w-2xl mx-auto">
+          <TabsList className="grid w-full grid-cols-4 bg-transparent">
             <TabsTrigger 
               value="profile" 
-              className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white"
+              className="flex items-center gap-2 rounded-full data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-orange-100 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 dark:data-[state=active]:border-orange-800 transition-all"
             >
-              <User className="h-4 w-4" /> Profile
+              <User className="h-4 w-4" />
+              <span className="font-medium">Profile</span>
             </TabsTrigger>
             <TabsTrigger 
               value="orders" 
-              className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white"
+              className="flex items-center gap-2 rounded-full data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-orange-100 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 dark:data-[state=active]:border-orange-800 transition-all"
             >
-              <Package className="h-4 w-4" /> My Orders
+              <Package className="h-4 w-4" />
+              <span className="font-medium">My Orders</span>
             </TabsTrigger>
             <TabsTrigger 
               value="events" 
-              className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white"
+              className="flex items-center gap-2 rounded-full data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-orange-100 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 dark:data-[state=active]:border-orange-800 transition-all"
             >
-              <CalendarIcon className="h-4 w-4" /> My Events
+              <CalendarIcon className="h-4 w-4" />
+              <span className="font-medium">My Events</span>
             </TabsTrigger>
             <TabsTrigger 
               value="recipes" 
-              className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white"
+              className="flex items-center gap-2 rounded-full data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-orange-100 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 dark:data-[state=active]:border-orange-800 transition-all"
             >
-              <Utensils className="h-4 w-4" /> My Recipes
+              <Utensils className="h-4 w-4" />
+              <span className="font-medium">My Recipes</span>
             </TabsTrigger>
           </TabsList>
         </div>
 
         <div className="mt-8">
-          <TabsContent value="profile">
-            <Card className="border-gray-800 bg-gray-900/50">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Personal Information</CardTitle>
-                  <p className="text-sm text-gray-400 mt-1">
-                    View and manage your personal information
-                  </p>
-                </div>
-                <AccountSettingsModal />
+          <TabsContent value="profile" className="space-y-6">
+            <Card className="border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+              <CardHeader className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+                <CardTitle className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <User className="h-5 w-5 text-orange-500" />
+                  Profile Information
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center space-x-6">
-                  <div className="h-24 w-24 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden">
-                    {user.image ? (
-                      <img 
-                        src={user.image} 
-                        alt={`${user.firstName} ${user.lastName}`}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-12 w-12 text-gray-400" />
-                    )}
+              <CardContent className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white dark:bg-gray-900/30 p-4 rounded-lg border border-gray-100 dark:border-gray-800">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</p>
+                    <p className="text-gray-900 dark:text-white font-medium">{user.firstName} {user.lastName}</p>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-semibold">
-                      {user.firstName} {user.lastName}
-                    </h3>
-                    <p className="text-gray-400">{user.email}</p>
-                    {user.phone && (
-                      <p className="text-gray-400">{user.phone}</p>
-                    )}
+                  <div className="bg-white dark:bg-gray-900/30 p-4 rounded-lg border border-gray-100 dark:border-gray-800">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Email Address</p>
+                    <p className="text-gray-900 dark:text-white font-medium">{user.email}</p>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-800">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-400">Account Created</h4>
-                    <p>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-400">Last Updated</h4>
-                    <p>{user.updatedAt ? new Date(user.updatedAt).toLocaleDateString() : '—'}</p>
-                  </div>
+                <div className="pt-2">
+                  <AccountSettingsModal />
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="orders">
-            <OrderHistory />
+          <TabsContent value="orders" className="space-y-6">
+            <Card className="border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+              <CardHeader className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+                <CardTitle className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Package className="h-5 w-5 text-orange-500" />
+                  Order History
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <OrderHistory />
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          <TabsContent value="events">
-            <Card className="border-gray-800 bg-gray-900/50">
-              <CardHeader>
-                <CardTitle>My Events</CardTitle>
-                <p className="text-sm text-gray-400">
-                  View and manage your upcoming events
-                </p>
+          <TabsContent value="events" className="space-y-6">
+            <Card className="border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+              <CardHeader className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+                <CardTitle className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5 text-orange-500" />
+                  My Events
+                </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <UserEvents />
               </CardContent>
             </Card>

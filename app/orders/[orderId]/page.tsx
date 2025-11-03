@@ -8,16 +8,58 @@ import prisma from "@/lib/db"
 import Link from "next/link"
 import { OrderItemWithReview } from "@/components/order-item-with-review"
 import { format } from "date-fns"
+import { PrintReceiptButton } from "@/components/print-receipt-button"
+
+interface OrderItemWithCustomizations {
+  id: number;
+  quantity: number;
+  price: number;
+  foodItem: {
+    id: number;
+    name: string;
+    price: number;
+  };
+  customizations?: Array<{
+    id: number;
+    name: string;
+    price: number;
+  }>;
+}
+
+interface OrderWithDetails {
+  id: number;
+  total: number;
+  status: string;
+  createdAt: string;
+  address: string;
+  phone: string;
+  deliveryFee?: number;
+  user: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  items: OrderItemWithCustomizations[];
+  payment: Array<{
+    id: number;
+    status: string;
+    amount: number;
+    method: string;
+    transactionId: string | null;
+    createdAt: Date;
+  }>;
+}
 
 const statusStyles: Record<string, string> = {
-  PENDING: "bg-yellow-500/20 text-yellow-400 border-yellow-500/40",
-  CONFIRMED: "bg-blue-500/20 text-blue-400 border-blue-500/40",
-  PREPARING: "bg-orange-500/20 text-orange-400 border-orange-500/40",
-  READY_FOR_PICKUP: "bg-green-500/20 text-green-400 border-green-500/40",
-  OUT_FOR_DELIVERY: "bg-blue-500/20 text-blue-400 border-blue-500/40",
-  DELIVERED: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
-  CANCELLED: "bg-red-500/20 text-red-400 border-red-500/40",
-  REFUNDED: "bg-purple-500/20 text-purple-400 border-purple-500/40",
+  PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/10",
+  CONFIRMED: "bg-blue-500/10 text-blue-400 border-blue-500/10",
+  PREPARING: "bg-orange-500/10 text-orange-400 border-orange-500/10",
+  READY_FOR_PICKUP: "bg-green-500/10 text-green-400 border-green-500/10",
+  OUT_FOR_DELIVERY: "bg-blue-500/10 text-blue-400 border-blue-500/10",
+  DELIVERED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/10",
+  CANCELLED: "bg-red-500/10 text-red-400 border-red-500/10",
+  REFUNDED: "bg-purple-500/10 text-purple-400 border-purple-500/10",
 };
 
 const currency = new Intl.NumberFormat("en-LK", {
@@ -172,7 +214,7 @@ export default async function OrderDetailsPage({ params }: { params: { orderId: 
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <Card className="border-gray-800 bg-gray-900/50">
+        <Card className="border-gray-800 bg-gray-200/50 dark:bg-gray-900/50">
           <CardHeader>
             <CardTitle>Items</CardTitle>
           </CardHeader>
@@ -204,7 +246,7 @@ export default async function OrderDetailsPage({ params }: { params: { orderId: 
         </Card>
 
         <div className="space-y-6">
-          <Card className="border-gray-800 bg-gray-900/50">
+          <Card className="border-gray-800 bg-gray-200/50 dark:bg-gray-900/50">
             <CardHeader>
               <CardTitle>Summary</CardTitle>
             </CardHeader>
@@ -228,29 +270,45 @@ export default async function OrderDetailsPage({ params }: { params: { orderId: 
               </div>
               <div className="text-muted-foreground">
                 <span className="block text-xs uppercase tracking-wide">Delivery Address</span>
-                <p className="text-sm text-white">{order.address || "Pickup"}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-200">{order.address || "Pickup"}</p>
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button asChild variant="ghost" size="sm">
                 <Link href="/profile?tab=orders">← Back to Orders</Link>
               </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href={`/order-confirmation?orderId=${order.id}`}>
-                  Get Receipt
-                </Link>
-              </Button>
+              <PrintReceiptButton 
+                order={{
+                  id: order.id,
+                  createdAt: order.createdAt.toISOString(),
+                  status: order.status,
+                  total: order.total,
+                  address: order.address,
+                  phone: order.phone,
+                  user: order.user,
+                  items: order.items.map(item => ({
+                    id: item.id,
+                    quantity: item.quantity,
+                    price: item.price,
+                    foodItem: {
+                      name: item.foodItem.name,
+                      price: item.foodItem.price
+                    },
+                    customizations: item.customizations ? JSON.parse(JSON.stringify(item.customizations)) : []
+                  }))
+                }} 
+              />
             </CardFooter>
           </Card>
 
           {payments.length > 0 && (
-            <Card className="border-gray-800 bg-gray-900/50">
+            <Card className="border-gray-800 bg-gray-200/50 dark:bg-gray-900/50">
               <CardHeader>
                 <CardTitle>Payments</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {payments.map((payment) => (
-                  <div key={payment.id} className="rounded-md border border-gray-800 bg-gray-900/40 p-3">
+                  <div key={payment.id} className="rounded-md border border-gray-800 bg-gray-100/60 dark:bg-gray-900/40 p-3">
                     <div className="flex justify-between">
                       <span className="font-medium">{currency.format(payment.amount)}</span>
                       <Badge variant="outline">{payment.status}</Badge>
