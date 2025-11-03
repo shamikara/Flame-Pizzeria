@@ -286,6 +286,8 @@ model fooditem {
   isActive       Boolean         @default(true)
   foodType       Int             @default(0) @db.TinyInt
   nutrition      Json?
+  averageRating  Float?          @default(0)
+  reviewCount    Int             @default(0)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   categoryId     Int
