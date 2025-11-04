@@ -407,18 +407,20 @@ model like {
   @@index([recipeId], map: "Like_recipeId_idx")
 }
 
-model promotionbanner {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  buttonText  String?
-  buttonLink  String?
-  imageUrl    String
-  startDate   DateTime
-  endDate     DateTime
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime
+model promotionBanner {
+  id          Int      @id @default(autoincrement()) @map("id")
+  title       String   @map("title")
+  description String   @map("description")
+  buttonText  String?  @map("buttonText")
+  buttonLink  String?  @map("buttonLink")
+  imageUrl    String   @map("imageUrl")
+  startDate   DateTime @map("startDate")
+  endDate     DateTime @map("endDate")
+  isActive    Boolean  @default(true) @map("isActive")
+  createdAt   DateTime @default(now()) @map("createdAt")
+  updatedAt   DateTime @updatedAt @map("updatedAt")
+
+  @@map("promotionbanner")
 
   @@index([isActive, startDate, endDate], map: "PromotionBanner_isActive_startDate_endDate_idx")
 }
