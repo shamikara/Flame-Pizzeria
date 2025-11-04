@@ -6,6 +6,14 @@ import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Menu, X, LogOut, User as UserIcon, LayoutDashboard, Sun, Moon, Loader2, Settings } from "lucide-react"
+
+interface Notification {
+  id: number;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  // Add other notification properties as needed
+}
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { useSession } from "@/components/session-provider"
@@ -37,14 +45,42 @@ export default function Header() {
   const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/dashboard');
 
   const handleLogout = async () => {
-    if (loggingOut) return
-    setLoggingOut(true)
+    if (loggingOut) return;
+    
+    // Show loading state
+    setLoggingOut(true);
+    
     try {
-      await sessionLogout()
+      // 1. Force clear cart from localStorage
+      localStorage.removeItem('shopping-cart');
+      
+      // 2. Dispatch clear-cart event to update UI if any cart provider is listening
+      const clearEvent = new CustomEvent('clear-cart', { 
+        detail: { timestamp: Date.now() } 
+      });
+      window.dispatchEvent(clearEvent);
+      
+      // 3. Call the session logout
+      await sessionLogout();
+      
+      // 4. Add a small delay to ensure everything is cleared
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 5. Clear all storage to be extra sure
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // 6. Force a hard reload with cache busting
+      window.location.href = `/?v=${Date.now()}&logout=${Date.now()}`;
+      
+      // 7. Force reload again after a short delay to ensure clean state
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+      
     } catch (error) {
-      console.error('Failed to logout:', error)
-    } finally {
-      setLoggingOut(false)
+      console.error('Failed to logout:', error);
+      setLoggingOut(false);
     }
   };
 
@@ -107,8 +143,9 @@ export default function Header() {
       const res = await fetch('/api/notifications');
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.notifications.filter((n: Notification) => !n.read).length);
+        const notifications: Notification[] = data.notifications || [];
+        setNotifications(notifications);
+        setUnreadCount(notifications.filter(n => !n.read).length);
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -118,8 +155,10 @@ export default function Header() {
   const markNotificationAsRead = async (notificationId: number) => {
     try {
       await fetch(`/api/notifications/${notificationId}/read`, { method: 'PATCH' });
-      setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      setNotifications(prevNotifications =>
+        prevNotifications.map(n => 
+          n.id === notificationId ? { ...n, read: true } : n
+        )
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
@@ -130,7 +169,9 @@ export default function Header() {
   const markAllAsRead = async () => {
     try {
       await fetch('/api/notifications/mark-all-read', { method: 'PATCH' });
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setNotifications(prevNotifications => 
+        prevNotifications.map(n => ({ ...n, read: true }))
+      );
       setUnreadCount(0);
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
@@ -152,8 +193,8 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-            <Image src="/img/logo.png" alt="Flames" width={40} height={40} />
+          <Link href="/" className="flex items-center pl-10 gap-2 font-bold text-xl">
+            <Image src="/img/logo.png" alt="Flames" width={60} height={60} />
             <span className="hidden sm:inline">Flames Pizzeria</span>
           </Link>
           <nav className="hidden md:flex gap-6">

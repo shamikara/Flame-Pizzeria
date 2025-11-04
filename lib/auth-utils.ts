@@ -47,43 +47,120 @@ export const clearClientData = () => {
 /**
  * Performs a complete logout by:
  * 1. Calling the server logout endpoint
- * 2. Clearing all client-side data
- * 3. Redirecting to the home page
+ * 2. Clearing all client-side data including cart
+ * 3. Clearing any intervals/timeouts
+ * 4. Redirecting to the home page
  */
-export const performLogout = async (redirectPath = '/') => {
+// Global variable to track logout state
+let isLoggingOut = false;
+
+export const performLogout = async (redirectPath = '/', onLogoutStart?: () => void) => {
+  // Prevent multiple simultaneous logout attempts
+  if (isLoggingOut) return { success: false, error: 'Logout already in progress' };
+  
+  isLoggingOut = true;
+  
   try {
-    // Call the server logout endpoint
-    const response = await fetch('/api/auth/logout', {
+    // Show loading state if callback provided
+    if (onLogoutStart) onLogoutStart();
+    
+    // 1. First, ensure cart is cleared with a small delay to allow UI to update
+    if (typeof window !== 'undefined') {
+      // Clear cart immediately
+      localStorage.removeItem('shopping-cart');
+      
+      // Dispatch clear-cart event with a unique ID to ensure it's processed
+      const clearEvent = new CustomEvent('clear-cart', { 
+        detail: { 
+          timestamp: Date.now(),
+          fromLogout: true 
+        } 
+      });
+      window.dispatchEvent(clearEvent);
+      
+      // Wait a bit to ensure cart is cleared in the UI
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 2. Clear all other storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // 3. Clear cookies
+      document.cookie.split(';').forEach(cookie => {
+        const [name] = cookie.trim().split('=');
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      });
+      
+      // 4. Clear service worker caches
+      if ('caches' in window) {
+        try {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map(name => caches.delete(name)));
+        } catch (e) {
+          console.warn('Failed to clear caches:', e);
+        }
+      }
+      
+      // 5. Force clear any pending state updates
+      if (window.__NEXT_DATA__) {
+        window.__NEXT_DATA__.props.pageProps = {};
+      }
+    }
+    
+    // Clear any pending timeouts/intervals
+    if (typeof window !== 'undefined') {
+      const highestTimeoutId = window.setTimeout(() => {}, 0);
+      for (let i = highestTimeoutId; i >= 0; i--) {
+        clearTimeout(i);
+        clearInterval(i);
+      }
+    }
+    
+    // Call server logout
+    await fetch('/actions/logout', { 
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
     
-    if (!response.ok) {
-      throw new Error('Logout failed');
-    }
-    
-    // Clear client-side data
-    clearClientData();
-    
-    // Clear any existing intervals or timeouts
-    // @ts-ignore - TypeScript doesn't like us clearing all timeouts, but it's safe
-    const highestTimeoutId = window.setTimeout(() => {}, 0);
-    // @ts-ignore - TypeScript doesn't like us clearing all timeouts, but it's safe
-    for (let i = highestTimeoutId; i >= 0; i--) {
-      clearTimeout(i);
-      clearInterval(i);
-    }
-    
-    // Force a hard redirect to ensure all state is cleared
+    // Force a complete page reload with cache busting and double refresh
     if (typeof window !== 'undefined') {
-      window.location.href = redirectPath;
+      // Add a small delay to ensure all cleanup is done
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Clear the cart one more time before redirect
+      localStorage.removeItem('shopping-cart');
+      
+      // First refresh - immediate
+      const timestamp = Date.now();
+      window.location.href = `${redirectPath}?v=${timestamp}&nocache=${timestamp}&refresh=1`;
+      
+      // Second refresh after a short delay
+      setTimeout(() => {
+        // Clear everything again before second refresh
+        localStorage.removeItem('shopping-cart');
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Force a hard reload with new cache-busting parameters
+        const newTimestamp = Date.now();
+        window.location.href = `${redirectPath}?v=${newTimestamp}&nocache=${newTimestamp}&refresh=2`;
+        
+        // Final reload to ensure clean state
+        setTimeout(() => {
+          window.location.reload();
+        }, 50);
+      }, 100);
     }
     
     return { success: true };
   } catch (error) {
     console.error('Error during logout:', error);
     return { success: false, error };
+  } finally {
+    isLoggingOut = false;
   }
 };
