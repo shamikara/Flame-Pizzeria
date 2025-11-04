@@ -1,144 +1,194 @@
-"use client"
+'use client'
 
-import React from 'react';
-import dynamic from 'next/dynamic';
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
 
-// Dynamic imports for better performance
-const LoginForm = dynamic(() => import('@/components/login-form').then(m => m.LoginForm), {
-  loading: () => <LoginFormLoading />
-});
+import { Button } from '@/components/ui/button'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { useToast } from '@/hooks/use-toast'
+import { Spinner } from '@/components/ui/spinner'
+import Link from 'next/link'
+import { useSession } from '@/components/session-provider'
 
-const RegisterForm = dynamic(() => import('@/components/register-form').then(m => m.RegisterForm), {
-  loading: () => <RegisterFormLoading />
-});
-
-// Define the search params type
-type SearchParams = Promise<{
-  tab?: string | string[];
-  email?: string | string[];
-  [key: string]: string | string[] | undefined;
-}>;
-
-// Define the resolved search params type
-type ResolvedSearchParams = {
-  tab?: string | string[];
-  email?: string | string[];
-  [key: string]: string | string[] | undefined;
-};
-
-// Loading component for the entire page
-function LoginPageLoading() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <Image src="/img/logo.png" alt="Flames Pizzeria" width={60} height={60} />
-          </div>
-          <CardTitle className="text-2xl">Loading...</CardTitle>
-          <CardDescription>Please wait while we prepare your login page</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-            <p className="text-sm text-muted-foreground">Loading login page...</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+interface LoginFormProps {
+  defaultEmail?: string
+  onLoginSuccess?: () => void
 }
 
-// Main login page component
-function LoginPageContent({ searchParams }: { searchParams: SearchParams }) {
-  // Safely extract search params using React.use()
-  const params = React.use(searchParams);
-  const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
-  const emailParam = Array.isArray(params.email) ? params.email[0] : params.email;
+const formSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email.' }),
+  password: z.string().min(1, { message: 'Password is required.' }),
+})
 
-  const defaultTab = tabParam === 'register' ? 'register' : 'login';
-  const defaultEmail = emailParam || '';
+export function LoginForm({ defaultEmail = '', onLoginSuccess }: LoginFormProps) {
+  const router = useRouter()
+  const { toast } = useToast()
+  const { refreshSession } = useSession()
+  const [isLoading, setIsLoading] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <Image src="/img/logo.png" alt="Flames Pizzeria" width={60} height={60} />
-          </div>
-          <CardTitle className="text-2xl">Welcome Back!</CardTitle>
-          <CardDescription>Sign in or create an account to continue</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue={defaultTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Sign In</TabsTrigger>
-              <TabsTrigger value="register">Sign Up</TabsTrigger>
-            </TabsList>
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: defaultEmail,
+      password: '',
+    },
+  })
 
-            <TabsContent value="login" className="mt-6">
-              <LoginForm searchParams={searchParams} />
-            </TabsContent>
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+      const result = await res.json()
 
-            <TabsContent value="register" className="mt-6">
-              <RegisterForm defaultEmail={defaultEmail} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+      if (!res.ok) {
+        toast({ 
+          variant: 'destructive', 
+          title: 'Login Failed', 
+          description: result.error || 'Invalid email or password.' 
+        })
+        setIsLoading(false)
+        return
+      }
 
-// Loading component for login form
-function LoginFormLoading() {
-  return (
-    <div className="flex items-center justify-center py-8">
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
-        <p className="text-sm text-muted-foreground">Loading login form...</p>
-      </div>
-    </div>
-  );
-}
+      // Show success message
+      toast({ 
+        title: 'Login Successful', 
+        description: 'Redirecting you now...',
+        duration: 2000,
+      })
 
-// Loading component for register form
-function RegisterFormLoading() {
-  return (
-    <div className="flex items-center justify-center py-8">
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
-        <p className="text-sm text-muted-foreground">Loading registration form...</p>
-      </div>
-    </div>
-  );
-}
+      // Set redirecting state for overlay spinner
+      setIsRedirecting(true)
 
-// Main export with client-side loading
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
-  const [isLoading, setIsLoading] = useState(true);
+      // Small delay to show success message
+      await new Promise(resolve => setTimeout(resolve, 500))
 
-  useEffect(() => {
-    // Minimal loading time for better UX (reduces flash)
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 300); // Reduced to 300ms for faster perceived loading
+      await refreshSession()
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isLoading) {
-    return <LoginPageLoading />;
+      if (onLoginSuccess) {
+        onLoginSuccess()
+      } else {
+        router.refresh()
+        const userRole = result.user.role
+        if (userRole === 'ADMIN' || userRole === 'MANAGER') {
+          router.push('/dashboard/overview')
+        } else if (userRole === 'CHEF') {
+          router.push('/dashboard/chef/overview')
+        } else if (userRole === 'WAITER') {
+          router.push('/dashboard/waiter/overview')
+        } else if (userRole === 'STORE_KEEP') {
+          router.push('/dashboard/store-keep/overview')
+        } else {
+          router.push('/shop')
+        }
+      }
+    } catch (error) {
+      console.error('An unexpected error occurred:', error)
+      toast({ 
+        variant: 'destructive', 
+        title: 'Connection Error', 
+        description: 'Please check your internet connection and try again.' 
+      })
+      setIsLoading(false)
+      setIsRedirecting(false)
+    }
   }
 
-  return <LoginPageContent searchParams={searchParams} />;
+  return (
+    <>
+      {/* Full-page loading overlay during redirect */}
+      {isRedirecting && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Spinner />
+            <p className="text-lg font-medium">Signing you in...</p>
+          </div>
+        </div>
+      )}
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="example@example.com" 
+                    {...field} 
+                    disabled={isLoading}
+                    autoComplete="email"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      className="pr-10"
+                      {...field}
+                      disabled={isLoading}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((s) => !s)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      disabled={isLoading}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="flex items-center justify-end">
+            <Link 
+              href="/forgot-password" 
+              className="text-sm text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                Signing In...
+              </>
+            ) : (
+              'Sign In'
+            )}
+          </Button>
+        </form>
+      </Form>
+    </>
+  )
 }
